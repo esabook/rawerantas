@@ -19,7 +19,7 @@ urut sesuai aturan pull (prio → effort → ID).
 
 | # | Lane | ID | Status | Prio | Effort |
 |---|---|---|---|---|---|
-| 1 | DATA | `D1-01` | READY | P0 | E:M |
+| 1 | DATA | `D1-01` | DONE | P0 | E:M |
 | 2 | DATA | `D1-02` | WAIT | P0 | E:S |
 | 3 | SEC | `D1-03` | WAIT | P1 | E:S |
 | 4 | DATA | `D1-04` | WAIT | P1 | E:M |
@@ -49,6 +49,7 @@ berhenti, bukan menebak.
 | Task | Fase | Kenapa manusia |
 |---|---|---|
 | `F0-03` (isi nilai `.env`) | 0 | `PUBLIC_BASE_URL`, Supabase URL/key, PIN asli — hanya user yang punya |
+| `DATABASE_URL` (D1-01 push) | 1 | Connection string Postgres Supabase utk `drizzle-kit push`/migrasi fisik |
 | `D1-03` (apply RLS SQL) | 1 | Butuh service role key / konsol Supabase |
 | `U4-03` (konten QRIS) | 4 | Upload gambar QRIS + instruksi bayar nyata |
 | `Q8-03` (deploy) | 8 | Akun Cloudflare Pages + domain |
@@ -150,10 +151,11 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 1: DATA & SKEMA
 
-- [ ] `D1-01` · `DATA/WAIT/P0/E:M` · `DEP:F0-02,F0-03` · `BLOCKS:D1-02,D1-03,D1-04,D1-06` — Skema Drizzle 9 tabel (ARCHITECTURE §4): `competitions`(+`scoring_mode`), `payment_configs`, `participants`, `participant_payments`, `scores_mancing`(+`running_total`, `received_at`), `scores_layangan`(+`received_at`), `scores_layangan_hias`(+`total_weighted`, `edited_at`), `audit_logs`; semua tabel skor + audit punya `idempotency_key uuid unique` + `uniqueIndex`; hias punya check constraint kriteria 0–100; done when migrasi Drizzle generate + push dry-run tanpa error, index unik terlihat.
+- [x] `D1-01` · `DATA/DONE/P0/E:M` · `DEP:F0-02,F0-03` · `BLOCKS:D1-02,D1-03,D1-04,D1-06` — Skema Drizzle 9 tabel (ARCHITECTURE §4): `competitions`(+`scoring_mode`), `payment_configs`, `participants`, `participant_payments`, `scores_mancing`(+`running_total`, `received_at`), `scores_layangan`(+`received_at`), `scores_layangan_hias`(+`total_weighted`, `edited_at`), `audit_logs`; semua tabel skor + audit punya `idempotency_key uuid unique` + `uniqueIndex`; hias punya check constraint kriteria 0–100; done when migrasi Drizzle generate + push dry-run tanpa error, index unik terlihat.
       FILES: src/lib/db/schema.ts (baru), drizzle.config.ts (baru), src/lib/db/index.ts (baru)
       VERIFY: bunx drizzle-kit generate && bunx drizzle-kit push --dry-run && bun run check
       Edge: `running_total` harus `integer` + default 0 (bukan nullable) agar SUM offline aman; `scoring_mode` pakai `text` + app-level enum (jangan PG enum — migrasi kaku); FK cascade perilaku pendaftaran hapus → jangan `onDelete: cascade` ke payments tanpa keputusan; `received_at` default `now()` di DB, bukan klien.
+      AMENDED: VERIFY `push --dry-run` dihapus di drizzle-kit 0.31 (sisa `--verbose`/`--force` yang butuh koneksi) + `DATABASE_URL` belum ada → push ke DB dijalankan saat koneksi tersedia (lihat antrean manusia). Pengganti bukti: `drizzle-kit generate` idempotent (2x = "no changes") + review SQL migrasi manual (8 tabel, 4 unique index idempotency, 3 check 0–100, generated column `total_weighted`, FK `ON DELETE restrict` payments). 8 tabel nyata — entri §4.9 adalah slot opsional fase 8 (kosong).
 
 - [ ] `D1-02` · `DATA/WAIT/P0/E:S` · `DEP:D1-01,F0-03` · `BLOCKS:D1-04` — Supabase client singleton: baca `PUBLIC_SUPABASE_URL`/`ANON_KEY` dari `$env/static/public`; export typed client + helper query (getCompetitions, getLeaderboard, dll.) yang bakal dipakai semua route; done when client terbentuk tanpa error, helper mengembalikan type yang cocok skema Drizzle.
       FILES: src/lib/db/supabaseClient.ts (baru), src/lib/db/queries.ts (baru)
