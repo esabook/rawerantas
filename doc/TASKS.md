@@ -246,7 +246,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run check
       Edge: nomor WA — validasi format Indonesia (62/08), simpan kanonik; kuota habis antara load & submit → tampilkan popup bukan error mentah; pendaftaran offline → antrean + tiket dibuat setelah sync; lomba yang sudah `checked_in` penuh → tolak.
 
-- [ ] `U4-03` · `FE/WAIT/P0/E:M` · `DEP:U4-02,D1-01,D1-05` · `BLOCKS:U4-04,A7-01` — Pembayaran: pilih metode dari `payment_configs` aktif (bank/ewallet/qris), upload bukti (compressor D1-05 ≤200KB), buat `participant_payments`, status `dp_paid`/`fully_paid`; done when test: DP bawah min_dp ditolak, upload terkompresi, payment tersimpan (live atau antrean).
+- [x] `U4-03` · `FE/DONE/P0/E:M` · `DEP:U4-02,D1-01,D1-05` · `BLOCKS:U4-04,A7-01` — Pembayaran: pilih metode dari `payment_configs` aktif (bank/ewallet/qris), upload bukti (compressor D1-05 ≤200KB), buat `participant_payments`, status `dp_paid`/`fully_paid`; done when test: DP bawah min_dp ditolak, upload terkompresi, payment tersimpan (live atau antrean).
       FILES: src/lib/components/PaymentMethodSelector.svelte (baru), src/lib/components/ImageUploader.svelte (baru), src/routes/daftar/+page.svelte
       VERIFY: bun run test && bun run check
       Edge: metode non-aktif tak muncul; bukti WAJIB untuk transfer, opsional cash; upload gagal saat offline → simpan draft bukti (blob/url), tawarkan ulang saat online; jangan biarkan user pilih QRIS saat `qris_image_url` kosong (fallback ke instruksi teks).

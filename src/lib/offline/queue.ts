@@ -1,4 +1,5 @@
 import { type IDBPDatabase, openDB } from "idb";
+import { DB_VERSION, ensureAllStores } from "./idbSchema";
 
 export type QueueStatus = "pending" | "syncing" | "synced" | "dead";
 
@@ -29,10 +30,15 @@ const INDEX = "by_status_ts";
 let dbPromise: Promise<IDBPDatabase<QueueSchema>> | null = null;
 
 const getDb = (): Promise<IDBPDatabase<QueueSchema>> => {
-	dbPromise ??= openDB<QueueSchema>(DB_NAME, 1, {
+	dbPromise ??= openDB<QueueSchema>(DB_NAME, DB_VERSION, {
 		upgrade(db) {
-			const store = db.createObjectStore(STORE, { keyPath: "idempotencyKey" });
-			store.createIndex(INDEX, ["status", "timestamp"]);
+			ensureAllStores(db);
+			if (!db.objectStoreNames.contains(STORE)) {
+				const store = db.createObjectStore(STORE, {
+					keyPath: "idempotencyKey",
+				});
+				store.createIndex(INDEX, ["status", "timestamp"]);
+			}
 		},
 	});
 	return dbPromise;

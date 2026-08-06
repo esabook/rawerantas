@@ -6,6 +6,7 @@ import {
 	demoLayanganScores,
 	demoMancingScores,
 	demoParticipants,
+	demoPaymentConfigs,
 	demoPayments,
 } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
@@ -18,7 +19,10 @@ import type {
 	scoresLayanganHias,
 	scoresMancing,
 } from "./schema";
-import { supabase } from "./supabaseClient";
+
+let supabasePromise: Promise<typeof import("./supabaseClient")> | null = null;
+const getSupabase = () =>
+	(supabasePromise ??= import("./supabaseClient").then((m) => m));
 
 export type Competition = InferSelectModel<typeof competitions>;
 export type PaymentConfig = InferSelectModel<typeof paymentConfigs>;
@@ -39,6 +43,7 @@ export async function getCompetitions(
 		const all = demoCompetitions();
 		return activeOnly ? all.filter((c) => c.isActive) : all;
 	}
+	const { supabase } = await getSupabase();
 	let query = supabase
 		.from("competitions")
 		.select("*")
@@ -57,8 +62,9 @@ export async function getPaymentConfigs(
 	activeOnly = true,
 ): Promise<PaymentConfig[]> {
 	if (get(demoMode)) {
-		return [];
+		return demoPaymentConfigs().filter((c) => (activeOnly ? c.isActive : true));
 	}
+	const { supabase } = await getSupabase();
 	let query = supabase
 		.from("payment_configs")
 		.select("*")
@@ -82,6 +88,7 @@ export async function getParticipants(
 			? all.filter((p) => p.competitionId === competitionId)
 			: all;
 	}
+	const { supabase } = await getSupabase();
 	let query = supabase
 		.from("participants")
 		.select("*")
@@ -105,6 +112,7 @@ export async function getPayments(
 			? all.filter((p) => p.participantId === participantId)
 			: all;
 	}
+	const { supabase } = await getSupabase();
 	let query = supabase
 		.from("participant_payments")
 		.select("*")
@@ -148,6 +156,7 @@ export async function getLeaderboard(
 				};
 			});
 	}
+	const { supabase } = await getSupabase();
 	const { data, error } = await supabase
 		.from(table)
 		.select("*, participants(name, lapak_number)")

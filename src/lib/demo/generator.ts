@@ -3,6 +3,7 @@ import type {
 	competitions,
 	participantPayments,
 	participants,
+	paymentConfigs,
 	scoresLayangan,
 	scoresLayanganHias,
 	scoresMancing,
@@ -11,6 +12,7 @@ import type {
 export type MockCompetition = InferSelectModel<typeof competitions>;
 export type MockParticipant = InferSelectModel<typeof participants>;
 export type MockPayment = InferSelectModel<typeof participantPayments>;
+export type MockPaymentConfig = InferSelectModel<typeof paymentConfigs>;
 export type MockMancing = InferSelectModel<typeof scoresMancing>;
 export type MockLayangan = InferSelectModel<typeof scoresLayangan>;
 export type MockHias = InferSelectModel<typeof scoresLayanganHias>;
@@ -163,6 +165,49 @@ export const mockPayments: MockPayment[] = mockParticipants
 		createdAt: at(-int(1_000, 40_000)),
 	}));
 
+export const mockPaymentConfigs: MockPaymentConfig[] = [
+	{
+		id: uuid(2000),
+		method: "bank_transfer",
+		accountName: "Panitia Lomba",
+		accountNumber: "1234567890",
+		qrisImageUrl: null,
+		instructions: "Transfer ke rekening panitia, lalu upload bukti.",
+		isActive: true,
+		createdAt: at(-30_000),
+	},
+	{
+		id: uuid(2001),
+		method: "ewallet",
+		accountName: "Panitia Lomba (OVO)",
+		accountNumber: "081234567890",
+		qrisImageUrl: null,
+		instructions: "Kirim via e-wallet, lalu upload bukti.",
+		isActive: true,
+		createdAt: at(-29_000),
+	},
+	{
+		id: uuid(2002),
+		method: "qris",
+		accountName: null,
+		accountNumber: null,
+		qrisImageUrl: null,
+		instructions: "Scan QRIS panitia, lalu upload bukti.",
+		isActive: true,
+		createdAt: at(-28_000),
+	},
+	{
+		id: uuid(2003),
+		method: "cash",
+		accountName: null,
+		accountNumber: null,
+		qrisImageUrl: null,
+		instructions: "Bayar tunai ke panitia di lokasi.",
+		isActive: false,
+		createdAt: at(-27_000),
+	},
+];
+
 export const mockMancingScores: MockMancing[] = mockParticipants.flatMap(
 	(p, i) => {
 		const attempts = int(1, 4);
@@ -243,3 +288,4 @@ export const demoMancingScores = () => mockMancingScores;
 export const demoLayanganScores = () => mockLayanganScores;
 export const demoHiasScores = () => mockHiasScores;
 export const demoPayments = () => mockPayments;
+export const demoPaymentConfigs = () => mockPaymentConfigs;

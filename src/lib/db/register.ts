@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
+import { DB_VERSION, ensureAllStores } from "$lib/offline/idbSchema";
 import { enqueue } from "$lib/offline/queue";
 import type { Participant } from "./queries";
 
@@ -31,11 +32,9 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 
 const getDb = (): Promise<IDBDatabase> => {
 	dbPromise ??= new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, 2);
+		const req = indexedDB.open(DB_NAME, DB_VERSION);
 		req.onupgradeneeded = () => {
-			if (!req.result.objectStoreNames.contains(STORE)) {
-				req.result.createObjectStore(STORE, { keyPath: "id" });
-			}
+			ensureAllStores(req.result);
 		};
 		req.onsuccess = () => resolve(req.result);
 		req.onerror = () => reject(req.error);

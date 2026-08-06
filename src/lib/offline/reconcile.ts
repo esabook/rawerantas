@@ -1,4 +1,5 @@
 import { type IDBPDatabase, openDB } from "idb";
+import { DB_VERSION, ensureAllStores } from "./idbSchema";
 
 export interface HighWaterRow {
 	endpoint: string;
@@ -19,9 +20,12 @@ const STORE = "high_water";
 let dbPromise: Promise<IDBPDatabase<ReconcileSchema>> | null = null;
 
 const getDb = (): Promise<IDBPDatabase<ReconcileSchema>> => {
-	dbPromise ??= openDB<ReconcileSchema>(DB_NAME, 1, {
+	dbPromise ??= openDB<ReconcileSchema>(DB_NAME, DB_VERSION, {
 		upgrade(db) {
-			db.createObjectStore(STORE, { keyPath: "endpoint" });
+			ensureAllStores(db);
+			if (!db.objectStoreNames.contains(STORE)) {
+				db.createObjectStore(STORE, { keyPath: "endpoint" });
+			}
 		},
 	});
 	return dbPromise;
