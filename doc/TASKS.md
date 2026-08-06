@@ -285,7 +285,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run check
       Edge: double-tap cepat → 1 op (guard tombol saat in-flight); peserta sudah `putus` di round ini → tombol disabled + alasan; undo setelah round maju → tolak (round berubah = konteks beda); multi-device last-write-wins (catat, jangan cegah).
 
-- [ ] `J6-03` · `FE/WAIT/P1/E:M` · `DEP:C3-01,C3-02,O2-03,D1-06` · `BLOCKS:U4-05` — Panel hias `/juri/layangan-hias`: PinGate, 3 slider 0–100 (estetika/stabil/kreativitas), preview `total_weighted` live, submit via queue, **edit window 5 menit** (dari `edited_at`), rescore luar window → tolak + audit; done when test: bobot benar, window berlalu → tolak, submit ganda → 1 row.
+- [x] `J6-03` · `FE/DONE/P1/E:M` · `DEP:C3-01,C3-02,O2-03,D1-06` · `BLOCKS:U4-05` — Panel hias `/juri/layangan-hias`: PinGate, 3 slider 0–100 (estetika/stabil/kreativitas), preview `total_weighted` live, submit via queue, **edit window 5 menit** (dari `edited_at`), rescore luar window → tolak + audit; done when test: bobot benar, window berlalu → tolak, submit ganda → 1 row.
       FILES: src/routes/juri/layangan-hias/+page.svelte, src/lib/components/HiasScoreForm.svelte (baru), src/lib/components/__tests__/HiasScoreForm.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: slider kosong → submit disabled; edit hanya boleh oleh actor sama (hash PIN sama); window timeout dihitung server-side (`edited_at`), bukan timer klien (user bisa putar jam).
