@@ -22,8 +22,8 @@ urut sesuai aturan pull (prio → effort → ID).
 | 1 | ARC | `F0-01` | DONE | P0 | E:S |
 | 2 | OPS | `F0-02` | DONE | P0 | E:M |
 | 3 | OPS | `F0-03` | BLOCKED | P0 | E:S |
-| 4 | FE | `F0-04` | READY | P0 | E:M |
-| 5 | FE | `F0-05` | WAIT | P0 | E:S |
+| 4 | FE | `F0-04` | DONE | P0 | E:M |
+| 5 | FE | `F0-05` | READY | P0 | E:S |
 | 6 | QA | `F0-06` | READY | P1 | E:S |
 | 7 | QA | `F0-07` | READY | P1 | E:S |
 
@@ -127,7 +127,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run build (dengan dan tanpa PUBLIC_BASE_URL — lihat warning) && bun run check
       Edge: nilai `.env` asli HANYA manusia (human queue) — agen tulis placeholder; jangan commit `.env` (guard di .gitignore F0-01); `PUBLIC_EVENT_DATE` wajib ISO-8601 lengkap dengan offset, parse gagal = build error bukan NaN.
 
-- [ ] `F0-04` · `FE/WAIT/P0/E:M` · `DEP:F0-02` · `BLOCKS:F0-05,U4-01` — Design tokens: set warna/typografi/spasi ARCHITECTURE §3 di config Tailwind + `src/app.css` (CSS reset `user-select:none`, kecuali input/textarea; `glass-panel`; `@media print` 58mm + varian 80mm + `.no-print`); done when token `background/foreground/primary/secondary/success/muted` terpakai di class, print CSS ada untuk dua ukuran, user-select benar.
+- [x] `F0-04` · `FE/DONE/P0/E:M` · `DEP:F0-02` · `BLOCKS:F0-05,U4-01` — Design tokens: set warna/typografi/spasi ARCHITECTURE §3 di config Tailwind + `src/app.css` (CSS reset `user-select:none`, kecuali input/textarea; `glass-panel`; `@media print` 58mm + varian 80mm + `.no-print`); done when token `background/foreground/primary/secondary/success/muted` terpakai di class, print CSS ada untuk dua ukuran, user-select benar.
       FILES: src/app.css, vite.config.ts / tailwind config, src/lib/components/ui/ (shadcn theming)
       VERIFY: bun run check && bun run build && grep -n "user-select" src/app.css
       Edge: spacing ≤24px (1.5rem) HANYA batas container/padding — font elemen big-button boleh lebih besar (ARCHITECTURE §3); print CSS harus tidak mengunci konten saat layar (print-only class); jangan reset `user-select` di browser non-webkit tanpa prefix ganda.
