@@ -21,7 +21,7 @@ urut sesuai aturan pull (prio → effort → ID).
 |---|---|---|---|---|---|
 | 1 | RUN | `O2-01` | READY | P0 | E:M |
 | 2 | RUN | `O2-02` | DONE | P0 | E:S |
-| 3 | RUN | `O2-03` | WAIT | P0 | E:M |
+| 3 | RUN | `O2-03` | DONE | P0 | E:M |
 | 4 | FE | `O2-04` | WAIT | P1 | E:XS |
 | 5 | RUN | `O2-05` | WAIT | P1 | E:S |
 
@@ -192,7 +192,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test
       Edge: `fake-indexeddb` dipakai di test (happy-dom tidak punya IndexedDB); op gagal tidak memblokir batch berikutnya (isolasi per-op); `retries` cap (mis. 10) → `dead` status + surfacing di offline UI, bukan loop abadi.
 
-- [ ] `O2-03` · `RUN/WAIT/P0/E:M` · `DEP:O2-02` · `BLOCKS:J6-01,J6-02,J6-03,U4-02` — Sync loop + idempotency: worker/interval kirim batch via SDK, tangani `ON CONFLICT DO NOTHING` = sukses (retry bukan error), **undo-after-sync** (op tombstone + recompute `running_total`), **draft-restore-check** utk registrasi (cek `ticket_number exists for phone` sebelum submit ulang); done when test: submit ganda → 1 row; retry setelah sukses → UI hijau; undo setelah sync → row hilang + running_total benar.
+- [x] `O2-03` · `RUN/DONE/P0/E:M` · `DEP:O2-02` · `BLOCKS:J6-01,J6-02,J6-03,U4-02` — Sync loop + idempotency: worker/interval kirim batch via SDK, tangani `ON CONFLICT DO NOTHING` = sukses (retry bukan error), **undo-after-sync** (op tombstone + recompute `running_total`), **draft-restore-check** utk registrasi (cek `ticket_number exists for phone` sebelum submit ulang); done when test: submit ganda → 1 row; retry setelah sukses → UI hijau; undo setelah sync → row hilang + running_total benar.
       FILES: src/lib/offline/sync.ts (baru), src/lib/offline/__tests__/sync.test.ts (baru)
       VERIFY: bun run test
       Edge: conflict retry — `ON CONFLICT` mengembalikan row → treat sebagai sukses, jangan show error; tombstone op harus di-proses berurutan setelah insert-nya (queue order), kalau tidak running_total kacau; offline queue vs realtime double-update → leaderboard pakai satu sumber (post-sync) utk konsistensi.
