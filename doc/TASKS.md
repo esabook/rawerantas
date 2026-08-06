@@ -25,7 +25,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 4 | FE | `F0-04` | DONE | P0 | E:M |
 | 5 | FE | `F0-05` | DONE | P0 | E:S |
 | 6 | QA | `F0-06` | DONE | P1 | E:S |
-| 7 | QA | `F0-07` | READY | P1 | E:S |
+| 7 | QA | `F0-07` | DONE | P1 | E:S |
 
 **Kenapa hanya ini.** F0-01 (init repo + skeleton) tidak punya dependensi —
 di situlah semua task lain bergantung. F0-02 menunggu F0-01 selesai.
@@ -142,7 +142,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test
       Edge: SvelteKit komponen pakai `$app/env`/`$env` → mock atau gunakan komponen tanpa dependency itu untuk test contoh; `happy-dom` tidak punya `crypto.subtle` → polyfill saat test PinGate (C3-01) ditulis, catat sekarang.
 
-- [ ] `F0-07` · `QA/WAIT/P1/E:S` · `DEP:F0-02` · `BLOCKS:Q8-01` — Baseline quality gates: install `biome` (lint+format) + `svelte-check`; script `bun run lint` (biome check) + `bun run check` (svelte-check); done when keduanya hijau di repo kosong (tanpa temuan) dan dipakai sebagai gate `VERIFY` semua task berikut.
+- [x] `F0-07` · `QA/DONE/P1/E:S` · `DEP:F0-02` · `BLOCKS:Q8-01` — Baseline quality gates: install `biome` (lint+format) + `svelte-check`; script `bun run lint` (biome check) + `bun run check` (svelte-check); done when keduanya hijau di repo kosong (tanpa temuan) dan dipakai sebagai gate `VERIFY` semua task berikut.
       FILES: package.json (scripts), biome.json (baru)
       VERIFY: bun run lint && bun run check
       Edge: biome vs prettier konflik — pilih SATU formatter (biome), matikan prettier di `package.json`; `svelte-check` butuh `check` script bawaan SvelteKit; jangan pernah melonggarkan config utk lulus gate — temuan = JOURNAL, bukan config diubah.

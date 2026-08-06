@@ -36,8 +36,8 @@
 
 @theme inline {
 	--font-sans:
-		system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-		sans-serif;
+		system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto,
+		"Helvetica Neue", Arial, sans-serif;
 	--color-success: var(--success);
 	--color-success-foreground: var(--success-foreground);
 	--color-sidebar: var(--card);
@@ -99,6 +99,7 @@
 		print-color-adjust: exact;
 	}
 	.no-print {
+		/* biome-ignore lint/complexity/noImportantStyles: override elemen tanpa class utk cetak */
 		display: none !important;
 	}
 }
