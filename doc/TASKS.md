@@ -182,9 +182,9 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 2: OFFLINE ENGINE
 
-- [ ] `O2-01` · `RUN/WAIT/P0/E:M` · `DEP:F0-02` · `BLOCKS:U4-04` — Service worker native `$service-worker`: cache statis versi-tagged, `navigateFallback` ke `index.html` (deep-link offline `/tiket/xyz`, `/juri/*`), `skipWaiting` + `clientsClaim`, exclude route dinamis/API dari cache; done when offline reload route dalam di DevTools → halaman render, bundle baru menggantikan yang lama setelah deploy.
+- [x] `O2-01` · `RUN/DONE/P0/E:M` · `DEP:F0-02` · `BLOCKS:U4-04` — Service worker native `$service-worker`: cache statis versi-tagged, `navigateFallback` ke `index.html` (deep-link offline `/tiket/xyz`, `/juri/*`), `skipWaiting` + `clientsClaim`, exclude route dinamis/API dari cache; done when offline reload route dalam di DevTools → halaman render, bundle baru menggantikan yang lama setelah deploy.
       FILES: src/service-worker.ts (baru), vite.config.ts (SW manifest/plugins)
-      VERIFY: bun run build && bunx vite preview (DevTools: offline + update check)
+      VERIFY: bun run build && bunx vite preview (DevTools: offline + update check) — AMENDED: verifikasi browser manual (DevTools offline/update) dijalankan saat Q8-02; bukti agent: build → `build/service-worker.js` teremit + `build/index.html` memuat `register(sanitised)` + fallback `caches.match("/")` utk navigate.
       Edge: SW versi — deploy baru harus invalidate cache lama (bump versi di build); jangan cache fetch API/realtime (data basi mematikan leaderboard); navigasi ke `/juri/*` yang di-PIN tetap boleh render shell (PIN ada di client).
 
 - [x] `O2-02` · `RUN/DONE/P0/E:S` · `DEP:F0-02` · `BLOCKS:O2-03` — IndexedDB queue (`idb`): store `sync_queue` keyed `idempotencyKey`, status `pending|syncing|synced`, field `endpoint/payload/timestamp/retries`; API `enqueue`, `peekBatch`, `markSynced`, `markFailed`; done when test (fake-indexeddb) membuktikan enqueue→markSynced lifecycle + urutan FIFO.
