@@ -224,7 +224,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run check
       Edge: `PUBLIC_BASE_URL` kosong → komponen QR menampilkan placeholder + warning (jangan generate QR sampah); QR perlu quiet zone — padding bawaan library diperiksa; print 58mm vs 80mm — pilih lebar dari config/query, jangan hardcode.
 
-- [ ] `C3-04` · `FE/WAIT/P2/E:S` · `DEP:F0-05` · `BLOCKS:A7-03,U4-05` — TTS announcer: Web Speech API `id-ID`, antrean ucapan, **tombol "nyalakan suara" eksplisit** (mobile autoplay-block), fallback diam saat API tak tersedia; done when test: enqueue → ucapan berurutan, gesture-required tertangani.
+- [x] `C3-04` · `FE/DONE/P2/E:S` · `DEP:F0-05` · `BLOCKS:A7-03,U4-05` — TTS announcer: Web Speech API `id-ID`, antrean ucapan, **tombol "nyalakan suara" eksplisit** (mobile autoplay-block), fallback diam saat API tak tersedia; done when test: enqueue → ucapan berurutan, gesture-required tertangani.
       FILES: src/lib/tts/ttsAnnouncer.ts (baru), src/lib/components/SoundToggle.svelte (baru), src/lib/tts/__tests__/ttsAnnouncer.test.ts (baru)
       VERIFY: bun run test
       Edge: `speechSynthesis` null di beberapa browser → graceful silent + toggle disabled; voice id-ID mungkin belum ke-download → fallback ke voice default; jangan heap ucapan saat offline (queue cap + drop tertua).
