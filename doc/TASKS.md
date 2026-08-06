@@ -229,7 +229,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test
       Edge: `speechSynthesis` null di beberapa browser → graceful silent + toggle disabled; voice id-ID mungkin belum ke-download → fallback ke voice default; jangan heap ucapan saat offline (queue cap + drop tertua).
 
-- [ ] `C3-05` · `FE/WAIT/P0/E:XS` · `DEP:F0-03` · `BLOCKS:U4-01` — `CountdownTimer.svelte`: baca `PUBLIC_EVENT_DATE`, 4 state (segera/live/habis/error), format countdown d/m/j/m/detik, state live → highlight gold; done when test: date parse valid, countdown decrement, state transisi benar.
+- [x] `C3-05` · `FE/DONE/P0/E:XS` · `DEP:F0-03` · `BLOCKS:U4-01` — `CountdownTimer.svelte`: baca `PUBLIC_EVENT_DATE`, 4 state (segera/live/habis/error), format countdown d/m/j/m/detik, state live → highlight gold; done when test: date parse valid, countdown decrement, state transisi benar.
       FILES: src/lib/components/CountdownTimer.svelte (baru), src/lib/components/__tests__/CountdownTimer.test.ts (baru)
       VERIFY: bun run test
       Edge: `PUBLIC_EVENT_DATE` invalid → error state + pesan, bukan NaN; timezone — pakai offset eksplisit env, jangan `local` asumsi; timer interval cleanup saat unmount.
