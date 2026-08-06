@@ -24,7 +24,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 3 | OPS | `F0-03` | BLOCKED | P0 | E:S |
 | 4 | FE | `F0-04` | DONE | P0 | E:M |
 | 5 | FE | `F0-05` | DONE | P0 | E:S |
-| 6 | QA | `F0-06` | READY | P1 | E:S |
+| 6 | QA | `F0-06` | DONE | P1 | E:S |
 | 7 | QA | `F0-07` | READY | P1 | E:S |
 
 **Kenapa hanya ini.** F0-01 (init repo + skeleton) tidak punya dependensi —
@@ -137,7 +137,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run build && bunx vite preview (cek nav render)
       Edge: `/display` dan `/juri/*` harus bisa bypass nav (layout route group atau conditional); route kosong lain dulu → `+page.svelte` placeholder agar build tidak error.
 
-- [ ] `F0-06` · `QA/WAIT/P1/E:S` · `DEP:F0-02` · `BLOCKS:semua task dengan VERIFY test` — Test harness: install + config Vitest + `@testing-library/svelte` + `happy-dom` + script `bun run test`; tulis 2 test contoh (util murni + render komponen sederhana) sebagai kanon; done when `bun run test` exit 0 dan `bun run test -- run` jalan deterministik.
+- [x] `F0-06` · `QA/DONE/P1/E:S` · `DEP:F0-02` · `BLOCKS:semua task dengan VERIFY test` — Test harness: install + config Vitest + `@testing-library/svelte` + `happy-dom` + script `bun run test`; tulis 2 test contoh (util murni + render komponen sederhana) sebagai kanon; done when `bun run test` exit 0 dan `bun run test -- run` jalan deterministik.
       FILES: vite.config.ts (test block), src/lib/utils/__tests__/example.test.ts (baru), src/lib/components/__tests__/Example.test.ts (baru)
       VERIFY: bun run test
       Edge: SvelteKit komponen pakai `$app/env`/`$env` → mock atau gunakan komponen tanpa dependency itu untuk test contoh; `happy-dom` tidak punya `crypto.subtle` → polyfill saat test PinGate (C3-01) ditulis, catat sekarang.

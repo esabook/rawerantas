@@ -38,3 +38,10 @@ Format entri:
 - Penyimpangan: `+layout.ts` (FILES) = export `ssr`/`prerender` flags, bukan load function — load kosong tak diperlukan untuk layout statis.
 - Penyimpangan kecil: nama app sementara hardcode di AppShell ("Pesta Rakyat Agustusan") — `PUBLIC_APP_NAME` akan dibaca saat F0-03 (env helper) ditarik manusia; fallback ini sementara, dicatat.
 - Belum diverifikasi: render visual nav di browser (tidak ada browser di sesi ini) — hanya verifikasi struktural + curl; butuh cek manual sekali di Q8-02.
+- Task `F0-06` `DONE` — commit `9eede6b` — vitest 4.1 + @testing-library/svelte 5.4 + happy-dom 20.11; test block di vite.config.ts (happy-dom, include src/**/*.{test,spec}.{js,ts,svelte}); script `test` = `vitest run`, `test:watch` = `vitest`; kanon: `src/lib/utils/__tests__/example.test.ts` (cn) + `src/lib/components/__tests__/Example.test.ts` (render Greeting); 5 test hijau, check 0 error, build hijau.
+- Keputusan: `resolve.conditions: ['browser']` di vite.config.ts — tanpa ini render komponen gagal `lifecycle_function_unavailable` (svelte resolve ke build server); syarat resmi SvelteKit utk Vitest.
+- Keputusan: `defineConfig` dari `vitest/config` bukan `vite` — tipe `test` tak ada di UserConfigExport vite; svelte-check menolak.
+- Keputusan: import eksplisit `describe/it/expect` + `afterEach(cleanup)` tanpa vitest globals — deterministik, tanpa ubah tsconfig types; kanon test memakai pola ini.
+- Nuansa bun CLI: `bun run test -- run` (spasi) meneruskan `run` sbg filter vitest → "no test files" exit 1; varian `bun run test --run` (flag) exit 0 — dipakai utk verifikasi deterministik.
+- Penyimpangan kecil FILES: `Greeting.svelte` ditambah sbg komponen pendamping render test (tanpa dependensi `$app`/`$env` — kanon utk test komponen nanti, Edge task dihormati).
+- Catatan utk C3-01 (PinGate): happy-dom tak punya `crypto.subtle` — butuh polyfill saat test PIN ditulis.
