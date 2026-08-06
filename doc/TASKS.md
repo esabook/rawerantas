@@ -23,7 +23,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 2 | RUN | `O2-02` | DONE | P0 | E:S |
 | 3 | RUN | `O2-03` | DONE | P0 | E:M |
 | 4 | FE | `O2-04` | DONE | P1 | E:XS |
-| 5 | RUN | `O2-05` | WAIT | P1 | E:S |
+| 5 | RUN | `O2-05` | DONE | P1 | E:S |
 
 **Kenapa hanya ini.** Fase 2 = offline engine: SW (O2-01) + queue (O2-02)
 independen di atas F0-02; sync loop (O2-03) menunggu queue; offline UI (O2-04)
@@ -202,7 +202,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run build && manual DevTools — AMENDED: toggle DevTools manual diserahkan Q8-02; bukti agent: test event/state + render banner.
       Edge: `navigator.onLine` tidak andal — kombinasi dengan hasil fetch gagal; banner tidak boleh menutup tombol aksi juri; queue badge update realtime via store subscription.
 
-- [ ] `O2-05` · `RUN/WAIT/P1/E:S` · `DEP:O2-03` · `BLOCKS:Q8-04` — High-water reconcile: simpan `received_at`/server time tertinggi per device, re-sync hanya delta; done when test membuktikan re-sync tidak double-insert dan urutan benar.
+- [x] `O2-05` · `RUN/DONE/P1/E:S` · `DEP:O2-03` · `BLOCKS:Q8-04` — High-water reconcile: simpan `received_at`/server time tertinggi per device, re-sync hanya delta; done when test membuktikan re-sync tidak double-insert dan urutan benar.
       FILES: src/lib/offline/reconcile.ts (baru), src/lib/offline/__tests__/reconcile.test.ts (baru)
       VERIFY: bun run test
       Edge: clock klien miring → high-water dari SERVER, bukan local; device ganti → high-water dibaca dari server (query max received_at), bukan localStorage; conflict dengan row yang diedit (hias edit window) → last-write-wins + audit.
