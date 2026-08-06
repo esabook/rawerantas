@@ -61,6 +61,14 @@ async function demoRegistrations(): Promise<Participant[]> {
 	});
 }
 
+/**
+ * Peserta yang terdaftar di perangkat ini (mode demo / offline lokal),
+ * termasuk yang baru didaftarkan via `registerParticipant`.
+ */
+export async function demoLocalParticipants(): Promise<Participant[]> {
+	return demoRegistrations();
+}
+
 async function saveDemoRegistration(participant: Participant): Promise<void> {
 	const db = await getDb();
 	await new Promise<void>((resolve, reject) => {

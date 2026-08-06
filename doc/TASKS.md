@@ -251,7 +251,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run check
       Edge: metode non-aktif tak muncul; bukti WAJIB untuk transfer, opsional cash; upload gagal saat offline → simpan draft bukti (blob/url), tawarkan ulang saat online; jangan biarkan user pilih QRIS saat `qris_image_url` kosong (fallback ke instruksi teks).
 
-- [ ] `U4-04` · `FE/WAIT/P1/E:M` · `DEP:U4-03,C3-03,O2-01` · `BLOCKS:P5-01` — E-tiket `/tiket/[id]`: tampil QR (C3-03), print thermal, tombol "Hubungi Panitia via WA"; done when URL QR benar, print 58mm rapi, link wa.me valid.
+- [x] `U4-04` · `FE/DONE/P1/E:M` · `DEP:U4-03,C3-03,O2-01` · `BLOCKS:P5-01` — E-tiket `/tiket/[id]`: tampil QR (C3-03), print thermal, tombol "Hubungi Panitia via WA"; done when URL QR benar, print 58mm rapi, link wa.me valid.
       FILES: src/routes/tiket/[id]/+page.svelte, src/lib/components/ThermalPrintButton.svelte (baru), src/lib/components/WaShareButton.svelte (baru)
       VERIFY: bun run check && bun run build
       Edge: tiket id tak ditemukan → 404 halaman ramah + CTA daftar; status `disqualified` → tiket menampilkan batal; QR harus regenerable offline (payload dari env, bukan fetch live).

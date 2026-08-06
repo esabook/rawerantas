@@ -103,6 +103,34 @@ export async function getParticipants(
 	return (data ?? []) as Participant[];
 }
 
+/**
+ * Cari peserta per id. Mode demo: gabungan peserta seed + peserta lokal
+ * (idb `demo_registrations`, termasuk yang baru daftar via register).
+ */
+export async function getParticipantById(
+	id: string,
+): Promise<Participant | null> {
+	if (get(demoMode)) {
+		const { demoLocalParticipants } = await import("$lib/db/register");
+		const local = await demoLocalParticipants();
+		return (
+			local.find((p) => p.id === id) ??
+			demoParticipants().find((p) => p.id === id) ??
+			null
+		);
+	}
+	const { supabase } = await getSupabase();
+	const { data, error } = await supabase
+		.from("participants")
+		.select("*")
+		.eq("id", id)
+		.maybeSingle();
+	if (error) {
+		throw new Error(`getParticipantById: ${error.message}`);
+	}
+	return (data ?? null) as Participant | null;
+}
+
 export async function getPayments(
 	participantId?: string,
 ): Promise<ParticipantPayment[]> {
