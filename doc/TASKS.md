@@ -207,7 +207,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test
       Edge: clock klien miring → high-water dari SERVER, bukan local; device ganti → high-water dibaca dari server (query max received_at), bukan localStorage; conflict dengan row yang diedit (hias edit window) → last-write-wins + audit.
 
-## FASE 3: KOMPONEN SHARED
+## FASE 3: KOMPONEN SHARED — IN PROGRESS
 
 - [ ] `C3-01` · `FE/WAIT/P0/E:M` · `DEP:F0-03` · `BLOCKS:J6-01,J6-02,J6-03,A7-01,A7-02,A7-03` — `PinGate.svelte`: baca `PUBLIC_JURI_PIN`/`PUBLIC_ADMIN_PIN` dari env (hash SHA-256 dibandingkan, bukan plaintext), 4-digit pad, simpan sukses di `sessionStorage` (bukan localStorage), lockout 5x salah PIN per sesi (cooldown 30s), slot `children` dirender hanya setelah lolos; done when test: PIN benar → render, salah 5x → lockout, refresh session → tetap terbuka.
       FILES: src/lib/components/PinGate.svelte (baru), src/lib/components/__tests__/PinGate.test.ts (baru)

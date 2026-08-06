@@ -87,3 +87,4 @@ Format entri:
 - Verifikasi toggle DevTools manual → Q8-02 (VERIFY di-amend).
 - Task `O2-05` `DONE` — commit `297185e` — `offline/reconcile.ts`: store idb `high_water` keyPath endpoint; `setHighWater` MONOTONIK (nilai lebih rendah ditolak — clock-skew aman), `getHighWater`, `deltaSince(rows, hw)` = row dgn receivedAt > hw (null → semua). Test 7 baru (62 total): null awal, monotonic (500→300→900), per-endpoint, delta filter + urutan, no-double-insert lifecycle, clock-skew acak.
 - FASE 2 SELESAI: O2-01..O2-05 DONE (5/5). Suite penuh: test 62/62 · check 0 · biome 0 · build 3 pass.
+- SWITCH FASE 2 → 3. Fase 2 tuntas: O2-01..O2-05 DONE (5/5). Gate: test 62/62 · check 0 · biome 0 · build 3 pass. START.md di-set fase 3; tarik: C3-01 (P0, PinGate), C3-05 (P0, countdown), C3-02 (P0, toast).
