@@ -12,30 +12,27 @@ crash-safe). Kode rujukan protokol: skill `orkes12`.
 
 ---
 
-## READY NOW — FASE 1: DATA & SKEMA
+## READY NOW — FASE 2: OFFLINE ENGINE
 
 Pintu masuk: [`START.md`](./START.md). Board ini = **`READY` dari fase aktif**,
 urut sesuai aturan pull (prio → effort → ID).
 
 | # | Lane | ID | Status | Prio | Effort |
 |---|---|---|---|---|---|
-| 1 | DATA | `D1-01` | DONE | P0 | E:M |
-| 2 | DATA | `D1-02` | DONE | P0 | E:S |
-| 3 | SEC | `D1-03` | BLOCKED | P1 | E:S |
-| 4 | DATA | `D1-04` | DONE | P1 | E:M |
-| 5 | FE | `D1-05` | DONE | P2 | E:XS |
-| 6 | DATA | `D1-06` | DONE | P1 | E:S |
+| 1 | RUN | `O2-01` | READY | P0 | E:M |
+| 2 | RUN | `O2-02` | DONE | P0 | E:S |
+| 3 | RUN | `O2-03` | WAIT | P0 | E:M |
+| 4 | FE | `O2-04` | WAIT | P1 | E:XS |
+| 5 | RUN | `O2-05` | WAIT | P1 | E:S |
 
-**Kenapa hanya ini.** Skema Drizzle (D1-01) = fondasi semua data: Supabase
-client (D1-02), RLS (D1-03), demo/seed (D1-04), dan scoring engine (D1-06)
-bergantung padanya. D1-05 (image compressor) independen — sudah `READY`
-menurut `DEP` (F0-02 `DONE`).
+**Kenapa hanya ini.** Fase 2 = offline engine: SW (O2-01) + queue (O2-02)
+independen di atas F0-02; sync loop (O2-03) menunggu queue; offline UI (O2-04)
+menunggu queue; high-water reconcile (O2-05) menunggu sync.
 
 ### Fase berikutnya — JANGAN ditarik
 
 Sudah `READY` menurut `DEP`, tapi fase-nya belum aktif:
 
-- Fase 2 (`O2`): `O2-01`, `O2-02` — offline engine
 - Fase 3 (`C3`): `C3-01`, `C3-03`, `C3-05` — komponen shared siap menurut `DEP`
   (`F0-03` `DONE`)
 

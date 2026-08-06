@@ -1,36 +1,36 @@
 # MULAI DI SINI — Tool Lomba Agustusan
 
-**FASE SEKARANG: 1 — Data & Skema**
+**FASE SEKARANG: 2 — Offline Engine**
 
 ## Tarik sekarang
 
 | ID | Lane/Prio/Effort | Aksi |
 |---|---|---|
-| `D1-01` | DATA/P0/E:M | Skema Drizzle 9 tabel (ARCHITECTURE §4) + migrasi |
-| `D1-05` | FE/P2/E:XS | Image compressor (canvas, ≤200KB) |
+| `O2-01` | RUN/P0/E:M | Service worker native: cache statis + navigate fallback |
+| `O2-04` | FE/P1/E:XS | Offline UI: banner + badge antrean (setelah `O2-02`) |
 
-`D1-01` menunggu `F0-02`+`F0-03` (sudah `DONE`). Detail (`FILES:`, `VERIFY:`,
-`Edge:`) ada di [`TASKS.md`](./TASKS.md).
+`O2-01` dan `O2-02` (sudah `DONE`) menunggu `F0-02` (sudah `DONE`). Detail
+(`FILES:`, `VERIFY:`, `Edge:`) ada di [`TASKS.md`](./TASKS.md).
 
 ## Kenapa fase ini dulu
 
-Fase 0 (fondasi: repo, deps, env, tokens, layout, test, lint) sudah `DONE`.
-Semua fase berikut — offline engine (O2), komponen (C3), alur user (U4),
-panitia (P5), juri (J6), admin (A7) — membaca/menulis data lewat skema Drizzle
-dan Supabase. Tanpa skema + client + engine skor, tidak ada yang bisa dibangun
-di atasnya.
+Fase 1 (data & skema: Drizzle, Supabase client, demo, engine skor) sudah
+selesai — 5/6 `DONE`, `D1-03` (apply RLS) `BLOCKED` menunggu manusia
+(konsol/service role). Semua alur user (U4), juri (J6), admin (A7) butuh
+bertahan di jaringan jelek lapangan: SW + queue + sync + reconcile inilah yang
+menjamin data tidak hilang dan skor tidak ganda.
 
-## Syarat naik ke fase 2
+## Syarat naik ke fase 3
 
-`D1-01` … `D1-06` semuanya `DONE`.
+`O2-01` … `O2-05` semuanya `DONE`.
 
 ## Peta fase
 
 | Fase | Isi | Selesai bila |
 |---|---|---|
 | 0 | `F0-*` — fondasi (repo, deps, env, tokens, layout, test, lint) | `F0-07` `DONE` |
-| **1** | `D1-*` — data & skema (9 tabel, RLS, demo, engine skor) | `D1-06` `DONE` |
-| 2 | `O2-*` — offline engine (SW, queue, sync, high-water) | `O2-05` `DONE` |
+| 1 | `D1-*` — data & skema (9 tabel, RLS, demo, engine skor) | `D1-06` `DONE` |
+| **2** | `O2-*` — offline engine (SW, queue, sync, high-water) | `O2-05` `DONE` |
 | 3 | `C3-*` — komponen shared (PIN, toast, QR, TTS, countdown) | `C3-05` `DONE` |
 | 4 | `U4-*` — alur user (landing, daftar, bayar, tiket, leaderboard) | `U4-05` `DONE` |
 | 5 | `P5-*` — panitia (scanner, check-in flow) | `P5-02` `DONE` |
