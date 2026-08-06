@@ -21,7 +21,7 @@ urut sesuai aturan pull (prio → effort → ID).
 |---|---|---|---|---|---|
 | 1 | DATA | `D1-01` | DONE | P0 | E:M |
 | 2 | DATA | `D1-02` | DONE | P0 | E:S |
-| 3 | SEC | `D1-03` | READY | P1 | E:S |
+| 3 | SEC | `D1-03` | BLOCKED | P1 | E:S |
 | 4 | DATA | `D1-04` | DONE | P1 | E:M |
 | 5 | FE | `D1-05` | DONE | P2 | E:XS |
 | 6 | DATA | `D1-06` | DONE | P1 | E:S |
@@ -162,7 +162,8 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run test
       Edge: URL/key kosong saat build → konstruksi client gagal; harus error eksplisit (bukan console.error lalu lanjut); jangan simpan instance di module-level tanpa penanganan HMR SvelteKit (re-export dari `$lib`).
 
-- [ ] `D1-03` · `SEC/WAIT/P1/E:S` · `DEP:D1-01` · `BLOCKS:A7-01` — RLS SQL: tulis file SQL policies (SELECT publik utk tabel publik; INSERT publik utk registrasi+skor; UPDATE terbatas; `verified_by`/`recorded_by` = hash PIN) + skrip apply via service role; done when SQL tereksekusi (oleh manusia/konsol) dan policies tercatat di evidence; agen hanya siapkan SQL + panduan, BUKAN menyentuh service role key.
+- [ ] `D1-03` · `SEC/BLOCKED/P1/E:S` · `DEP:D1-01` · `BLOCKS:A7-01` — RLS SQL: tulis file SQL policies (SELECT publik utk tabel publik; INSERT publik utk registrasi+skor; UPDATE terbatas; `verified_by`/`recorded_by` = hash PIN) + skrip apply via service role; done when SQL tereksekusi (oleh manusia/konsol) dan policies tercatat di evidence; agen hanya siapkan SQL + panduan, BUKAN menyentuh service role key.
+  - ARTEFAK DONE (`0c03d83`): `supabase/rls.sql` (15 policies, 8 tabel RLS on) + `supabase/README.md` (panduan apply, bucket `proof-images`, checklist). EKSEKUSI menunggu manusia (konsol/service role) → antrean manusia. Status tetap BLOCKED sampai policies ter-apply + tercatat.
       FILES: supabase/rls.sql (baru), supabase/README.md (baru)
       VERIFY: artefak — rls.sql ada + panduan apply + checklist policies
       Edge: RLS apply butuh service role / konsol = **human queue** → kalau belum, task `BLOCKED`+JOURNAL, lanjut; jangan pakai `GRANT ALL`; proof images pakai Storage bucket policy (public-read, upload lewat client).
