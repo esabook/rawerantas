@@ -20,11 +20,11 @@ urut sesuai aturan pull (prio → effort → ID).
 | # | Lane | ID | Status | Prio | Effort |
 |---|---|---|---|---|---|
 | 1 | DATA | `D1-01` | DONE | P0 | E:M |
-| 2 | DATA | `D1-02` | WAIT | P0 | E:S |
-| 3 | SEC | `D1-03` | WAIT | P1 | E:S |
+| 2 | DATA | `D1-02` | DONE | P0 | E:S |
+| 3 | SEC | `D1-03` | READY | P1 | E:S |
 | 4 | DATA | `D1-04` | WAIT | P1 | E:M |
 | 5 | FE | `D1-05` | READY | P2 | E:XS |
-| 6 | DATA | `D1-06` | WAIT | P1 | E:S |
+| 6 | DATA | `D1-06` | READY | P1 | E:S |
 
 **Kenapa hanya ini.** Skema Drizzle (D1-01) = fondasi semua data: Supabase
 client (D1-02), RLS (D1-03), demo/seed (D1-04), dan scoring engine (D1-06)
@@ -157,7 +157,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       Edge: `running_total` harus `integer` + default 0 (bukan nullable) agar SUM offline aman; `scoring_mode` pakai `text` + app-level enum (jangan PG enum — migrasi kaku); FK cascade perilaku pendaftaran hapus → jangan `onDelete: cascade` ke payments tanpa keputusan; `received_at` default `now()` di DB, bukan klien.
       AMENDED: VERIFY `push --dry-run` dihapus di drizzle-kit 0.31 (sisa `--verbose`/`--force` yang butuh koneksi) + `DATABASE_URL` belum ada → push ke DB dijalankan saat koneksi tersedia (lihat antrean manusia). Pengganti bukti: `drizzle-kit generate` idempotent (2x = "no changes") + review SQL migrasi manual (8 tabel, 4 unique index idempotency, 3 check 0–100, generated column `total_weighted`, FK `ON DELETE restrict` payments). 8 tabel nyata — entri §4.9 adalah slot opsional fase 8 (kosong).
 
-- [ ] `D1-02` · `DATA/WAIT/P0/E:S` · `DEP:D1-01,F0-03` · `BLOCKS:D1-04` — Supabase client singleton: baca `PUBLIC_SUPABASE_URL`/`ANON_KEY` dari `$env/static/public`; export typed client + helper query (getCompetitions, getLeaderboard, dll.) yang bakal dipakai semua route; done when client terbentuk tanpa error, helper mengembalikan type yang cocok skema Drizzle.
+- [x] `D1-02` · `DATA/DONE/P0/E:S` · `DEP:D1-01,F0-03` · `BLOCKS:D1-04` — Supabase client singleton: baca `PUBLIC_SUPABASE_URL`/`ANON_KEY` dari `$env/static/public`; export typed client + helper query (getCompetitions, getLeaderboard, dll.) yang bakal dipakai semua route; done when client terbentuk tanpa error, helper mengembalikan type yang cocok skema Drizzle.
       FILES: src/lib/db/supabaseClient.ts (baru), src/lib/db/queries.ts (baru)
       VERIFY: bun run check && bun run test
       Edge: URL/key kosong saat build → konstruksi client gagal; harus error eksplisit (bukan console.error lalu lanjut); jangan simpan instance di module-level tanpa penanganan HMR SvelteKit (re-export dari `$lib`).
