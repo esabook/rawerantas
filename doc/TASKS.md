@@ -236,7 +236,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 4: ALUR USER
 
-- [ ] `U4-01` · `FE/WAIT/P0/E:M` · `DEP:F0-05,C3-05,D1-04` · `BLOCKS:U4-02` — Landing `/`: hero + countdown + card daftar lomba (dari `competitions`) + ringkasan skor (dari leaderboard engine); done when render data live ATAU demo, akses ke `/daftar` dan `/leaderboard` benar.
+- [x] `U4-01` · `FE/DONE/P0/E:M` · `DEP:F0-05,C3-05,D1-04` · `BLOCKS:U4-02` — Landing `/`: hero + countdown + card daftar lomba (dari `competitions`) + ringkasan skor (dari leaderboard engine); done when render data live ATAU demo, akses ke `/daftar` dan `/leaderboard` benar.
       FILES: src/routes/+page.svelte, src/lib/components/HeroSection.svelte (baru), src/lib/components/CompetitionList.svelte (baru)
       VERIFY: bun run check && bun run build
       Edge: lomba non-aktif (`is_active=false`) → card disabled + alasan; loading state jangan spinner kosong (skeleton); `PUBLIC_APP_NAME`/`YEAR` dipakai di hero.
