@@ -263,12 +263,12 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 5: PANITIA
 
-- [ ] `P5-01` · `FE/WAIT/P1/E:M` · `DEP:U4-04,C3-03` · `BLOCKS:P5-02` — Scanner check-in `/panitia/checkin`: lazy-load `html5-qrcode` (cuma route ini), parse `?id=`, **manual entry fallback** (ketik no. tiket, input nomor kamera perm denied), state scan (scanning/sukses/error); done when scan sukses → panggil status flow (P5-02), manual entry bekerja tanpa kamera.
+- [x] `P5-01` · `FE/DONE/P1/E:M` · `DEP:U4-04,C3-03` · `BLOCKS:P5-02` — Scanner check-in `/panitia/checkin`: lazy-load `html5-qrcode` (cuma route ini), parse `?id=`, **manual entry fallback** (ketik no. tiket, input nomor kamera perm denied), state scan (scanning/sukses/error); done when scan sukses → panggil status flow (P5-02), manual entry bekerja tanpa kamera.
       FILES: src/routes/panitia/checkin/+page.svelte, src/lib/components/QrScanner.svelte (baru)
       VERIFY: bun run check && bun run build && manual (kamera)
       Edge: permission kamera denied → fallback manual + pesan jelas; cahaya buruk → pesan panduan; bundle scanner TIDAK masuk route lain (lazy import, verifikasi bundle split).
 
-- [ ] `P5-02` · `FE/WAIT/P1/E:S` · `DEP:P5-01` · `BLOCKS:—` — Detail + status flow: `ParticipantDetailCard` (nama, lomba, status, sisa bayar), transisi `registered/dp_paid/fully_paid → checked_in`, **syarat masuk: minimal `dp_paid`** (keputusan), re-scan idempotent (sudah `checked_in` → info, bukan error), `disqualified` → blokir; done when test: tiap transisi status valid/invalid teruji.
+- [x] `P5-02` · `FE/DONE/P1/E:S` · `DEP:P5-01` · `BLOCKS:—` — Detail + status flow: `ParticipantDetailCard` (nama, lomba, status, sisa bayar), transisi `registered/dp_paid/fully_paid → checked_in`, **syarat masuk: minimal `dp_paid`** (keputusan), re-scan idempotent (sudah `checked_in` → info, bukan error), `disqualified` → blokir; done when test: tiap transisi status valid/invalid teruji.
       FILES: src/lib/components/ParticipantDetailCard.svelte (baru), src/lib/components/__tests__/ParticipantDetailCard.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: sisa bayar >0 → tampil + tagih onsite hanya bila `quota - terdaftar > 0`; status invalid → tolak dengan alasan + audit entry; offline → antrean status update.
