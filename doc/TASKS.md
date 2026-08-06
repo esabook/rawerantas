@@ -24,7 +24,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 3 | SEC | `D1-03` | READY | P1 | E:S |
 | 4 | DATA | `D1-04` | WAIT | P1 | E:M |
 | 5 | FE | `D1-05` | READY | P2 | E:XS |
-| 6 | DATA | `D1-06` | READY | P1 | E:S |
+| 6 | DATA | `D1-06` | DONE | P1 | E:S |
 
 **Kenapa hanya ini.** Skema Drizzle (D1-01) = fondasi semua data: Supabase
 client (D1-02), RLS (D1-03), demo/seed (D1-04), dan scoring engine (D1-06)
@@ -177,7 +177,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test
       Edge: webp tidak didukung Safari lama → fallback jpeg; HEIC dari iPhone gagal decode → pesan error jelas; file >20MB tolak di UI sebelum canvas.
 
-- [ ] `D1-06` · `DATA/WAIT/P1/E:S` · `DEP:D1-01` · `BLOCKS:U4-05,J6-01,J6-03` — Scoring rules engine: fungsi murni per mode (`terberat`/`kumulatif`/`jackpot_pita`/`hias`) utk peringkat + tie-break `received_at ASC`; hias `total_weighted = a*0.4 + s*0.4 + k*0.2`; done when engine punya test untuk tiap mode + tie-break clock-skew (input received_at tidak berurutan).
+- [x] `D1-06` · `DATA/DONE/P1/E:S` · `DEP:D1-01` · `BLOCKS:U4-05,J6-01,J6-03` — Scoring rules engine: fungsi murni per mode (`terberat`/`kumulatif`/`jackpot_pita`/`hias`) utk peringkat + tie-break `received_at ASC`; hias `total_weighted = a*0.4 + s*0.4 + k*0.2`; done when engine punya test untuk tiap mode + tie-break clock-skew (input received_at tidak berurutan).
       FILES: src/lib/scoring/engine.ts (baru), src/lib/scoring/__tests__/engine.test.ts (baru)
       VERIFY: bun run test
       Edge: jackpot = kategori terpisah, jangan tercampur ranking biasa; mode kumulatif pakai `running_total` (bukan sum on-the-fly); tie `received_at` sama → tambah tie-break `id` asc (deterministik).
