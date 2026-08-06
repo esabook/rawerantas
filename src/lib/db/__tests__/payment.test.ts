@@ -71,7 +71,7 @@ describe("submitPayment (demo)", () => {
 		);
 
 		const db = await new Promise<IDBDatabase>((resolve, reject) => {
-			const req = indexedDB.open("rawerantas", 4);
+			const req = indexedDB.open("rawerantas", 5);
 			req.onsuccess = () => resolve(req.result);
 			req.onerror = () => reject(req.error);
 		});
@@ -127,7 +127,7 @@ describe("submitPayment (demo)", () => {
 		expect(res).toEqual({ paymentId: null, queued: false });
 
 		const db = await new Promise<IDBDatabase>((resolve, reject) => {
-			const req = indexedDB.open("rawerantas", 4);
+			const req = indexedDB.open("rawerantas", 5);
 			req.onsuccess = () => resolve(req.result);
 			req.onerror = () => reject(req.error);
 		});

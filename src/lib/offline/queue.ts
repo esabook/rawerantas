@@ -106,6 +106,23 @@ export async function markFailed(idempotencyKey: string): Promise<QueueStatus> {
 	return status;
 }
 
+/**
+ * Hapus item queue bila masih `pending` (undo sebelum tersinkron).
+ * Mengembalikan false bila item tak ada / sudah bukan pending.
+ */
+export async function removePending(idempotencyKey: string): Promise<boolean> {
+	const db = await getDb();
+	const tx = db.transaction(STORE, "readwrite");
+	const entry = await tx.store.get(idempotencyKey);
+	if (entry && entry.status === "pending") {
+		await tx.store.delete(idempotencyKey);
+		await tx.done;
+		return true;
+	}
+	await tx.done;
+	return false;
+}
+
 export async function countByStatus(status: QueueStatus): Promise<number> {
 	const db = await getDb();
 	return db.countFromIndex(

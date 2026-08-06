@@ -275,7 +275,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 6: JURI
 
-- [ ] `J6-01` · `FE/WAIT/P0/E:M` · `DEP:C3-01,C3-02,O2-03,D1-06` · `BLOCKS:U4-05,A7-01` — Panel mancing `/juri/mancing`: PinGate, numpad raksasa, pilih lapak (1–100), toggle jackpot pita, mode dari `scoring_mode`, submit via queue (UI hijau/kuning), undo 5s utk jackpot keliru; done when test: timbangan ≤0 ditolak, jackpot dup → konfirmasi, submit ganda → 1 row, UI state benar saat offline.
+- [x] `J6-01` · `FE/DONE/P0/E:M` · `DEP:C3-01,C3-02,O2-03,D1-06` · `BLOCKS:U4-05,A7-01` — Panel mancing `/juri/mancing`: PinGate, numpad raksasa, pilih lapak (1–100), toggle jackpot pita, mode dari `scoring_mode`, submit via queue (UI hijau/kuning), undo 5s utk jackpot keliru; done when test: timbangan ≤0 ditolak, jackpot dup → konfirmasi, submit ganda → 1 row, UI state benar saat offline.
       FILES: src/routes/juri/mancing/+page.svelte, src/lib/components/WeightInputPad.svelte (baru), src/lib/components/__tests__/WeightInputPad.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: input non-numeric ditolak; lapak kosong (belum terdaftar) → warning; jackpot kedua utk lapak sama → konfirmasi "timpa/abaikan"; timbangan >50kg (curiga salah ketik) → konfirmasi; numpad padding tetap ≤24px container (ARCHITECTURE §3).

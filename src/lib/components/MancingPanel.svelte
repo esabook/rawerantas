@@ -1,0 +1,224 @@
+<script lang="ts">
+	import { CheckCircle2, Fish, Loader2, TriangleAlert } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import {
+		hasJackpot,
+		InvalidWeightError,
+		removeScore,
+		submitMancingScore,
+		validateWeight,
+	} from "$lib/db/scores";
+	import { getParticipants } from "$lib/db/queries";
+	import type { Participant } from "$lib/db/queries";
+	import { online } from "$lib/offline/networkStore";
+	import { undoable } from "$lib/components/toast/toastStore";
+
+	let {
+		competitionId,
+		competitionName,
+		recordedBy,
+	}: {
+		competitionId: string;
+		competitionName: string;
+		recordedBy: string;
+	} = $props();
+
+	let participants = $state<Participant[]>([]);
+	let lapak = $state<number | null>(null);
+	let digits = $state("");
+	let jackpot = $state(false);
+	let jackpotConfirm = $state(false);
+	let submitting = $state(false);
+	let error = $state("");
+
+	const selected = $derived(
+		lapak === null
+			? undefined
+			: participants.find((p) => p.lapakNumber === String(lapak)),
+	);
+	const weightGram = $derived(digits === "" ? 0 : Number(digits));
+	const weightValid = $derived(weightGram > 0);
+	const canSubmit = $derived(weightValid && lapak !== null && !submitting);
+
+	const displayKg = $derived(
+		weightGram > 0 ? (weightGram / 1000).toLocaleString("id-ID") : "0",
+	);
+
+	onMount(() => {
+		void getParticipants(competitionId).then((rows) => {
+			participants = rows;
+		});
+	});
+
+	const press = (digit: string) => {
+		error = "";
+		if (digit === "⌫") {
+			digits = digits.slice(0, -1);
+			return;
+		}
+		if (digits.length >= 6) {
+			return;
+		}
+		digits = digits === "0" ? digit : digits + digit;
+	};
+
+	const confirmJackpot = async (): Promise<boolean> => {
+		if (!jackpot || lapak === null) {
+			return true;
+		}
+		const selectedP = selected;
+		if (!selectedP) {
+			return true;
+		}
+		if (await hasJackpot(competitionId, selectedP.id)) {
+			jackpotConfirm = true;
+			return false;
+		}
+		return true;
+	};
+
+	const submit = async () => {
+		if (!canSubmit) {
+			return;
+		}
+		if (!jackpotConfirm && !(await confirmJackpot())) {
+			return;
+		}
+		const selectedP = selected;
+		if (!selectedP) {
+			error = "Peserta lapak belum termuat. Coba lagi.";
+			return;
+		}
+		submitting = true;
+		error = "";
+		try {
+			const weight = validateWeight(weightGram);
+			const result = await submitMancingScore({
+				competitionId,
+				participantId: selectedP.id,
+				fishWeightGram: weight,
+				isJackpot: jackpot,
+				recordedBy,
+			});
+			const label = `Lapak ${lapak} — ${(weight / 1000).toLocaleString("id-ID")} kg${jackpot ? " 🎗️" : ""}`;
+			undoable(result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`, {
+				onUndo: () => {
+					void removeScore(result.id, result.queued).then(() => {
+						undoable("Skor dibatalkan", {
+							onConfirm: () => {},
+							timeoutMs: 2000,
+						});
+					});
+				},
+				onConfirm: () => {},
+			});
+			digits = "";
+			jackpot = false;
+			jackpotConfirm = false;
+		} catch (e) {
+			error =
+				e instanceof InvalidWeightError || e instanceof Error
+					? e.message
+					: "Gagal menyimpan skor.";
+		} finally {
+			submitting = false;
+		}
+	};
+</script>
+
+<div class="mx-auto flex w-full max-w-md flex-col gap-4 rounded-xl border border-border bg-background/60 p-6">
+	<div class="flex items-center justify-between">
+		<div class="flex items-center gap-2">
+			<Fish class="h-5 w-5 text-gold" aria-hidden="true" />
+			<h1 class="font-bold">{competitionName}</h1>
+		</div>
+		{#if !$online}
+			<span class="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600">
+				Offline — antrean
+			</span>
+		{/if}
+	</div>
+
+	<label class="flex flex-col gap-1 text-sm">
+		<span class="font-medium">Lapak peserta</span>
+		<select
+			class="input"
+			bind:value={lapak}
+			onchange={(e) => {
+				lapak = e.currentTarget.value ? Number(e.currentTarget.value) : null;
+				error = "";
+				jackpotConfirm = false;
+			}}
+		>
+			<option value="" disabled>Pilih lapak (1–100)…</option>
+			{#each Array.from({ length: 100 }, (_, i) => i + 1) as n}
+				{@const p = participants.find((x) => x.lapakNumber === String(n))}
+				<option value={n} disabled={p?.status === "disqualified"}>
+					{n} — {p?.name ?? "belum terdaftar"}
+				</option>
+			{/each}
+		</select>
+		{#if selected?.name}
+			<span class="text-xs text-muted-foreground">{selected.name}</span>
+		{/if}
+	</label>
+
+	<div class="flex flex-col gap-1 text-sm">
+		<span class="font-medium">Timbangan</span>
+		<div
+			class="rounded-lg border border-border bg-background px-4 py-3 text-right font-mono text-2xl font-bold tabular-nums"
+			role="status"
+			aria-label="Timbangan"
+		>
+			{displayKg} kg
+		</div>
+		<div class="grid grid-cols-3 gap-2">
+			{#each ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "00", "⌫"] as key}
+				<button
+					type="button"
+					class="btn h-14 text-lg"
+					onclick={() => press(key)}
+					aria-label={key === "⌫" ? "Hapus digit" : `Digit ${key}`}
+				>
+					{key}
+				</button>
+			{/each}
+		</div>
+	</div>
+
+	<label class="flex cursor-pointer items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
+		<span class="font-medium">Jackpot Pita</span>
+		<input
+			type="checkbox"
+			bind:checked={jackpot}
+			class="h-5 w-5 accent-gold"
+			onchange={() => (jackpotConfirm = false)}
+		/>
+	</label>
+
+	{#if jackpotConfirm && lapak !== null}
+		<div class="rounded-lg bg-destructive/10 p-3 text-xs text-destructive" role="alert">
+			<TriangleAlert class="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+			Lapak ini sudah tercatat jackpot pita. Simpan tetap?
+		</div>
+	{/if}
+
+	{#if error}
+		<p class="text-sm text-destructive" role="alert">{error}</p>
+	{/if}
+
+	<button
+		type="button"
+		class="btn btn-gold h-14 text-lg"
+		onclick={() => void submit()}
+		disabled={!canSubmit}
+	>
+		{#if submitting}
+			<Loader2 class="h-5 w-5 animate-spin" aria-hidden="true" />
+			Menyimpan…
+		{:else}
+			<CheckCircle2 class="h-5 w-5" aria-hidden="true" />
+			Simpan Skor
+		{/if}
+	</button>
+</div>
