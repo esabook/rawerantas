@@ -219,7 +219,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test
       Edge: tombol undo dua kali cepat → sekali jalan; timer + unmount komponen → clear interval (leak); undo saat aksi sudah sync = opsional tombstone (dipanggil via O2-03 callback).
 
-- [ ] `C3-03` · `FE/WAIT/P1/E:M` · `DEP:F0-02` · `BLOCKS:U4-04,P5-01` — QR + print + WA helper: generate QR dari `PUBLIC_BASE_URL/panitia/checkin?id={id}`, print CSS thermal (58/80mm), helper `wa.me` text share; done when unit test QR payload benar, print layout render dua ukuran.
+- [x] `C3-03` · `FE/DONE/P1/E:M` · `DEP:F0-02` · `BLOCKS:U4-04,P5-01` — QR + print + WA helper: generate QR dari `PUBLIC_BASE_URL/panitia/checkin?id={id}`, print CSS thermal (58/80mm), helper `wa.me` text share; done when unit test QR payload benar, print layout render dua ukuran.
       FILES: src/lib/components/QRCode.svelte (baru), src/lib/utils/thermal.ts (baru), src/lib/utils/whatsapp.ts (baru), src/lib/utils/__tests__/thermal.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: `PUBLIC_BASE_URL` kosong → komponen QR menampilkan placeholder + warning (jangan generate QR sampah); QR perlu quiet zone — padding bawaan library diperiksa; print 58mm vs 80mm — pilih lebar dari config/query, jangan hardcode.
