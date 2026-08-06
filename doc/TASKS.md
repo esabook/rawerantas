@@ -23,7 +23,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 2 | DATA | `D1-02` | DONE | P0 | E:S |
 | 3 | SEC | `D1-03` | READY | P1 | E:S |
 | 4 | DATA | `D1-04` | DONE | P1 | E:M |
-| 5 | FE | `D1-05` | READY | P2 | E:XS |
+| 5 | FE | `D1-05` | DONE | P2 | E:XS |
 | 6 | DATA | `D1-06` | DONE | P1 | E:S |
 
 **Kenapa hanya ini.** Skema Drizzle (D1-01) = fondasi semua data: Supabase
@@ -172,7 +172,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run build && manual: network tab bersih saat demo ON
       Edge: mode demo harus tidak bisa menulis ke Supabase (jangan pakai client yang sama utk tulis); toggle saat ada channel live → teardown dulu, jangan leak subscription; data demo deterministik (seed tetap) agar test stabil.
 
-- [ ] `D1-05` · `FE/WAIT/P2/E:XS` · `DEP:F0-02` · `BLOCKS:U4-03` — Image compressor (canvas): kompres bukti transfer ≤200KB (jpeg/webp, max dimensi), EXIF rotate; done when gambar 5MB jadi ≤200KB tanpa artefak parah, utilitas punya test.
+- [x] `D1-05` · `FE/DONE/P2/E:XS` · `DEP:F0-02` · `BLOCKS:U4-03` — Image compressor (canvas): kompres bukti transfer ≤200KB (jpeg/webp, max dimensi), EXIF rotate; done when gambar 5MB jadi ≤200KB tanpa artefak parah, utilitas punya test.
       FILES: src/lib/utils/imageCompressor.ts (baru), src/lib/utils/__tests__/imageCompressor.test.ts (baru)
       VERIFY: bun run test
       Edge: webp tidak didukung Safari lama → fallback jpeg; HEIC dari iPhone gagal decode → pesan error jelas; file >20MB tolak di UI sebelum canvas.
