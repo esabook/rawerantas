@@ -22,7 +22,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 1 | DATA | `D1-01` | DONE | P0 | E:M |
 | 2 | DATA | `D1-02` | DONE | P0 | E:S |
 | 3 | SEC | `D1-03` | READY | P1 | E:S |
-| 4 | DATA | `D1-04` | WAIT | P1 | E:M |
+| 4 | DATA | `D1-04` | DONE | P1 | E:M |
 | 5 | FE | `D1-05` | READY | P2 | E:XS |
 | 6 | DATA | `D1-06` | DONE | P1 | E:S |
 
@@ -167,7 +167,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: artefak — rls.sql ada + panduan apply + checklist policies
       Edge: RLS apply butuh service role / konsol = **human queue** → kalau belum, task `BLOCKED`+JOURNAL, lanjut; jangan pakai `GRANT ALL`; proof images pakai Storage bucket policy (public-read, upload lewat client).
 
-- [ ] `D1-04` · `DATA/WAIT/P1/E:M` · `DEP:D1-01,D1-02` · `BLOCKS:U4-05` — Demo mode + seed: `demoStore.ts` (flag `PUBLIC_ENABLE_DEMO_MODE`), generator mock (50 peserta, skor, pembayaran), query layer yang intercept ke data lokal saat demo ON; **realtime teardown**: saat toggle demo ON, semua subscription Supabase channel di-teardown; done when demo ON menampilkan data penuh tanpa satu pun panggilan ke Supabase terlihat (network tab), toggle OFF mengembalikan live.
+- [x] `D1-04` · `DATA/DONE/P1/E:M` · `DEP:D1-01,D1-02` · `BLOCKS:U4-05` — Demo mode + seed: `demoStore.ts` (flag `PUBLIC_ENABLE_DEMO_MODE`), generator mock (50 peserta, skor, pembayaran), query layer yang intercept ke data lokal saat demo ON; **realtime teardown**: saat toggle demo ON, semua subscription Supabase channel di-teardown; done when demo ON menampilkan data penuh tanpa satu pun panggilan ke Supabase terlihat (network tab), toggle OFF mengembalikan live.
       FILES: src/lib/demo/demoStore.ts (baru), src/lib/demo/mockData.ts (baru), src/lib/db/queries.ts
       VERIFY: bun run test && bun run build && manual: network tab bersih saat demo ON
       Edge: mode demo harus tidak bisa menulis ke Supabase (jangan pakai client yang sama utk tulis); toggle saat ada channel live → teardown dulu, jangan leak subscription; data demo deterministik (seed tetap) agar test stabil.

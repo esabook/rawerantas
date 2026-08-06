@@ -1,4 +1,14 @@
 import type { InferSelectModel } from "drizzle-orm";
+import { get } from "svelte/store";
+import {
+	demoCompetitions,
+	demoHiasScores,
+	demoLayanganScores,
+	demoMancingScores,
+	demoParticipants,
+	demoPayments,
+} from "$lib/demo/generator";
+import { demoMode } from "$lib/demo/store";
 import type {
 	competitions,
 	participantPayments,
@@ -18,9 +28,17 @@ export type ScoreMancing = InferSelectModel<typeof scoresMancing>;
 export type ScoreLayangan = InferSelectModel<typeof scoresLayangan>;
 export type ScoreLayanganHias = InferSelectModel<typeof scoresLayanganHias>;
 
+export type LeaderboardRow = Record<string, unknown> & {
+	participants?: { name: string; lapak_number: string | null } | null;
+};
+
 export async function getCompetitions(
 	activeOnly = true,
 ): Promise<Competition[]> {
+	if (get(demoMode)) {
+		const all = demoCompetitions();
+		return activeOnly ? all.filter((c) => c.isActive) : all;
+	}
 	let query = supabase
 		.from("competitions")
 		.select("*")
@@ -38,6 +56,9 @@ export async function getCompetitions(
 export async function getPaymentConfigs(
 	activeOnly = true,
 ): Promise<PaymentConfig[]> {
+	if (get(demoMode)) {
+		return [];
+	}
 	let query = supabase
 		.from("payment_configs")
 		.select("*")
@@ -55,6 +76,12 @@ export async function getPaymentConfigs(
 export async function getParticipants(
 	competitionId?: string,
 ): Promise<Participant[]> {
+	if (get(demoMode)) {
+		const all = demoParticipants();
+		return competitionId
+			? all.filter((p) => p.competitionId === competitionId)
+			: all;
+	}
 	let query = supabase
 		.from("participants")
 		.select("*")
@@ -69,10 +96,58 @@ export async function getParticipants(
 	return (data ?? []) as Participant[];
 }
 
+export async function getPayments(
+	participantId?: string,
+): Promise<ParticipantPayment[]> {
+	if (get(demoMode)) {
+		const all = demoPayments();
+		return participantId
+			? all.filter((p) => p.participantId === participantId)
+			: all;
+	}
+	let query = supabase
+		.from("participant_payments")
+		.select("*")
+		.order("created_at", { ascending: true });
+	if (participantId) {
+		query = query.eq("participant_id", participantId);
+	}
+	const { data, error } = await query;
+	if (error) {
+		throw new Error(`getPayments: ${error.message}`);
+	}
+	return (data ?? []) as ParticipantPayment[];
+}
+
 export async function getLeaderboard(
 	competitionId: string,
 	table: "scores_mancing" | "scores_layangan" | "scores_layangan_hias",
-): Promise<Record<string, unknown>[]> {
+): Promise<LeaderboardRow[]> {
+	if (get(demoMode)) {
+		const participantsMap = new Map(demoParticipants().map((p) => [p.id, p]));
+		const rows: Array<{
+			id: string;
+			receivedAt: Date | string;
+			competitionId: string;
+			participantId: string;
+		}> =
+			table === "scores_mancing"
+				? demoMancingScores()
+				: table === "scores_layangan"
+					? demoLayanganScores()
+					: demoHiasScores();
+		return rows
+			.filter((r) => r.competitionId === competitionId)
+			.map((r) => {
+				const participant = participantsMap.get(r.participantId);
+				return {
+					...r,
+					participants: participant
+						? { name: participant.name, lapak_number: participant.lapakNumber }
+						: null,
+				};
+			});
+	}
 	const { data, error } = await supabase
 		.from(table)
 		.select("*, participants(name, lapak_number)")
@@ -81,5 +156,5 @@ export async function getLeaderboard(
 	if (error) {
 		throw new Error(`getLeaderboard: ${error.message}`);
 	}
-	return (data ?? []) as Record<string, unknown>[];
+	return (data ?? []) as LeaderboardRow[];
 }
