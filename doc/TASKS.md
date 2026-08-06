@@ -20,7 +20,8 @@ urut sesuai aturan pull (prio → effort → ID).
 | # | Lane | ID | Status | Prio | Effort |
 |---|---|---|---|---|---|
 | 1 | ARC | `F0-01` | DONE | P0 | E:S |
-| 2 | OPS | `F0-02` | READY | P0 | E:M |
+| 2 | OPS | `F0-02` | DONE | P0 | E:M |
+| 3 | OPS | `F0-03` | BLOCKED | P0 | E:S |
 
 **Kenapa hanya ini.** F0-01 (init repo + skeleton) tidak punya dependensi —
 di situlah semua task lain bergantung. F0-02 menunggu F0-01 selesai.
@@ -112,7 +113,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run build && git log --oneline -1
       Edge: `bun create svelte` kadang interaktif — pakai flag `--no-git --yes`/args eksplisit; kalau repo root tidak kosong (ada doc/), pindahkan dulu atau pakai `--force`; adapter-static wajib di-set dari awal, bukan belakangan.
 
-- [ ] `F0-02` · `OPS/WAIT/P0/E:M` · `DEP:F0-01` · `BLOCKS:D1-01,D1-05,D1-06,O2-01,O2-02,C3-03` — Install deps inti: `@sveltejs/adapter-static`, tailwindcss v4 + `@tailwindcss/vite`, shadcn-svelte (`bunx shadcn-svelte init` + add button/input/card/dialog/slider/select), bits-ui, `drizzle-orm` + `drizzle-kit`, `@supabase/supabase-js`, `idb`, `qrcode`, `html5-qrcode`; done when `bun run check` + `bun run build` hijau, semua import terbaca.
+- [x] `F0-02` · `OPS/DONE/P0/E:M` · `DEP:F0-01` · `BLOCKS:D1-01,D1-05,D1-06,O2-01,O2-02,C3-03` — Install deps inti: `@sveltejs/adapter-static`, tailwindcss v4 + `@tailwindcss/vite`, shadcn-svelte (`bunx shadcn-svelte init` + add button/input/card/dialog/slider/select), bits-ui, `drizzle-orm` + `drizzle-kit`, `@supabase/supabase-js`, `idb`, `qrcode`, `html5-qrcode`; done when `bun run check` + `bun run build` hijau, semua import terbaca.
       FILES: package.json, svelte.config.js, vite.config.ts, src/app.css, components.json
       VERIFY: bun run check && bun run build
       Edge: html5-qrcode besar → pastikan cuma di route panitia via lazy `import()` (jangan bundle landing); shadcn-svelte init butuh Tailwind v4 — ikuti versi terkini, jangan ikut tutorial Tailwind v3; kalau `bunx shadcn-svelte add` manggil alias `@/*`, set `paths` tsconfig lebih dulu.
