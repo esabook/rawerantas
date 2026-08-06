@@ -1,6 +1,6 @@
 # TASKS — Tool Lomba Agustusan, Execution Backlog
 
-**Status:** Fase 0 (Fondasi) aktif — `F0-01` siap ditarik.
+**Status:** Fase 1 (Data & Skema) aktif — `D1-01` siap ditarik.
 
 **Source of truth:** file ini satu-satunya pemilik status dan urutan eksekusi
 task. [`ARCHITECTURE.md`](./ARCHITECTURE.md) mendefinisikan arsitektur dan
@@ -12,30 +12,32 @@ crash-safe). Kode rujukan protokol: skill `orkes12`.
 
 ---
 
-## READY NOW — FASE 0: FONDASI
+## READY NOW — FASE 1: DATA & SKEMA
 
 Pintu masuk: [`START.md`](./START.md). Board ini = **`READY` dari fase aktif**,
 urut sesuai aturan pull (prio → effort → ID).
 
 | # | Lane | ID | Status | Prio | Effort |
 |---|---|---|---|---|---|
-| 1 | ARC | `F0-01` | DONE | P0 | E:S |
-| 2 | OPS | `F0-02` | DONE | P0 | E:M |
-| 3 | OPS | `F0-03` | DONE | P0 | E:S |
-| 4 | FE | `F0-04` | DONE | P0 | E:M |
-| 5 | FE | `F0-05` | DONE | P0 | E:S |
-| 6 | QA | `F0-06` | DONE | P1 | E:S |
-| 7 | QA | `F0-07` | DONE | P1 | E:S |
+| 1 | DATA | `D1-01` | READY | P0 | E:M |
+| 2 | DATA | `D1-02` | WAIT | P0 | E:S |
+| 3 | SEC | `D1-03` | WAIT | P1 | E:S |
+| 4 | DATA | `D1-04` | WAIT | P1 | E:M |
+| 5 | FE | `D1-05` | READY | P2 | E:XS |
+| 6 | DATA | `D1-06` | WAIT | P1 | E:S |
 
-**Kenapa hanya ini.** F0-01 (init repo + skeleton) tidak punya dependensi —
-di situlah semua task lain bergantung. F0-02 menunggu F0-01 selesai.
+**Kenapa hanya ini.** Skema Drizzle (D1-01) = fondasi semua data: Supabase
+client (D1-02), RLS (D1-03), demo/seed (D1-04), dan scoring engine (D1-06)
+bergantung padanya. D1-05 (image compressor) independen — sudah `READY`
+menurut `DEP` (F0-02 `DONE`).
 
 ### Fase berikutnya — JANGAN ditarik
 
 Sudah `READY` menurut `DEP`, tapi fase-nya belum aktif:
 
-- Fase 1 (`D1`): `D1-01` — skema 9 tabel
 - Fase 2 (`O2`): `O2-01`, `O2-02` — offline engine
+- Fase 3 (`C3`): `C3-01`, `C3-03`, `C3-05` — komponen shared siap menurut `DEP`
+  (`F0-03` `DONE`)
 
 ### Antrean manusia — task yang agen TIDAK bisa kerjakan
 
@@ -57,8 +59,7 @@ berhenti, bukan menebak.
 
 | Fase | Isi | Selesai bila |
 |---|---|---|
-| **0** | `F0-*` fondasi | `F0-07` `DONE` |
-| 1 | `D1-*` data & skema | `D1-06` `DONE` |
+| **1** | `D1-*` data & skema | `D1-06` `DONE` |
 | 2 | `O2-*` offline engine | `O2-05` `DONE` |
 | 3 | `C3-*` komponen shared | `C3-05` `DONE` |
 | 4 | `U4-*` alur user | `U4-05` `DONE` |

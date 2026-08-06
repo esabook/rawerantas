@@ -1,34 +1,35 @@
 # MULAI DI SINI — Tool Lomba Agustusan
 
-**FASE SEKARANG: 0 — Fondasi**
+**FASE SEKARANG: 1 — Data & Skema**
 
 ## Tarik sekarang
 
 | ID | Lane/Prio/Effort | Aksi |
 |---|---|---|
-| `F0-01` | ARC/P0/E:S | Init git + skeleton SvelteKit SPA statis (adapter-static) |
-| `F0-02` | OPS/P0/E:M | Instal deps inti (tailwind, shadcn, drizzle, supabase, idb, qrcode) |
+| `D1-01` | DATA/P0/E:M | Skema Drizzle 9 tabel (ARCHITECTURE §4) + migrasi |
+| `D1-05` | FE/P2/E:XS | Image compressor (canvas, ≤200KB) |
 
-`F0-02` menunggu `F0-01`. Detail (`FILES:`, `VERIFY:`, `Edge:`) ada di
-[`TASKS.md`](./TASKS.md).
+`D1-01` menunggu `F0-02`+`F0-03` (sudah `DONE`). Detail (`FILES:`, `VERIFY:`,
+`Edge:`) ada di [`TASKS.md`](./TASKS.md).
 
 ## Kenapa fase ini dulu
 
-Repositori masih kosong (belum git, hanya `doc/`). Semua fase berikut
-bergantung pada skeleton, env, dan quality gates — kalau fondasinya salah
-(adapter bukan statis, lint tidak ada), setiap task berikutnya membangun di atas
-pasir.
+Fase 0 (fondasi: repo, deps, env, tokens, layout, test, lint) sudah `DONE`.
+Semua fase berikut — offline engine (O2), komponen (C3), alur user (U4),
+panitia (P5), juri (J6), admin (A7) — membaca/menulis data lewat skema Drizzle
+dan Supabase. Tanpa skema + client + engine skor, tidak ada yang bisa dibangun
+di atasnya.
 
-## Syarat naik ke fase 1
+## Syarat naik ke fase 2
 
-`F0-01` … `F0-07` semuanya `DONE`.
+`D1-01` … `D1-06` semuanya `DONE`.
 
 ## Peta fase
 
 | Fase | Isi | Selesai bila |
 |---|---|---|
-| **0** | `F0-*` — fondasi (repo, deps, env, tokens, layout, test, lint) | `F0-07` `DONE` |
-| 1 | `D1-*` — data & skema (9 tabel, RLS, demo, engine skor) | `D1-06` `DONE` |
+| 0 | `F0-*` — fondasi (repo, deps, env, tokens, layout, test, lint) | `F0-07` `DONE` |
+| **1** | `D1-*` — data & skema (9 tabel, RLS, demo, engine skor) | `D1-06` `DONE` |
 | 2 | `O2-*` — offline engine (SW, queue, sync, high-water) | `O2-05` `DONE` |
 | 3 | `C3-*` — komponen shared (PIN, toast, QR, TTS, countdown) | `C3-05` `DONE` |
 | 4 | `U4-*` — alur user (landing, daftar, bayar, tiket, leaderboard) | `U4-05` `DONE` |
