@@ -21,7 +21,7 @@ urut sesuai aturan pull (prio → effort → ID).
 |---|---|---|---|---|---|
 | 1 | ARC | `F0-01` | DONE | P0 | E:S |
 | 2 | OPS | `F0-02` | DONE | P0 | E:M |
-| 3 | OPS | `F0-03` | BLOCKED | P0 | E:S |
+| 3 | OPS | `F0-03` | DONE | P0 | E:S |
 | 4 | FE | `F0-04` | DONE | P0 | E:M |
 | 5 | FE | `F0-05` | DONE | P0 | E:S |
 | 6 | QA | `F0-06` | DONE | P1 | E:S |
@@ -122,8 +122,8 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run build
       Edge: html5-qrcode besar → pastikan cuma di route panitia via lazy `import()` (jangan bundle landing); shadcn-svelte init butuh Tailwind v4 — ikuti versi terkini, jangan ikut tutorial Tailwind v3; kalau `bunx shadcn-svelte add` manggil alias `@/*`, set `paths` tsconfig lebih dulu.
 
-- [ ] `F0-03` · `OPS/WAIT/P0/E:S` · `DEP:F0-02` · `BLOCKS:D1-02,C3-01,C3-05` — Setup env: tulis `.env.example` (lihat ARCHITECTURE §1, termasuk `PUBLIC_EVENT_DATE`) + `.env` kosong + helper baca `$env/static/public`; tambah build-time guard: `PUBLIC_BASE_URL` kosong di mode `build` → warning keras (log, jangan silent); done when tiap `PUBLIC_*` terbaca dari `$env/static/public`, build di luar dev memperingatkan base-url kosong.
-      FILES: .env.example (baru), .env (baru), src/lib/env.ts (baru)
+- [x] `F0-03` · `OPS/DONE/P0/E:S` · `DEP:F0-02` · `BLOCKS:D1-02,C3-01,C3-05` — Setup env: tulis `.env.example` (lihat ARCHITECTURE §1, termasuk `PUBLIC_EVENT_DATE`) + `.env` kosong + helper baca `$env/static/public`; tambah build-time guard: `PUBLIC_BASE_URL` kosong di mode `build` → warning keras (log, jangan silent); done when tiap `PUBLIC_*` terbaca dari `$env/static/public`, build di luar dev memperingatkan base-url kosong.
+      FILES: .env.example (baru), .env (baru), src/lib/env.ts (baru), vite.config.ts (guard build — AMENDED: VERIFY butuh warning di log build; SPA statis tak eksekusi module saat build, guard ditaruh di plugin `buildStart`)
       VERIFY: bun run build (dengan dan tanpa PUBLIC_BASE_URL — lihat warning) && bun run check
       Edge: nilai `.env` asli HANYA manusia (human queue) — agen tulis placeholder; jangan commit `.env` (guard di .gitignore F0-01); `PUBLIC_EVENT_DATE` wajib ISO-8601 lengkap dengan offset, parse gagal = build error bukan NaN.
 
