@@ -280,7 +280,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run check
       Edge: input non-numeric ditolak; lapak kosong (belum terdaftar) → warning; jackpot kedua utk lapak sama → konfirmasi "timpa/abaikan"; timbangan >50kg (curiga salah ketik) → konfirmasi; numpad padding tetap ≤24px container (ARCHITECTURE §3).
 
-- [ ] `J6-02` · `FE/WAIT/P0/E:M` · `DEP:C3-01,C3-02,O2-03` · `BLOCKS:U4-05` — Panel layangan aduan `/juri/layangan`: PinGate, tombol raksasa MUDUN/PUTUS per peserta, UndoToast 5s (dua state: belum sync = hapus queue, sudah sync = tombstone), **round indicator** (dari `current_round`), state machine `aktif→mudun|putus`; done when test: transisi valid, undo dua state benar, round berubah → board reset.
+- [x] `J6-02` · `FE/DONE/P0/E:M` · `DEP:C3-01,C3-02,O2-03` · `BLOCKS:U4-05` — Panel layangan aduan `/juri/layangan`: PinGate, tombol raksasa MUDUN/PUTUS per peserta, UndoToast 5s (dua state: belum sync = hapus queue, sudah sync = tombstone), **round indicator** (dari `current_round`), state machine `aktif→mudun|putus`; done when test: transisi valid, undo dua state benar, round berubah → board reset.
       FILES: src/routes/juri/layangan/+page.svelte, src/lib/components/BigRedButton.svelte (baru), src/lib/components/__tests__/BigRedButton.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: double-tap cepat → 1 op (guard tombol saat in-flight); peserta sudah `putus` di round ini → tombol disabled + alasan; undo setelah round maju → tolak (round berubah = konteks beda); multi-device last-write-wins (catat, jangan cegah).

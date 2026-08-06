@@ -22,6 +22,9 @@ export function ensureAllStores(db: StoreLike): void {
 	if (!db.objectStoreNames.contains("demo_scores_mancing")) {
 		db.createObjectStore("demo_scores_mancing", { keyPath: "id" });
 	}
+	if (!db.objectStoreNames.contains("demo_scores_layangan")) {
+		db.createObjectStore("demo_scores_layangan", { keyPath: "id" });
+	}
 }
 
-export const DB_VERSION = 5;
+export const DB_VERSION = 6;

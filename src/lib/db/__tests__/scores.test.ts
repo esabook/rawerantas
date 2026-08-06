@@ -22,7 +22,7 @@ const getParticipant = async () => {
 
 const readLocal = async (): Promise<MancingScoreRecord[]> => {
 	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const req = indexedDB.open("rawerantas", 5);
+		const req = indexedDB.open("rawerantas", 6);
 		req.onsuccess = () => resolve(req.result);
 		req.onerror = () => reject(req.error);
 	});
