@@ -23,7 +23,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 2 | OPS | `F0-02` | DONE | P0 | E:M |
 | 3 | OPS | `F0-03` | BLOCKED | P0 | E:S |
 | 4 | FE | `F0-04` | DONE | P0 | E:M |
-| 5 | FE | `F0-05` | READY | P0 | E:S |
+| 5 | FE | `F0-05` | DONE | P0 | E:S |
 | 6 | QA | `F0-06` | READY | P1 | E:S |
 | 7 | QA | `F0-07` | READY | P1 | E:S |
 
@@ -132,7 +132,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run build && grep -n "user-select" src/app.css
       Edge: spacing ≤24px (1.5rem) HANYA batas container/padding — font elemen big-button boleh lebih besar (ARCHITECTURE §3); print CSS harus tidak mengunci konten saat layar (print-only class); jangan reset `user-select` di browser non-webkit tanpa prefix ganda.
 
-- [ ] `F0-05` · `FE/WAIT/P0/E:S` · `DEP:F0-04` · `BLOCKS:C3-02,C3-04,U4-01` — Base layout: `+layout.svelte` (glass topbar + iOS-style bottom nav: Landing/Daftar/Leaderboard) + meta `theme-color`, viewport, manifest injection + offline banner slot + global toaster slot; done when nav muncul di semua route non-display, layout kunci konten aman utk layar kecil (375px).
+- [x] `F0-05` · `FE/DONE/P0/E:S` · `DEP:F0-04` · `BLOCKS:C3-02,C3-04,U4-01` — Base layout: `+layout.svelte` (glass topbar + iOS-style bottom nav: Landing/Daftar/Leaderboard) + meta `theme-color`, viewport, manifest injection + offline banner slot + global toaster slot; done when nav muncul di semua route non-display, layout kunci konten aman utk layar kecil (375px).
       FILES: src/routes/+layout.svelte, src/lib/components/AppShell.svelte (baru), src/lib/components/BottomNav.svelte (baru), src/routes/+layout.ts
       VERIFY: bun run check && bun run build && bunx vite preview (cek nav render)
       Edge: `/display` dan `/juri/*` harus bisa bypass nav (layout route group atau conditional); route kosong lain dulu → `+page.svelte` placeholder agar build tidak error.
