@@ -190,7 +190,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run build && bunx vite preview (DevTools: offline + update check)
       Edge: SW versi — deploy baru harus invalidate cache lama (bump versi di build); jangan cache fetch API/realtime (data basi mematikan leaderboard); navigasi ke `/juri/*` yang di-PIN tetap boleh render shell (PIN ada di client).
 
-- [ ] `O2-02` · `RUN/WAIT/P0/E:S` · `DEP:F0-02` · `BLOCKS:O2-03` — IndexedDB queue (`idb`): store `sync_queue` keyed `idempotencyKey`, status `pending|syncing|synced`, field `endpoint/payload/timestamp/retries`; API `enqueue`, `peekBatch`, `markSynced`, `markFailed`; done when test (fake-indexeddb) membuktikan enqueue→markSynced lifecycle + urutan FIFO.
+- [x] `O2-02` · `RUN/DONE/P0/E:S` · `DEP:F0-02` · `BLOCKS:O2-03` — IndexedDB queue (`idb`): store `sync_queue` keyed `idempotencyKey`, status `pending|syncing|synced`, field `endpoint/payload/timestamp/retries`; API `enqueue`, `peekBatch`, `markSynced`, `markFailed`; done when test (fake-indexeddb) membuktikan enqueue→markSynced lifecycle + urutan FIFO.
       FILES: src/lib/offline/queue.ts (baru), src/lib/offline/__tests__/queue.test.ts (baru)
       VERIFY: bun run test
       Edge: `fake-indexeddb` dipakai di test (happy-dom tidak punya IndexedDB); op gagal tidak memblokir batch berikutnya (isolasi per-op); `retries` cap (mis. 10) → `dead` status + surfacing di offline UI, bukan loop abadi.
