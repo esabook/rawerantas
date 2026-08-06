@@ -214,7 +214,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run check
       Edge: `crypto.subtle` butuh secure context — polyfill di test (F0-06 note); PIN di hash SHA-256 bundle = UX gate, catat ulang di kode (bukan security claim); akses `/display` pakai ADMIN_PIN juga.
 
-- [ ] `C3-02` · `FE/WAIT/P0/E:S` · `DEP:F0-05` · `BLOCKS:J6-01,J6-02` — Toast + `UndoToast.svelte`: sistem toast global + undo bar 5 detik (progress), API `undoable(message, onConfirm, onUndo)`; done when test: toast auto-dismiss 5s, undo membatalkan, confirm kedua tidak jalan (idempotent).
+- [x] `C3-02` · `FE/DONE/P0/E:S` · `DEP:F0-05` · `BLOCKS:J6-01,J6-02` — Toast + `UndoToast.svelte`: sistem toast global + undo bar 5 detik (progress), API `undoable(message, onConfirm, onUndo)`; done when test: toast auto-dismiss 5s, undo membatalkan, confirm kedua tidak jalan (idempotent).
       FILES: src/lib/components/toast/ToastSystem.svelte (baru), src/lib/components/toast/toastStore.ts (baru), src/lib/components/__tests__/UndoToast.test.ts (baru)
       VERIFY: bun run test
       Edge: tombol undo dua kali cepat → sekali jalan; timer + unmount komponen → clear interval (leak); undo saat aksi sudah sync = opsional tombstone (dipanggil via O2-03 callback).
