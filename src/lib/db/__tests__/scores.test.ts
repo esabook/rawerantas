@@ -11,7 +11,7 @@ import {
 	validateWeight,
 } from "$lib/db/scores";
 import { demoCompetitions } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const competitionId = demoCompetitions()[0].id;
 

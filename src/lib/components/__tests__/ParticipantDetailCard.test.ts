@@ -19,7 +19,7 @@ vi.mock("$env/static/public", () => ({
 import ParticipantDetailCard from "$lib/components/ParticipantDetailCard.svelte";
 import { resetDemoCheckins } from "$lib/db/checkin";
 import { demoParticipants } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const dpPaid = demoParticipants().find((p) => p.status === "dp_paid");
 const registered = demoParticipants().find((p) => p.status === "registered");

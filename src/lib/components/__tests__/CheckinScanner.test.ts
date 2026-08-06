@@ -36,7 +36,7 @@ vi.mock("html5-qrcode", () => ({
 import CheckinScanner from "$lib/components/CheckinScanner.svelte";
 import { resetDemoCheckins } from "$lib/db/checkin";
 import { demoParticipants } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const fullyPaid = demoParticipants().find((p) => p.status === "fully_paid");
 if (!fullyPaid) {

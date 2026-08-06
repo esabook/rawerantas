@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getParticipantById } from "$lib/db/queries";
 import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";
 import { demoCompetitions } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 describe("getParticipantById (demo)", () => {
 	beforeEach(async () => {

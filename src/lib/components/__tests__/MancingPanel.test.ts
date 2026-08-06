@@ -19,7 +19,7 @@ vi.mock("$env/static/public", () => ({
 import MancingPanel from "$lib/components/MancingPanel.svelte";
 import { resetDemoMancingScores } from "$lib/db/scores";
 import { demoCompetitions } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const competitionId = demoCompetitions()[0].id;
 

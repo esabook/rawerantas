@@ -19,7 +19,7 @@ vi.mock("$env/static/public", () => ({
 import HiasPanel from "$lib/components/HiasPanel.svelte";
 import { resetDemoHiasScores } from "$lib/db/hias";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const competitionId = demoCompetitions()[2].id;
 const hiasParticipants = demoParticipants().filter(
@@ -50,7 +50,7 @@ describe("HiasPanel", () => {
 	});
 
 	it("menampilkan daftar peserta + badge offline", async () => {
-		const { container } = await renderPanel();
+		await renderPanel();
 		expect(hiasParticipants.length).toBeGreaterThan(0);
 		const { online } = await import("$lib/offline/networkStore");
 		online.set(false);

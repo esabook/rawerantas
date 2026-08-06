@@ -21,7 +21,7 @@ import {
 	submitLayanganResult,
 } from "$lib/db/layangan";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const competitionId = demoCompetitions()[1].id;
 const [pesertaAduan] = demoParticipants().filter(

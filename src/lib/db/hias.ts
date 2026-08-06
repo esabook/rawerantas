@@ -199,7 +199,7 @@ export async function submitHiasScore(
 			}
 			return { queued: false, participantId: input.participantId };
 		}
-		const { data, error } = await supabase
+		const { error } = await supabase
 			.from("scores_layangan_hias")
 			.insert({
 				competition_id: input.competitionId,

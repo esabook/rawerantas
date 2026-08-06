@@ -5,7 +5,6 @@ import SoundToggle from "$lib/components/SoundToggle.svelte";
 import {
 	announce,
 	clearQueue,
-	loadTtsPreference,
 	setTtsEnabled,
 	ttsAvailable,
 	ttsEnabled,
@@ -102,17 +101,17 @@ describe("ttsAnnouncer", () => {
 		setTtsEnabled(true);
 		announce("Skor 10");
 		announce("Skor 20");
-		expect(synth!.spoken).toEqual(["Skor 10"]);
-		synth!.finish();
+		expect(synth?.spoken).toEqual(["Skor 10"]);
+		synth?.finish();
 		await waitForIdle(200);
-		expect(synth!.spoken).toEqual(["Skor 10", "Skor 20"]);
-		synth!.finish();
+		expect(synth?.spoken).toEqual(["Skor 10", "Skor 20"]);
+		synth?.finish();
 		await waitForIdle(200);
 	});
 
 	it("mode mati → announce no-op", () => {
 		announce("Halo");
-		expect(synth!.spoken).toEqual([]);
+		expect(synth?.spoken).toEqual([]);
 	});
 
 	it("speechSynthesis null → announce no-op tanpa crash (fallback diam)", () => {
@@ -125,12 +124,12 @@ describe("ttsAnnouncer", () => {
 		setTtsEnabled(true);
 		announce("Satu");
 		announce("Dua");
-		synth!.fail("not-allowed");
+		synth?.fail("not-allowed");
 		let enabled = true;
 		ttsEnabled.subscribe((v) => (enabled = v))();
 		expect(enabled).toBe(false);
 		announce("Tiga");
-		expect(synth!.spoken).toEqual(["Satu"]);
+		expect(synth?.spoken).toEqual(["Satu"]);
 	});
 
 	it("queue cap: overflow → teks tertua di-drop", () => {
@@ -138,13 +137,13 @@ describe("ttsAnnouncer", () => {
 		for (let i = 0; i < 12; i++) {
 			announce(`Teks ${i}`);
 		}
-		expect(synth!.spoken).toEqual(["Teks 0"]);
+		expect(synth?.spoken).toEqual(["Teks 0"]);
 	});
 
 	it("voice id-ID dipilih", async () => {
 		setTtsEnabled(true);
 		announce("Halo");
-		expect(synth!.voices[0].lang).toBe("id-ID");
+		expect(synth?.voices[0].lang).toBe("id-ID");
 	});
 });
 

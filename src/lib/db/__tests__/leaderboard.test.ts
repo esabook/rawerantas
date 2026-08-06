@@ -21,7 +21,7 @@ import {
 import { getLeaderboardRows } from "$lib/db/leaderboard";
 import { resetDemoMancingScores, submitMancingScore } from "$lib/db/scores";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const mancing = demoCompetitions()[0];
 const aduan = demoCompetitions()[1];

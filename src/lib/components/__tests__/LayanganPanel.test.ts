@@ -19,13 +19,13 @@ vi.mock("$env/static/public", () => ({
 import LayanganPanel from "$lib/components/LayanganPanel.svelte";
 import { resetDemoLayanganScores } from "$lib/db/layangan";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const competitionId = demoCompetitions()[1].id;
 const aduanParticipants = demoParticipants().filter(
 	(p) => p.competitionId === competitionId,
 );
-const seededRound1 = aduanParticipants.length;
+const _seededRound1 = aduanParticipants.length;
 
 afterEach(cleanup);
 

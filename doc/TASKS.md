@@ -292,7 +292,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 7: ADMIN & DISPLAY
 
-- [ ] `A7-01` · `FE/WAIT/P0/E:M` · `DEP:C3-01,D1-03,U4-03` · `BLOCKS:A7-04` — Dashboard admin `/admin`: PinGate (ADMIN_PIN), tabel `participant_payments` belum diverifikasi (dengan gambar proof), tombol Verifikasi/Tolak + alasan, tulis `audit_logs` (action + actor_hash), `verified_by` hash; done when test: verifikasi → status pembayaran update + audit row, tolak → status + reason.
+- [ ] `A7-01` · `FE/BLOCKED/P0/E:M` · `DEP:C3-01,D1-03,U4-03` · `BLOCKS:A7-04` — Dashboard admin `/admin`: PinGate (ADMIN_PIN), tabel `participant_payments` belum diverifikasi (dengan gambar proof), tombol Verifikasi/Tolak + alasan, tulis `audit_logs` (action + actor_hash), `verified_by` hash; done when test: verifikasi → status pembayaran update + audit row, tolak → status + reason. — BLOCKED: butuh manusia `D1-03` (apply RLS SQL, service role) — syarat lepas: `D1-03` `DONE`.
       FILES: src/routes/admin/+page.svelte, src/lib/components/PaymentReviewTable.svelte (baru), src/lib/components/__tests__/PaymentReviewTable.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: bukti hilang/gagal load → jangan bisa verifikasi (tombol disabled); jumlah DP vs fee tidak cocok → warning "jumlah kurang"; dua admin verifikasi bersamaan → last-write-wins + audit dua entri; gambar proof tidak boleh di-cache lama (supabase storage signed/expiry).
@@ -307,7 +307,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run build && manual preview
       Edge: layar tidur — Wake Lock API + fallback; TTS off → mode hening (jangan error); display di route group yang exclude nav (cek F0-05); koneksi putus → last-known + banner kecil (jangan layar hitam).
 
-- [ ] `A7-04` · `FE/WAIT/P2/E:S` · `DEP:A7-01` · `BLOCKS:Q8-04` — Export + data lock: tombol export CSV (peserta, pembayaran, peringkat per lomba) + **toggle data lock** (blokir semua tulis non-admin, set flag + audit); done when test: CSV kolom lengkap, lock ON → tulis non-admin ditolak.
+- [ ] `A7-04` · `FE/BLOCKED/P2/E:S` · `DEP:A7-01` · `BLOCKS:Q8-04` — Export + data lock: tombol export CSV (peserta, pembayaran, peringkat per lomba) + **toggle data lock** (blokir semua tulis non-admin, set flag + audit); done when test: CSV kolom lengkap, lock ON → tulis non-admin ditolak. — BLOCKED: butuh manusia `D1-03` → `A7-01` (rantai) — syarat lepas: `A7-01` `DONE`.
       FILES: src/lib/utils/export.ts (baru), src/lib/components/DataLockControl.svelte (baru), src/lib/components/__tests__/DataLockControl.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: CSV dengan nilai koma → escape benar (RFC 4180); export offline → queue + notif; lock permanen per acara (tidak ada unlock UI) — pastikan teks konfirmasi tegas.
@@ -319,7 +319,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run lint && bun run build && bunx lighthouse <preview-url>
       Edge: PWA audit butuh HTTPS (vite preview tidak) — pakai tunnel atau deploy preview dulu; skor di bawah 90 → perbaiki atau catat alasan; bundle split diverifikasi di network tab (scanner hanya di route panitia).
 
-- [ ] `Q8-02` · `QA/WAIT/P1/E:M` · `DEP:U4-05,J6-03,A7-03,D1-04` · `BLOCKS:Q8-04` — Smoke e2e demo mode: alur penuh offline + demo data (landing → daftar → bayar → tiket → juri mancing/layangan/hias → leaderboard → admin verify → display); done when tiap langkah diverifikasi manual/test dan tercatat, bug ditemukan → task baru atau fix task terkait.
+- [x] `Q8-02` · `QA/DONE/P1/E:M` · `DEP:U4-05,J6-03,A7-03,D1-04` · `BLOCKS:Q8-04` — Smoke e2e demo mode: alur penuh offline + demo data (landing → daftar → bayar → tiket → juri mancing/layangan/hias → leaderboard → admin verify → display); done when tiap langkah diverifikasi manual/test dan tercatat, bug ditemukan → task baru atau fix task terkait.
       FILES: (evidence) doc/RUN-REPORT.md
       VERIFY: manual checklist di RUN-REPORT + bun run test (suite penuh sekali)
       Edge: gunakan demo mode (tanpa DB) untuk smoke; jangan jalankan suite penuh per task — sekali di fase ini; temuan yang butuh keputusan → DEFERRED + JOURNAL.

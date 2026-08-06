@@ -21,7 +21,7 @@ import {
 	validateCriteria,
 } from "$lib/db/hias";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
-import { demoMode, setDemoMode } from "$lib/demo/store";
+import { setDemoMode } from "$lib/demo/store";
 
 const competitionId = demoCompetitions()[2].id;
 const hiasParticipants = demoParticipants().filter(
