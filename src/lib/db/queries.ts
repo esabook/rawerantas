@@ -21,7 +21,7 @@ import type {
 } from "./schema";
 
 let supabasePromise: Promise<typeof import("./supabaseClient")> | null = null;
-const getSupabase = () =>
+export const getSupabase = () =>
 	(supabasePromise ??= import("./supabaseClient").then((m) => m));
 
 export type Competition = InferSelectModel<typeof competitions>;
@@ -32,7 +32,12 @@ export type ScoreMancing = InferSelectModel<typeof scoresMancing>;
 export type ScoreLayangan = InferSelectModel<typeof scoresLayangan>;
 export type ScoreLayanganHias = InferSelectModel<typeof scoresLayanganHias>;
 
-export type LeaderboardRow = Record<string, unknown> & {
+export type LeaderboardRow = {
+	id: string;
+	receivedAt: Date | string;
+	competitionId: string;
+	participantId: string;
+	[key: string]: unknown;
 	participants?: { name: string; lapak_number: string | null } | null;
 };
 

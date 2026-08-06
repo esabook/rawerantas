@@ -91,6 +91,28 @@ async function localScores(): Promise<HiasScoreRecord[]> {
 }
 
 /**
+ * Semua skor hias (lokal menang atas seed per peserta) — untuk leaderboard.
+ */
+export async function getAllHiasScores(
+	competitionId: string,
+): Promise<HiasScoreRecord[]> {
+	const local = await localScores();
+	const localByParticipant = new Map(local.map((s) => [s.participantId, s]));
+	const merged = demoHiasScores()
+		.filter((s) => s.competitionId === competitionId)
+		.map((s) => {
+			const override = localByParticipant.get(s.participantId);
+			return override ?? (s as unknown as HiasScoreRecord);
+		});
+	const localOnly = local.filter(
+		(s) =>
+			s.competitionId === competitionId &&
+			!demoHiasScores().some((seed) => seed.participantId === s.participantId),
+	);
+	return [...localOnly, ...merged];
+}
+
+/**
  * Skor hias peserta (lokal menang atas seed — hias 1 skor final per peserta,
  * submit lokal = versi terbaru).
  */

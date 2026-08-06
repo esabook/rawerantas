@@ -68,6 +68,19 @@ async function localScores(): Promise<LayanganScoreRecord[]> {
 }
 
 /**
+ * Semua hasil layangan (semua babak) — seed + lokal — untuk leaderboard.
+ */
+export async function getAllLayanganScores(
+	competitionId: string,
+): Promise<LayanganScoreRecord[]> {
+	const seeded = demoLayanganScores().filter(
+		(s) => s.competitionId === competitionId,
+	) as LayanganScoreRecord[];
+	const local = await localScores();
+	return [...local, ...seeded].filter((s) => s.competitionId === competitionId);
+}
+
+/**
  * Semua hasil layangan untuk kompetisi pada babak tertentu — seed + lokal.
  * Tanpa filter round: seluruh babak (dipakai cek peserta sudah main di babak lama).
  */

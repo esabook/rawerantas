@@ -256,7 +256,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run build
       Edge: tiket id tak ditemukan → 404 halaman ramah + CTA daftar; status `disqualified` → tiket menampilkan batal; QR harus regenerable offline (payload dari env, bukan fetch live).
 
-- [ ] `U4-05` · `FE/WAIT/P1/E:M` · `DEP:U4-01,D1-04,D1-06,C3-04,O2-04` · `BLOCKS:A7-03` — Leaderboard `/leaderboard`: subscribe realtime channel (dengan teardown saat demo OFF/ON), tampil per-kompetisi via engine (tie-break `received_at`), post-sync refresh utk konsistensi, TTS trigger skor baru opsional; done when test: update realtime render, urutan benar untuk semua mode, offline fallback ke last-known.
+- [x] `U4-05` · `FE/DONE/P1/E:M` · `DEP:U4-01,D1-04,D1-06,C3-04,O2-04` · `BLOCKS:A7-03` — Leaderboard `/leaderboard`: subscribe realtime channel (dengan teardown saat demo OFF/ON), tampil per-kompetisi via engine (tie-break `received_at`), post-sync refresh utk konsistensi, TTS trigger skor baru opsional; done when test: update realtime render, urutan benar untuk semua mode, offline fallback ke last-known.
       FILES: src/routes/leaderboard/+page.svelte, src/lib/components/ScoreboardTable.svelte (baru), src/lib/components/__tests__/ScoreboardTable.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: koneksi putus → tampilkan last-known + banner (jangan hilangkan data); perubahan setelah `checked_in` (mis. diskualifikasi) → leaderboard update; channel error → auto-retry dengan backoff, jangan spam log.

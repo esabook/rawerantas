@@ -1,5 +1,164 @@
 <script lang="ts">
+	import { Loader2, RefreshCw } from "@lucide/svelte";
+	import { get } from "svelte/store";
+	import { onDestroy, onMount } from "svelte";
+	import LeaderboardBoard from "$lib/components/LeaderboardBoard.svelte";
+	import { getLeaderboardRows } from "$lib/db/leaderboard";
+	import { getCompetitions } from "$lib/db/queries";
+	import type { Competition } from "$lib/db/queries";
+	import { demoMode } from "$lib/demo/store";
+	import { online } from "$lib/offline/networkStore";
+	import { announce } from "$lib/tts/ttsAnnouncer";
+
+	let competitions = $state<Competition[]>([]);
+	let selectedId = $state<string | null>(null);
+	let rows = $state<Awaited<ReturnType<typeof getLeaderboardRows>>>([]);
+	let lastKnown = $state<typeof rows>([]);
+	let loading = $state(true);
+	let error = $state("");
+	let lastTop = $state("");
+
+	const competition = $derived(
+		competitions.find((c) => c.id === selectedId) ?? competitions[0],
+	);
+	const demo = $derived(get(demoMode));
+
+	const refresh = async () => {
+		if (!competition) {
+			return;
+		}
+		try {
+			const next = await getLeaderboardRows(
+				competition.id,
+				competition.scoringMode,
+			);
+			rows = next;
+			lastKnown = next;
+			error = "";
+			const top = next[0]?.participants;
+			const topName =
+				top && typeof top === "object" && "name" in top
+					? String((top as { name?: unknown }).name ?? "")
+					: "";
+			if (topName && topName !== lastTop) {
+				lastTop = topName;
+				announce(`${topName} memimpin ${competition.name}`);
+			}
+		} catch (e) {
+			if (lastKnown.length > 0) {
+				rows = lastKnown;
+			}
+			error =
+				e instanceof Error
+					? `Gagal memuat skor: ${e.message}`
+					: "Gagal memuat skor.";
+		}
+	};
+
+	let channel: unknown;
+	let unsubscribeOnline: (() => void) | null = null;
+
+	onMount(() => {
+		void getCompetitions(false)
+			.then((list) => {
+				competitions = list;
+				selectedId = list[0]?.id ?? null;
+				return refresh();
+			})
+			.finally(() => {
+				loading = false;
+			});
+		unsubscribeOnline = online.subscribe((isOnline) => {
+			if (isOnline && !demo) {
+				void refresh();
+			}
+		});
+		if (!demo) {
+			void import("$lib/db/queries").then(async ({ getSupabase }) => {
+				const { supabase } = await getSupabase();
+				channel = supabase
+					.channel("leaderboard-live")
+					.on(
+						"postgres_changes",
+						{ event: "*", schema: "public", table: "scores_mancing" },
+						() => void refresh(),
+					)
+					.on(
+						"postgres_changes",
+						{ event: "*", schema: "public", table: "scores_layangan" },
+						() => void refresh(),
+					)
+					.on(
+						"postgres_changes",
+						{ event: "*", schema: "public", table: "scores_layangan_hias" },
+						() => void refresh(),
+					)
+					.subscribe();
+			});
+		}
+	});
+
+	onDestroy(() => {
+		unsubscribeOnline?.();
+		if (channel) {
+			void import("$lib/db/queries").then(async ({ getSupabase }) => {
+				const { supabase } = await getSupabase();
+				supabase.removeChannel(channel as never).catch(() => {});
+			});
+		}
+	});
 </script>
 
-<h1 class="text-lg font-semibold">Leaderboard</h1>
-<p class="mt-2 text-sm text-muted-foreground">Papan skor live segera hadir.</p>
+<svelte:head>
+	<title>Leaderboard | Rawera 2026</title>
+</svelte:head>
+
+<div class="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-8">
+	<div class="flex items-center justify-between">
+		<h1 class="text-lg font-bold">Leaderboard</h1>
+		<button
+			type="button"
+			class="btn btn-ghost"
+			onclick={() => void refresh()}
+			aria-label="Muat ulang skor"
+		>
+			<RefreshCw class="h-4 w-4" aria-hidden="true" />
+			Muat ulang
+		</button>
+	</div>
+
+	{#if loading}
+		<div class="flex flex-col items-center gap-2 py-16 text-muted-foreground">
+			<Loader2 class="h-6 w-6 animate-spin" aria-hidden="true" />
+			<p class="text-sm">Memuat…</p>
+		</div>
+	{:else if !competition}
+		<div class="rounded-lg border border-border/60 p-8 text-center text-sm text-muted-foreground">
+			Tidak ada kompetisi aktif.
+		</div>
+	{:else}
+		<div class="flex flex-wrap gap-2">
+			{#each competitions as c (c.id)}
+				<button
+					type="button"
+					class="btn {competition.id === c.id ? 'btn-gold' : ''}"
+					onclick={() => {
+						selectedId = c.id;
+						void refresh();
+					}}
+				>
+					{c.name}
+				</button>
+			{/each}
+		</div>
+		{#if error}
+			<p class="text-sm text-destructive" role="alert">{error}</p>
+			{#if rows.length > 0}
+				<p class="text-xs text-muted-foreground" role="status">
+					Menampilkan data terakhir yang tersimpan (offline).
+				</p>
+			{/if}
+		{/if}
+		<LeaderboardBoard {competition} {rows} />
+	{/if}
+</div>
