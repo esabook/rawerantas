@@ -302,7 +302,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test && bun run check
       Edge: advance round saat masih ada peserta `aktif` → konfirmasi tegas (data bisa hilang); non-aktifkan lomba saat ada peserta → blokir (atau alasan tertulis); setiap perubahan config → audit entry.
 
-- [ ] `A7-03` · `FE/WAIT/P1/E:M` · `DEP:A7-02,U4-05,C3-04` · `BLOCKS:Q8-02` — Display mode `/display`: layar penuh leaderboard (reuse U4-05 engine), hide nav (route group khusus), auto-update realtime, TTS pengumuman (check-in/skor baru via C3-04), clock/round header; done when render full-screen stabil, TTS trigger saat event, tanpa interaksi mouse.
+- [x] `A7-03` · `FE/DONE/P1/E:M` · `DEP:A7-02,U4-05,C3-04` · `BLOCKS:Q8-02` — Display mode `/display`: layar penuh leaderboard (reuse U4-05 engine), hide nav (route group khusus), auto-update realtime, TTS pengumuman (check-in/skor baru via C3-04), clock/round header; done when render full-screen stabil, TTS trigger saat event, tanpa interaksi mouse.
       FILES: src/routes/display/+page.svelte, src/lib/components/DisplayScreen.svelte (baru)
       VERIFY: bun run check && bun run build && manual preview
       Edge: layar tidur — Wake Lock API + fallback; TTS off → mode hening (jangan error); display di route group yang exclude nav (cek F0-05); koneksi putus → last-known + banner kecil (jangan layar hitam).
