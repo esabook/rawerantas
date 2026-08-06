@@ -27,3 +27,4 @@ Format entri:
 - Penyimpangan: `@sveltejs/adapter-auto` (bawaan template) dihapus — tak terpakai setelah adapter-static.
 - Penyimpangan: init shadcn butuh `--preset <code>` (nama preset ditolak CLI 1.5). Code `bIkeymG` di-encode manual dari source CLI (vega/neutral/lucide/inter/default radius) — theme shadcn akan ditimpa F0-04 sesuai ARCHITECTURE §3.
 - Rekonstruksi: entri "Keputusan: template `sv create --template minimal`..." dari run ini hilang saat append F0-02 — isi: template `sv create --template minimal` dipakai pengganti `bun create svelte` (CLI lama redirect ke `sv`; minimal = skeleton tanpa demo); `--no-add-ons` agar setup tailwind/shadcn/drizzle manual per task.
+- Task `F0-03` `BLOCKED` — butuh manusia: nilai `.env` asli (PUBLIC_BASE_URL, Supabase URL/key, PIN) hanya user yang punya — syarat lepas: user mengisi `.env` (contoh di `.env.example`), lalu task ditarik ulang.

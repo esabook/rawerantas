@@ -22,6 +22,10 @@ urut sesuai aturan pull (prio → effort → ID).
 | 1 | ARC | `F0-01` | DONE | P0 | E:S |
 | 2 | OPS | `F0-02` | DONE | P0 | E:M |
 | 3 | OPS | `F0-03` | BLOCKED | P0 | E:S |
+| 4 | FE | `F0-04` | READY | P0 | E:M |
+| 5 | FE | `F0-05` | WAIT | P0 | E:S |
+| 6 | QA | `F0-06` | READY | P1 | E:S |
+| 7 | QA | `F0-07` | READY | P1 | E:S |
 
 **Kenapa hanya ini.** F0-01 (init repo + skeleton) tidak punya dependensi —
 di situlah semua task lain bergantung. F0-02 menunggu F0-01 selesai.
