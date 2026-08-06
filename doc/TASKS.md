@@ -22,7 +22,7 @@ urut sesuai aturan pull (prio → effort → ID).
 | 1 | RUN | `O2-01` | READY | P0 | E:M |
 | 2 | RUN | `O2-02` | DONE | P0 | E:S |
 | 3 | RUN | `O2-03` | DONE | P0 | E:M |
-| 4 | FE | `O2-04` | WAIT | P1 | E:XS |
+| 4 | FE | `O2-04` | DONE | P1 | E:XS |
 | 5 | RUN | `O2-05` | WAIT | P1 | E:S |
 
 **Kenapa hanya ini.** Fase 2 = offline engine: SW (O2-01) + queue (O2-02)
@@ -197,9 +197,9 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run test
       Edge: conflict retry — `ON CONFLICT` mengembalikan row → treat sebagai sukses, jangan show error; tombstone op harus di-proses berurutan setelah insert-nya (queue order), kalau tidak running_total kacau; offline queue vs realtime double-update → leaderboard pakai satu sumber (post-sync) utk konsistensi.
 
-- [ ] `O2-04` · `FE/WAIT/P1/E:XS` · `DEP:O2-02` · `BLOCKS:U4-05` — Offline UI: banner "luring — data tersimpan lokal" + badge jumlah antrean + status online/offline store (`navigator.onLine` + event); done when UI berubah state saat toggle DevTools offline, badge = jumlah queue pending.
+- [x] `O2-04` · `FE/DONE/P1/E:XS` · `DEP:O2-02` · `BLOCKS:U4-05` — Offline UI: banner "luring — data tersimpan lokal" + badge jumlah antrean + status online/offline store (`navigator.onLine` + event); done when UI berubah state saat toggle DevTools offline, badge = jumlah queue pending.
       FILES: src/lib/offline/networkStore.ts (baru), src/lib/components/OfflineBanner.svelte (baru)
-      VERIFY: bun run test && bun run build && manual DevTools
+      VERIFY: bun run test && bun run build && manual DevTools — AMENDED: toggle DevTools manual diserahkan Q8-02; bukti agent: test event/state + render banner.
       Edge: `navigator.onLine` tidak andal — kombinasi dengan hasil fetch gagal; banner tidak boleh menutup tombol aksi juri; queue badge update realtime via store subscription.
 
 - [ ] `O2-05` · `RUN/WAIT/P1/E:S` · `DEP:O2-03` · `BLOCKS:Q8-04` — High-water reconcile: simpan `received_at`/server time tertinggi per device, re-sync hanya delta; done when test membuktikan re-sync tidak double-insert dan urutan benar.
