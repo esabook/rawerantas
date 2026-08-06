@@ -241,7 +241,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run build
       Edge: lomba non-aktif (`is_active=false`) → card disabled + alasan; loading state jangan spinner kosong (skeleton); `PUBLIC_APP_NAME`/`YEAR` dipakai di hero.
 
-- [ ] `U4-02` · `FE/WAIT/P0/E:M` · `DEP:U4-01,D1-01,O2-03` · `BLOCKS:U4-03` — Pendaftaran `/daftar`: form nama+WA+pilih lomba, DP vs lunas (min_dp), warning merah no-refund wajib tampil, **quota race** (atomic update, 0 row → popup habis), **idempotency registration** (token localStorage, restore-check "ticket exists by phone"), draft tersimpan saat submit timeout; done when test: kuota habis → tolak; double-submit → 1 peserta; refresh setelah timeout → form terisi + tidak double-insert.
+- [x] `U4-02` · `FE/DONE/P0/E:M` · `DEP:U4-01,D1-01,O2-03` · `BLOCKS:U4-03` — Pendaftaran `/daftar`: form nama+WA+pilih lomba, DP vs lunas (min_dp), warning merah no-refund wajib tampil, **quota race** (atomic update, 0 row → popup habis), **idempotency registration** (token localStorage, restore-check "ticket exists by phone"), draft tersimpan saat submit timeout; done when test: kuota habis → tolak; double-submit → 1 peserta; refresh setelah timeout → form terisi + tidak double-insert.
       FILES: src/routes/daftar/+page.svelte, src/lib/components/RegistrationForm.svelte (baru), src/lib/offline/draftStore.ts (baru), src/lib/components/__tests__/RegistrationForm.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: nomor WA — validasi format Indonesia (62/08), simpan kanonik; kuota habis antara load & submit → tampilkan popup bukan error mentah; pendaftaran offline → antrean + tiket dibuat setelah sync; lomba yang sudah `checked_in` penuh → tolak.

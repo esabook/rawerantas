@@ -1,5 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("$env/static/public", () => ({
+	PUBLIC_SUPABASE_URL: "https://mock.supabase.co",
+	PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+	PUBLIC_APP_NAME: "Lomba",
+	PUBLIC_APP_YEAR: "2026",
+	PUBLIC_BASE_URL: "",
+	PUBLIC_EVENT_DATE: "",
+	PUBLIC_JURI_PIN: "",
+	PUBLIC_ADMIN_PIN: "",
+	PUBLIC_ENABLE_DEMO_MODE: "true",
+}));
+
 vi.mock("../supabaseClient", () => ({
 	supabase: { from: vi.fn(), removeAllChannels: vi.fn() },
 }));
@@ -46,10 +58,12 @@ describe("demo — determinisme", () => {
 describe("demo — query intercept", () => {
 	beforeEach(() => {
 		vi.mocked(supabase.from).mockClear();
-		setDemoMode(true);
+		vi.mocked(supabase.removeAllChannels).mockClear();
+		demoMode.set(false);
 	});
 
 	it("demo ON: helper mengembalikan data lokal tanpa panggilan Supabase", async () => {
+		await setDemoMode(true);
 		const competitions = await getCompetitions();
 		const participants = await getParticipants();
 		const payments = await getPayments();
@@ -65,33 +79,37 @@ describe("demo — query intercept", () => {
 	});
 
 	it("demo OFF: toggle mengembalikan mode live (bukan intercept)", async () => {
-		setDemoMode(false);
+		await setDemoMode(false);
 		await expect(getCompetitions()).rejects.toThrow();
 	});
 });
 
 describe("demo — store & realtime teardown", () => {
-	it("toggle flip + teardown channel saat berubah", () => {
-		setDemoMode(true);
+	beforeEach(() => {
+		demoMode.set(false);
 		vi.mocked(supabase.removeAllChannels).mockClear();
-		toggleDemoMode();
+	});
+
+	it("toggle flip + teardown channel saat berubah", async () => {
+		await setDemoMode(true);
+		vi.mocked(supabase.removeAllChannels).mockClear();
+		await toggleDemoMode();
 		expect(get(demoMode)).toBe(false);
 		expect(supabase.removeAllChannels).toHaveBeenCalledTimes(1);
-		toggleDemoMode();
+		await toggleDemoMode();
 		expect(get(demoMode)).toBe(true);
 		expect(supabase.removeAllChannels).toHaveBeenCalledTimes(2);
 	});
 
-	it("set nilai sama → tanpa teardown", () => {
-		setDemoMode(true);
+	it("set nilai sama → tanpa teardown", async () => {
+		await setDemoMode(true);
 		vi.mocked(supabase.removeAllChannels).mockClear();
-		setDemoMode(true);
+		await setDemoMode(true);
 		expect(supabase.removeAllChannels).not.toHaveBeenCalled();
 	});
 
-	it("teardownRealtime memanggil removeAllChannels", () => {
-		vi.mocked(supabase.removeAllChannels).mockClear();
-		teardownRealtime();
+	it("teardownRealtime memanggil removeAllChannels", async () => {
+		await teardownRealtime();
 		expect(supabase.removeAllChannels).toHaveBeenCalledTimes(1);
 	});
 });

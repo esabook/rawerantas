@@ -1,20 +1,23 @@
 import { get, writable } from "svelte/store";
-import { supabase } from "$lib/db/supabaseClient";
 import { env } from "$lib/env";
 
 export const demoMode = writable(env.enableDemoMode === "true");
 
-export function teardownRealtime(): void {
+export async function teardownRealtime(): Promise<void> {
+	if (env.supabaseUrl.length === 0 || env.supabaseAnonKey.length === 0) {
+		return;
+	}
+	const { supabase } = await import("../db/supabaseClient");
 	supabase.removeAllChannels();
 }
 
-export function setDemoMode(enabled: boolean): void {
+export async function setDemoMode(enabled: boolean): Promise<void> {
 	if (get(demoMode) !== enabled) {
 		demoMode.set(enabled);
-		teardownRealtime();
+		await teardownRealtime();
 	}
 }
 
-export function toggleDemoMode(): void {
-	setDemoMode(!get(demoMode));
+export async function toggleDemoMode(): Promise<void> {
+	await setDemoMode(!get(demoMode));
 }
