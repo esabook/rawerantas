@@ -1,12 +1,10 @@
 import type { InferSelectModel } from "drizzle-orm";
 import { get } from "svelte/store";
 import {
-	demoCompetitions,
 	demoHiasScores,
 	demoLayanganScores,
 	demoMancingScores,
 	demoParticipants,
-	demoPaymentConfigs,
 	demoPayments,
 } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
@@ -45,8 +43,8 @@ export async function getCompetitions(
 	activeOnly = true,
 ): Promise<Competition[]> {
 	if (get(demoMode)) {
-		const all = demoCompetitions();
-		return activeOnly ? all.filter((c) => c.isActive) : all;
+		const { getMergedCompetitions } = await import("./admin");
+		return getMergedCompetitions(activeOnly);
 	}
 	const { supabase } = await getSupabase();
 	let query = supabase
@@ -67,7 +65,8 @@ export async function getPaymentConfigs(
 	activeOnly = true,
 ): Promise<PaymentConfig[]> {
 	if (get(demoMode)) {
-		return demoPaymentConfigs().filter((c) => (activeOnly ? c.isActive : true));
+		const { getMergedPaymentConfigs } = await import("./admin");
+		return getMergedPaymentConfigs(activeOnly);
 	}
 	const { supabase } = await getSupabase();
 	let query = supabase
