@@ -1,6 +1,6 @@
 # MULAI DI SINI — Tool Lomba Agustusan
 
-**FASE SEKARANG: 3 — Komponen Shared**
+**FASE SEKARANG: 4 — Alur User**
 
 ## Tarik sekarang
 
@@ -22,7 +22,7 @@ lanjutan tidak menunggu.
 
 ## Syarat naik ke fase 4
 
-`C3-01` … `C3-05` semuanya `DONE`.
+Fase 4 dibuka: C3-01..C3-05 DONE (5/5). Tarik: U4-01 (P0, landing).
 
 ## Peta fase
 
