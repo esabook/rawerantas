@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/svelte";
 import { get } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
