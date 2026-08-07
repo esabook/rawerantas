@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
 import { demoMode } from "$lib/demo/store";
-import { DB_VERSION, ensureAllStores } from "$lib/offline/idbSchema";
 import { enqueue } from "$lib/offline/queue";
+import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import type { Participant } from "./queries";
 import {
 	getCompetitions,
@@ -10,22 +10,7 @@ import {
 	getSupabase,
 } from "./queries";
 
-const DB_NAME = "rawerantas";
-const STORE = "demo_checkins";
-
-let dbPromise: Promise<IDBDatabase> | null = null;
-
-const getDb = (): Promise<IDBDatabase> => {
-	dbPromise ??= new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, DB_VERSION);
-		req.onupgradeneeded = () => {
-			ensureAllStores(req.result);
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
-	return dbPromise;
-};
+const STORE = localStores.checkins;
 
 export interface CheckinRecord {
 	participantId: string;
@@ -62,12 +47,11 @@ export class CheckinError extends Error {
 }
 
 async function localCheckins(): Promise<CheckinRecord[]> {
-	const db = await getDb();
-	return new Promise((resolve, reject) => {
-		const req = db.transaction(STORE).objectStore(STORE).getAll();
-		req.onsuccess = () => resolve((req.result as CheckinRecord[]) ?? []);
-		req.onerror = () => reject(req.error);
-	});
+	const rows = await localGetAll<CheckinRecord>(STORE);
+	return rows.map((r) => ({
+		...r,
+		checkedInAt: new Date(r.checkedInAt as unknown as string),
+	}));
 }
 
 async function getCheckin(
@@ -134,18 +118,12 @@ export async function checkInParticipant(
 		return { eligibility: "already", summary };
 	}
 	if (get(demoMode)) {
-		const db = await getDb();
 		const record: CheckinRecord = {
 			participantId,
 			checkedInAt: new Date(),
 			recordedBy,
 		};
-		await new Promise<void>((resolve, reject) => {
-			const tx = db.transaction(STORE, "readwrite");
-			tx.objectStore(STORE).put(record);
-			tx.oncomplete = () => resolve();
-			tx.onerror = () => reject(tx.error);
-		});
+		await localPut(STORE, record);
 		return {
 			eligibility: "ok",
 			summary: await getCheckinSummary(participantId),
@@ -203,11 +181,5 @@ export async function findParticipantByTicket(
 }
 
 export async function resetDemoCheckins(): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).clear();
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localClear(STORE);
 }

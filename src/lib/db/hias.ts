@@ -1,25 +1,10 @@
 import { get } from "svelte/store";
 import { demoHiasScores } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
-import { DB_VERSION, ensureAllStores } from "$lib/offline/idbSchema";
 import { enqueue } from "$lib/offline/queue";
+import { localClear, localGetAll, localPut, localStores } from "./localStore";
 
-const DB_NAME = "rawerantas";
-const STORE = "demo_scores_hias";
-
-let dbPromise: Promise<IDBDatabase> | null = null;
-
-const getDb = (): Promise<IDBDatabase> => {
-	dbPromise ??= new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, DB_VERSION);
-		req.onupgradeneeded = () => {
-			ensureAllStores(req.result);
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
-	return dbPromise;
-};
+const STORE = localStores.scoresHias;
 
 export const HIAS_EDIT_WINDOW_MS = 5 * 60 * 1000;
 
@@ -72,22 +57,16 @@ export function isWithinEditWindow(record: HiasScoreRecord): boolean {
 }
 
 export async function resetDemoHiasScores(): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).clear();
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localClear(STORE);
 }
 
 async function localScores(): Promise<HiasScoreRecord[]> {
-	const db = await getDb();
-	return new Promise((resolve, reject) => {
-		const req = db.transaction(STORE).objectStore(STORE).getAll();
-		req.onsuccess = () => resolve((req.result as HiasScoreRecord[]) ?? []);
-		req.onerror = () => reject(req.error);
-	});
+	const rows = await localGetAll<HiasScoreRecord>(STORE);
+	return rows.map((r) => ({
+		...r,
+		receivedAt: new Date(r.receivedAt as unknown as string),
+		editedAt: r.editedAt ? new Date(r.editedAt as unknown as string) : null,
+	}));
 }
 
 /**
@@ -136,13 +115,7 @@ export async function getHiasScore(
 }
 
 export async function saveLocal(record: HiasScoreRecord): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).put(record);
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localPut(STORE, record);
 }
 
 /**

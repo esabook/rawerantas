@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { cleanup, render } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LeaderboardBoard from "$lib/components/LeaderboardBoard.svelte";

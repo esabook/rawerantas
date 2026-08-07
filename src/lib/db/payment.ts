@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
 import { demoMode } from "$lib/demo/store";
-import { DB_VERSION, ensureAllStores } from "$lib/offline/idbSchema";
 import { enqueue } from "$lib/offline/queue";
+import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import type { Participant } from "./queries";
 
 export interface PaymentInput {
@@ -25,65 +25,22 @@ export class AmountBelowMinDpError extends Error {
 	}
 }
 
-const DB_NAME = "rawerantas";
-const STORE = "demo_payments";
-
-let dbPromise: Promise<IDBDatabase> | null = null;
-
-const getDb = (): Promise<IDBDatabase> => {
-	dbPromise ??= new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, DB_VERSION);
-		req.onupgradeneeded = () => {
-			ensureAllStores(req.result);
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
-	return dbPromise;
-};
+const STORE = localStores.payments;
 
 export async function resetDemoPayments(): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).clear();
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localClear(STORE);
 }
 
 async function saveDemoPayment(
 	payment: Record<string, unknown>,
 	participant: Participant,
 ): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).put(payment);
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
-	const regs = await demoRegistrations(db);
+	await localPut(STORE, payment);
+	const regs = await localGetAll<Participant>(localStores.registrations);
 	const updated = regs.map((r) => (r.id === participant.id ? participant : r));
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction("demo_registrations", "readwrite");
-		for (const r of updated) {
-			tx.objectStore("demo_registrations").put(r);
-		}
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
-}
-
-async function demoRegistrations(db: IDBDatabase): Promise<Participant[]> {
-	return new Promise((resolve, reject) => {
-		const req = db
-			.transaction("demo_registrations")
-			.objectStore("demo_registrations")
-			.getAll();
-		req.onsuccess = () => resolve((req.result as Participant[]) ?? []);
-		req.onerror = () => reject(req.error);
-	});
+	for (const r of updated) {
+		await localPut(localStores.registrations, r);
+	}
 }
 
 export function validateAmount(

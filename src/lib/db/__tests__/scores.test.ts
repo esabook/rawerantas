@@ -1,5 +1,5 @@
-import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
+import { localGetAll, localStores } from "$lib/db/localStore";
 import { getParticipants } from "$lib/db/queries";
 import {
 	hasJackpot,
@@ -20,21 +20,8 @@ const getParticipant = async () => {
 	return rows.find((p) => p.lapakNumber === "7") ?? rows[0];
 };
 
-const readLocal = async (): Promise<MancingScoreRecord[]> => {
-	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const req = indexedDB.open("rawerantas", 9);
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
-	return new Promise((resolve, reject) => {
-		const req = db
-			.transaction("demo_scores_mancing")
-			.objectStore("demo_scores_mancing")
-			.getAll();
-		req.onsuccess = () => resolve(req.result as MancingScoreRecord[]);
-		req.onerror = () => reject(req.error);
-	});
-};
+const readLocal = (): Promise<MancingScoreRecord[]> =>
+	localGetAll<MancingScoreRecord>(localStores.scoresMancing);
 
 describe("validateWeight", () => {
 	it("menolak timbangan ≤ 0", () => {

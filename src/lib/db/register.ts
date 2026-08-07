@@ -1,8 +1,8 @@
 import { get } from "svelte/store";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
-import { DB_VERSION, ensureAllStores } from "$lib/offline/idbSchema";
 import { enqueue } from "$lib/offline/queue";
+import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import type { Participant } from "./queries";
 
 export interface RegistrationInput {
@@ -25,40 +25,14 @@ export class QuotaFullError extends Error {
 	}
 }
 
-const DB_NAME = "rawerantas";
-const STORE = "demo_registrations";
-
-let dbPromise: Promise<IDBDatabase> | null = null;
-
-const getDb = (): Promise<IDBDatabase> => {
-	dbPromise ??= new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, DB_VERSION);
-		req.onupgradeneeded = () => {
-			ensureAllStores(req.result);
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
-	return dbPromise;
-};
+const STORE = localStores.registrations;
 
 export async function resetDemoRegistrations(): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).clear();
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localClear(STORE);
 }
 
 async function demoRegistrations(): Promise<Participant[]> {
-	const db = await getDb();
-	return new Promise((resolve, reject) => {
-		const req = db.transaction(STORE).objectStore(STORE).getAll();
-		req.onsuccess = () => resolve((req.result as Participant[]) ?? []);
-		req.onerror = () => reject(req.error);
-	});
+	return localGetAll<Participant>(STORE);
 }
 
 /**
@@ -70,13 +44,7 @@ export async function demoLocalParticipants(): Promise<Participant[]> {
 }
 
 async function saveDemoRegistration(participant: Participant): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).put(participant);
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localPut(STORE, participant);
 }
 
 export function normalizePhone(raw: string): string {

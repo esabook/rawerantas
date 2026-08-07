@@ -1,59 +1,24 @@
 import { get } from "svelte/store";
 import { demoCompetitions, demoPaymentConfigs } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
-import { DB_VERSION, ensureAllStores } from "$lib/offline/idbSchema";
+import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import type { Competition, PaymentConfig } from "./queries";
 
-const DB_NAME = "rawerantas";
-const COMP_STORE = "demo_competitions";
-const CONFIG_STORE = "demo_payment_configs";
-
-let dbPromise: Promise<IDBDatabase> | null = null;
-
-const getDb = (): Promise<IDBDatabase> => {
-	dbPromise ??= new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, DB_VERSION);
-		req.onupgradeneeded = () => {
-			ensureAllStores(req.result);
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
-	return dbPromise;
-};
-
-async function getAll<T>(store: string): Promise<T[]> {
-	const db = await getDb();
-	return new Promise((resolve, reject) => {
-		const req = db.transaction(store).objectStore(store).getAll();
-		req.onsuccess = () => resolve((req.result as T[]) ?? []);
-		req.onerror = () => reject(req.error);
-	});
-}
-
-async function put(store: string, value: unknown): Promise<void> {
-	const db = await getDb();
-	const plain = JSON.parse(JSON.stringify(value));
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(store, "readwrite");
-		tx.objectStore(store).put(plain);
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
-}
+const COMP_STORE = localStores.competitions;
+const CONFIG_STORE = localStores.paymentConfigs;
 
 /** Override kompetisi dari penyimpanan lokal admin (demo). */
 export async function getLocalCompetitions(): Promise<
 	Map<string, Competition>
 > {
-	const rows = await getAll<Competition>(COMP_STORE);
+	const rows = await localGetAll<Competition>(COMP_STORE);
 	return new Map(rows.map((c) => [c.id, c]));
 }
 
 export async function getLocalPaymentConfigs(): Promise<
 	Map<string, PaymentConfig>
 > {
-	const rows = await getAll<PaymentConfig>(CONFIG_STORE);
+	const rows = await localGetAll<PaymentConfig>(CONFIG_STORE);
 	return new Map(rows.map((c) => [c.id, c]));
 }
 
@@ -66,9 +31,7 @@ export async function getMergedCompetitions(
 		Promise.resolve(demoCompetitions()),
 	]);
 	const merged = seed.map((c) => local.get(c.id) ?? c);
-	const localOnly = seed.length ? [] : [...local.values()];
-	const all = [...localOnly, ...merged];
-	return activeOnly ? all.filter((c) => c.isActive) : all;
+	return activeOnly ? merged.filter((c) => c.isActive) : merged;
 }
 
 export async function getMergedPaymentConfigs(
@@ -79,16 +42,12 @@ export async function getMergedPaymentConfigs(
 		Promise.resolve(demoPaymentConfigs()),
 	]);
 	const merged = seed.map((c) => local.get(c.id) ?? c);
-	const localOnly = seed.length ? [] : [...local.values()];
-	const all = [...localOnly, ...merged];
-	return activeOnly ? all.filter((c) => c.isActive) : all;
+	return activeOnly ? merged.filter((c) => c.isActive) : merged;
 }
 
-export async function saveCompetitionLocal(
-	competition: Competition,
-): Promise<void> {
+export async function saveCompetition(competition: Competition): Promise<void> {
 	if (get(demoMode)) {
-		await put(COMP_STORE, competition);
+		await localPut(COMP_STORE, competition);
 		return;
 	}
 	const { supabase } = await import("./supabaseClient");
@@ -104,15 +63,13 @@ export async function saveCompetitionLocal(
 		})
 		.eq("id", competition.id);
 	if (error) {
-		throw new Error(`saveCompetitionLocal: ${error.message}`);
+		throw new Error(`saveCompetition: ${error.message}`);
 	}
 }
 
-export async function savePaymentConfigLocal(
-	config: PaymentConfig,
-): Promise<void> {
+export async function savePaymentConfig(config: PaymentConfig): Promise<void> {
 	if (get(demoMode)) {
-		await put(CONFIG_STORE, config);
+		await localPut(CONFIG_STORE, config);
 		return;
 	}
 	const { supabase } = await import("./supabaseClient");
@@ -127,7 +84,7 @@ export async function savePaymentConfigLocal(
 		})
 		.eq("id", config.id);
 	if (error) {
-		throw new Error(`savePaymentConfigLocal: ${error.message}`);
+		throw new Error(`savePaymentConfig: ${error.message}`);
 	}
 }
 
@@ -150,17 +107,10 @@ export async function advanceRound(
 		...competition,
 		currentRound: competition.currentRound + 1,
 	};
-	await saveCompetitionLocal(next);
+	await saveCompetition(next);
 	return { ok: true, round: next.currentRound };
 }
 
 export async function resetDemoAdminState(): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction([COMP_STORE, CONFIG_STORE], "readwrite");
-		tx.objectStore(COMP_STORE).clear();
-		tx.objectStore(CONFIG_STORE).clear();
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await Promise.all([localClear(COMP_STORE), localClear(CONFIG_STORE)]);
 }

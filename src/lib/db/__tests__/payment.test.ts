@@ -1,5 +1,5 @@
-import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { localGetAll, localStores } from "$lib/db/localStore";
 import {
 	AmountBelowMinDpError,
 	resetDemoPayments,
@@ -70,21 +70,8 @@ describe("submitPayment (demo)", () => {
 			competition,
 		);
 
-		const db = await new Promise<IDBDatabase>((resolve, reject) => {
-			const req = indexedDB.open("rawerantas", 9);
-			req.onsuccess = () => resolve(req.result);
-			req.onerror = () => reject(req.error);
-		});
-		const payments = await new Promise<Array<Record<string, unknown>>>(
-			(resolve, reject) => {
-				const req = db
-					.transaction("demo_payments")
-					.objectStore("demo_payments")
-					.getAll();
-				req.onsuccess = () =>
-					resolve(req.result as Array<Record<string, unknown>>);
-				req.onerror = () => reject(req.error);
-			},
+		const payments = await localGetAll<Record<string, unknown>>(
+			localStores.payments,
 		);
 		expect(payments).toHaveLength(1);
 		expect(payments[0]).toMatchObject({
@@ -94,16 +81,8 @@ describe("submitPayment (demo)", () => {
 		});
 		expect(payments[0].isVerified).toBe(false);
 
-		const regs = await new Promise<Array<Record<string, unknown>>>(
-			(resolve, reject) => {
-				const req = db
-					.transaction("demo_registrations")
-					.objectStore("demo_registrations")
-					.getAll();
-				req.onsuccess = () =>
-					resolve(req.result as Array<Record<string, unknown>>);
-				req.onerror = () => reject(req.error);
-			},
+		const regs = await localGetAll<Record<string, unknown>>(
+			localStores.registrations,
 		);
 		expect(regs.find((r) => r.id === participantId)).toMatchObject({
 			status: "dp_paid",
@@ -126,21 +105,8 @@ describe("submitPayment (demo)", () => {
 		);
 		expect(res).toEqual({ paymentId: null, queued: false });
 
-		const db = await new Promise<IDBDatabase>((resolve, reject) => {
-			const req = indexedDB.open("rawerantas", 9);
-			req.onsuccess = () => resolve(req.result);
-			req.onerror = () => reject(req.error);
-		});
-		const payments = await new Promise<Array<Record<string, unknown>>>(
-			(resolve, reject) => {
-				const req = db
-					.transaction("demo_payments")
-					.objectStore("demo_payments")
-					.getAll();
-				req.onsuccess = () =>
-					resolve(req.result as Array<Record<string, unknown>>);
-				req.onerror = () => reject(req.error);
-			},
+		const payments = await localGetAll<Record<string, unknown>>(
+			localStores.payments,
 		);
 		expect(payments[0]).toMatchObject({
 			participantId,

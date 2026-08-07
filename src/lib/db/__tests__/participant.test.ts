@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getParticipantById } from "$lib/db/queries";
 import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";

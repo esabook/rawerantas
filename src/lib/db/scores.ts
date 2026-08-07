@@ -1,26 +1,17 @@
 import { get } from "svelte/store";
 import { demoMancingScores } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
-import { DB_VERSION, ensureAllStores } from "$lib/offline/idbSchema";
 import { enqueue } from "$lib/offline/queue";
+import {
+	localClear,
+	localDelete,
+	localGetAll,
+	localPut,
+	localStores,
+} from "./localStore";
 import type { Participant } from "./queries";
 
-const DB_NAME = "rawerantas";
-const STORE = "demo_scores_mancing";
-
-let dbPromise: Promise<IDBDatabase> | null = null;
-
-const getDb = (): Promise<IDBDatabase> => {
-	dbPromise ??= new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, DB_VERSION);
-		req.onupgradeneeded = () => {
-			ensureAllStores(req.result);
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
-	return dbPromise;
-};
+const STORE = localStores.scoresMancing;
 
 export interface MancingScoreRecord {
 	id: string;
@@ -62,22 +53,11 @@ export function validateWeight(gram: number): number {
 }
 
 export async function resetDemoMancingScores(): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).clear();
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localClear(STORE);
 }
 
 async function localScores(): Promise<MancingScoreRecord[]> {
-	const db = await getDb();
-	return new Promise((resolve, reject) => {
-		const req = db.transaction(STORE).objectStore(STORE).getAll();
-		req.onsuccess = () => resolve((req.result as MancingScoreRecord[]) ?? []);
-		req.onerror = () => reject(req.error);
-	});
+	return localGetAll<MancingScoreRecord>(STORE);
 }
 
 /**
@@ -106,13 +86,7 @@ export async function hasJackpot(
 }
 
 async function saveLocal(record: MancingScoreRecord): Promise<void> {
-	const db = await getDb();
-	await new Promise<void>((resolve, reject) => {
-		const tx = db.transaction(STORE, "readwrite");
-		tx.objectStore(STORE).put(record);
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	await localPut(STORE, record);
 }
 
 /**
@@ -126,13 +100,7 @@ export async function removeScore(
 	wasQueued: boolean,
 ): Promise<void> {
 	if (get(demoMode)) {
-		const db = await getDb();
-		await new Promise<void>((resolve, reject) => {
-			const tx = db.transaction(STORE, "readwrite");
-			tx.objectStore(STORE).delete(id);
-			tx.oncomplete = () => resolve();
-			tx.onerror = () => reject(tx.error);
-		});
+		await localDelete(STORE, id);
 		return;
 	}
 	if (wasQueued) {
