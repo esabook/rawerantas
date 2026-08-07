@@ -21,7 +21,7 @@
 	--accent-foreground: #f8fafc;
 	--success: #059669;
 	--success-foreground: #f8fafc;
-	--destructive: #dc2626;
+	--destructive: #e11d48;
 	--destructive-foreground: #f8fafc;
 	--border: #262626;
 	--input: #262626;
@@ -150,5 +150,25 @@
 	[contenteditable] {
 		-webkit-user-select: text;
 		user-select: text;
+	}
+	h1,
+	h2,
+	h3 {
+		text-wrap: balance;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: override aksesibilitas reduced-motion (kanonik) */
+		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: override aksesibilitas reduced-motion (kanonik) */
+		animation-iteration-count: 1 !important;
+		/* biome-ignore lint/complexity/noImportantStyles: override aksesibilitas reduced-motion (kanonik) */
+		transition-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: override aksesibilitas reduced-motion (kanonik) */
+		scroll-behavior: auto !important;
 	}
 }

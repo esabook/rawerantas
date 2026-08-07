@@ -337,7 +337,7 @@
 
 	{#if error && rows.length > 0}
 		<p
-			class="absolute right-3 top-3 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground"
+			class="absolute right-3 top-3 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-600"
 			role="status"
 		>
 			Luring — menampilkan data terakhir tersimpan

@@ -139,15 +139,6 @@
 					{/if}
 				{/each}
 			</div>
-
-			<button
-				type="button"
-				class="btn btn-ghost text-sm"
-				onclick={backspace}
-				disabled={verifying || pin.length === 0}
-			>
-				Hapus digit
-			</button>
-		{/if}
-	</div>
+	{/if}
+</div>
 {/if}

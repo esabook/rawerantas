@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Loader2, RefreshCw } from "@lucide/svelte";
+	import { RefreshCw } from "@lucide/svelte";
 	import { get } from "svelte/store";
 	import { onDestroy, onMount } from "svelte";
 	import LeaderboardBoard from "$lib/components/LeaderboardBoard.svelte";
@@ -129,9 +129,10 @@
 	</div>
 
 	{#if loading}
-		<div class="flex flex-col items-center gap-2 py-16 text-muted-foreground">
-			<Loader2 class="h-6 w-6 animate-spin" aria-hidden="true" />
-			<p class="text-sm">Memuat…</p>
+		<div class="flex flex-col gap-2" aria-label="memuat papan skor">
+			{#each [1, 2, 3, 4] as i}
+				<div class="h-12 animate-pulse rounded-lg border border-border/60 bg-background/60"></div>
+			{/each}
 		</div>
 	{:else if !competition}
 		<div class="rounded-lg border border-border/60 p-8 text-center text-sm text-muted-foreground">

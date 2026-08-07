@@ -85,8 +85,10 @@
 						<span class="w-6 shrink-0 text-center font-mono text-sm font-bold">
 							{#if entry.rank === 1}
 								<Crown class="mx-auto h-4 w-4 text-gold" aria-hidden="true" />
-							{:else if entry.rank <= 3}
-								<Medal class="mx-auto h-4 w-4 text-gold/70" aria-hidden="true" />
+							{:else if entry.rank === 2}
+								<Medal class="mx-auto h-4 w-4 text-slate-300" aria-hidden="true" />
+							{:else if entry.rank === 3}
+								<Medal class="mx-auto h-4 w-4 text-amber-700" aria-hidden="true" />
 							{:else}
 								{entry.rank}
 							{/if}
