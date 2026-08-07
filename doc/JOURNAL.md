@@ -125,3 +125,22 @@ Format entri:
 - Temuan lint gate fase-8: `bun run lint` (biome check .) ternyata ERROR di 13 file test dari task lama (J6/P5/U4/C3) — unused imports/vars + `!` assertion — tidak terlihat karena verifikasi task lama hanya biome scoped path berubah; dibersihkan di gate fase: `biome check --write --unsafe .` (12 file) + manual (hias.ts `data` unused, LayanganPanel `seededRound1`, HiasPanel `container`) — suite tetap 188 hijau.
 - Task `Q8-02` `DONE` — commit `317fa78` — smoke e2e demo mode: checklist per langkah flow (landing/daftar/bayar/tiket/juri ×3/leaderboard/display/offline queue/PIN gate) dipetakan ke test suite + komponen terkait di `doc/RUN-REPORT.md`; suite penuh sekali: `bun run test` 188 passed / 35 file, `bun run check` 0 error, `bun run lint` 0 error, `bun run build` hijau. Langkah "admin verify" TIDAK bisa smoke — A7-01 BLOCKED (rantai manusia D1-03) — dicatat gap di RUN-REPORT, bukan bug. Verifikasi browser nyata tetap belum (tanpa browser di sesi) — Q8-04 manusia.
 - KOREKSI SHA: entri `Q8-02` di atas awalnya mencatut `e3c19bf` (commit tutup fase) karena amend — commit Q8-02 sebenarnya `(lihat log)` (RUN-REPORT + board + entri koreksi ini).
+- SESI 3 — `refactor(db)` sqlite + temuan review (fix): penyimpanan lokal perangkat
+  dua backend — node/test → SQLite via Drizzle (`localSchema.ts` `local_kv` PK
+  (store,key), `localDb.ts` driver better-sqlite3 `:memory:` + migrasi drizzle-kit
+  `drizzle/0000_tricky_red_shift.sql`), browser → IndexedDB tak berubah
+  (`localStore.ts` switch `typeof window === undefined || MODE === "test"`,
+  localDb di-import dinamis supaya tak masuk bundle client). 7 modul db
+  (register/admin/scores/checkin/hias/layangan/payment) refactor ke `localStore`;
+  test db + komponen kini jalan di sqlite asli (fake-indexeddb tinggal modul
+  offline + RegistrationForm via ImageUploader/proofDraftStore). Fix ikutan:
+  hias/checkin revive `Date` dari JSON round-trip; test TTS DisplayScreen bug seed
+  (target = peserta pertama yang SUDAH juara → announce "Skor baru" bukan
+  "memimpin" — ganti target peserta non-juara); helper test scores/payment yang
+  buka idb langsung → `localGetAll`. Commit: `4c4b47b` (refactor),
+  `47a3ea7` (fix display refresh kompetisi + rename saveCompetition/savePaymentConfig
+  + hapus dead localOnly + title leaderboard pakai env.appName),
+  `8094046` (chore test AdminPanel). Dep: node-gyp + better-sqlite3 (build native
+  OK). Gates: test 189/189 (35 file) · check 0 error · lint 0 · build ✓ · bundle
+  client bersih better-sqlite3 (chunk lazy). TTS test sebelumnya gagal juga di
+  main bersih (bukan regresi sqlite).
