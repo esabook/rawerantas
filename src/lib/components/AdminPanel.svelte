@@ -1,31 +1,50 @@
 <script lang="ts">
-	import { ArrowRight, Loader2, Save, Settings2 } from "@lucide/svelte";
+	import {
+		ArrowRight,
+		BadgeCheck,
+		Ban,
+		Loader2,
+		Save,
+		Settings2,
+		ShieldCheck,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { undoable } from "$lib/components/toast/toastStore";
 	import {
 		advanceRound,
+		adminActorHash,
+		getUnverifiedPayments,
+		rejectPayment,
 		saveCompetition,
 		savePaymentConfig,
+		verifyPayment,
+		type PaymentWithMeta,
 	} from "$lib/db/admin";
 	import { getCompetitions, getPaymentConfigs } from "$lib/db/queries";
 	import type { Competition, PaymentConfig } from "$lib/db/queries";
 
 	let competitions = $state<Competition[]>([]);
 	let configs = $state<PaymentConfig[]>([]);
+	let payments = $state<PaymentWithMeta[]>([]);
 	let loading = $state(true);
 	let error = $state("");
-	let tab = $state<"config" | "competition">("competition");
+	let tab = $state<"config" | "competition" | "verify">("verify");
 	let savingId = $state<string | null>(null);
 	let advancing = $state<string | null>(null);
+	let actingPayment = $state<string | null>(null);
+	let rejectReason = $state<Record<string, string>>({});
+	let rejectOpen = $state<Record<string, boolean>>({});
 
 	const load = async () => {
 		try {
-			const [comps, cfgs] = await Promise.all([
+			const [comps, cfgs, unverified] = await Promise.all([
 				getCompetitions(false),
 				getPaymentConfigs(false),
+				getUnverifiedPayments(),
 			]);
 			competitions = comps;
 			configs = cfgs;
+			payments = unverified;
 			error = "";
 		} catch (e) {
 			error = e instanceof Error ? e.message : "Gagal memuat konfigurasi.";
@@ -72,6 +91,53 @@
 		}
 	};
 
+	const verify = async (p: PaymentWithMeta) => {
+		if (actingPayment !== null) {
+			return;
+		}
+		actingPayment = p.id;
+		error = "";
+		try {
+			const actorHash = await adminActorHash();
+			await verifyPayment(p.id, actorHash);
+			undoable(`Pembayaran ${p.participantName} terverifikasi.`, {
+				onConfirm: () => {},
+			});
+			await load();
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Gagal verifikasi.";
+		} finally {
+			actingPayment = null;
+		}
+	};
+
+	const reject = async (p: PaymentWithMeta) => {
+		if (actingPayment !== null) {
+			return;
+		}
+		const reason = (rejectReason[p.id] ?? "").trim();
+		if (!reason) {
+			error = "Alasan penolakan wajib diisi.";
+			return;
+		}
+		actingPayment = p.id;
+		error = "";
+		try {
+			const actorHash = await adminActorHash();
+			await rejectPayment(p.id, actorHash, reason);
+			undoable(`Pembayaran ${p.participantName} ditolak.`, {
+				onConfirm: () => {},
+			});
+			rejectReason[p.id] = "";
+			rejectOpen[p.id] = false;
+			await load();
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Gagal menolak.";
+		} finally {
+			actingPayment = null;
+		}
+	};
+
 	const nextRound = async (c: Competition) => {
 		if (advancing !== null) {
 			return;
@@ -111,6 +177,14 @@
 		<div class="flex gap-2">
 			<button
 				type="button"
+				class="btn {tab === 'verify' ? 'btn-gold' : ''}"
+				onclick={() => (tab = "verify")}
+			>
+				<ShieldCheck class="h-4 w-4" aria-hidden="true" />
+				Verifikasi ({payments.length})
+			</button>
+			<button
+				type="button"
 				class="btn {tab === 'competition' ? 'btn-gold' : ''}"
 				onclick={() => (tab = "competition")}
 			>
@@ -125,7 +199,102 @@
 			</button>
 		</div>
 
-		{#if tab === "competition"}
+		{#if tab === "verify"}
+			<div class="flex flex-col gap-3">
+				{#if payments.length === 0}
+					<p class="rounded-xl border border-border bg-background/60 p-4 text-sm text-muted-foreground">
+						Tidak ada pembayaran menunggu verifikasi.
+					</p>
+				{/if}
+				{#each payments as p (p.id)}
+					<div class="flex flex-col gap-2 rounded-xl border border-border bg-background/60 p-4">
+						<div class="flex items-center justify-between gap-2">
+							<div class="min-w-0">
+								<p class="truncate text-sm font-semibold">{p.participantName}</p>
+								<p class="truncate text-xs text-muted-foreground">
+									{p.competitionName} · {p.paymentMethod}
+								</p>
+							</div>
+							<span class="shrink-0 font-mono text-sm font-semibold tabular-nums">
+								Rp {Number(p.amount).toLocaleString("id-ID")}
+							</span>
+						</div>
+						{#if p.proofImageUrl && p.proofImageUrl.startsWith("http")}
+							<img
+								src={p.proofImageUrl}
+								alt="Bukti pembayaran {p.participantName}"
+								class="h-32 w-full rounded-lg border border-border/60 object-cover"
+							/>
+						{:else if p.proofImageUrl}
+							<p class="text-xs text-muted-foreground">
+								Bukti belum diunggah (draft).
+							</p>
+						{/if}
+						{#if rejectOpen[p.id]}
+							<label class="flex flex-col gap-1">
+								<span class="text-xs text-muted-foreground">Alasan penolakan</span>
+								<input
+									type="text"
+									class="input"
+									value={rejectReason[p.id] ?? ""}
+									oninput={(e) => {
+										rejectReason[p.id] = e.currentTarget.value;
+									}}
+								/>
+							</label>
+						{/if}
+						<div class="flex justify-end gap-2">
+							{#if !rejectOpen[p.id]}
+								<button
+									type="button"
+									class="btn"
+									onclick={() => (rejectOpen[p.id] = true)}
+									disabled={actingPayment !== null}
+								>
+									<Ban class="h-4 w-4" aria-hidden="true" />
+									Tolak
+								</button>
+								<button
+									type="button"
+									class="btn btn-gold"
+									onclick={() => void verify(p)}
+									disabled={actingPayment !== null}
+								>
+									{#if actingPayment === p.id}
+										<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+									{:else}
+										<BadgeCheck class="h-4 w-4" aria-hidden="true" />
+									{/if}
+									Verifikasi
+								</button>
+							{:else}
+								<button
+									type="button"
+									class="btn"
+									onclick={() => (rejectOpen[p.id] = false)}
+									disabled={actingPayment !== null}
+								>
+									Batal
+								</button>
+								<button
+									type="button"
+									class="btn btn-destructive"
+									onclick={() => void reject(p)}
+									disabled={actingPayment !== null}
+								>
+									{#if actingPayment === p.id}
+										<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+									{:else}
+										<Ban class="h-4 w-4" aria-hidden="true" />
+									{/if}
+									Konfirmasi Tolak
+								</button>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else if tab === "competition"}
 			<div class="flex flex-col gap-3">
 				{#each competitions as c (c.id)}
 					<div class="flex flex-col gap-3 rounded-xl border border-border bg-background/60 p-4">

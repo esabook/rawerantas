@@ -21,8 +21,37 @@ import { getCompetitions } from "$lib/db/queries";
 import { demoCompetitions } from "$lib/demo/generator";
 import { setDemoMode } from "$lib/demo/store";
 
+function must<T>(v: T | undefined | null, msg = "nilai wajib ada"): T {
+	if (v == null) {
+		throw new Error(msg);
+	}
+	return v;
+}
+
 const aduan = demoCompetitions()[1];
 const mancing = demoCompetitions()[0];
+
+async function clickTab(container: HTMLElement, label: string) {
+	await waitFor(
+		() => {
+			const btn = Array.from(container.querySelectorAll("button")).find((b) =>
+				(b.textContent ?? "").includes(label),
+			);
+			expect(btn).toBeDefined();
+		},
+		{ timeout: 5000 },
+	);
+	const btn = must(
+		Array.from(container.querySelectorAll("button")).find((b) =>
+			(b.textContent ?? "").includes(label),
+		),
+		`tab ${label} tidak ada`,
+	);
+	fireEvent.click(btn);
+	await waitFor(() => {
+		expect(container.textContent ?? "").toContain(label);
+	});
+}
 
 afterEach(cleanup);
 
@@ -34,15 +63,12 @@ describe("AdminPanel", () => {
 
 	it("menampilkan daftar kompetisi + metode pembayaran via tab", async () => {
 		const { container } = render(AdminPanel);
+		await clickTab(container, "Kompetisi");
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain(aduan.name);
 		});
 		expect(container.textContent ?? "").toContain(mancing.name);
-		fireEvent.click(
-			Array.from(container.querySelectorAll("button")).find((b) =>
-				(b.textContent ?? "").includes("Metode Pembayaran"),
-			) as Element,
-		);
+		await clickTab(container, "Metode Pembayaran");
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("bank_transfer");
 		});
@@ -51,6 +77,7 @@ describe("AdminPanel", () => {
 
 	it("advance round aduan → toast + babak naik; tombol non-aduan disabled", async () => {
 		const { container } = render(AdminPanel);
+		await clickTab(container, "Kompetisi");
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain(aduan.name);
 		});
@@ -82,6 +109,7 @@ describe("AdminPanel", () => {
 
 	it("simpan perubahan fee → toast + terlihat di getCompetitions", async () => {
 		const { container } = render(AdminPanel);
+		await clickTab(container, "Kompetisi");
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain(mancing.name);
 		});
@@ -105,4 +133,107 @@ describe("AdminPanel", () => {
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === mancing.id)?.fee).toBe(80000);
 	});
+
+	it("tab verifikasi: daftar payment unverified + verifikasi via UI", async () => {
+		const { registerParticipant } = await import("$lib/db/register");
+		const { submitPayment } = await import("$lib/db/payment");
+		const res = await registerParticipant({
+			competitionId: mancing.id,
+			name: "Eka Verifikasi UI",
+			phone: "081255566677",
+		});
+		await submitPayment(
+			{
+				participantId: res.participantId,
+				competitionId: mancing.id,
+				method: "qris",
+				amount: 25000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"dp",
+			mancing,
+		);
+		const { container } = render(AdminPanel);
+		await waitFor(
+			() => {
+				expect(container.textContent ?? "").toContain("Eka Verifikasi UI");
+			},
+			{ timeout: 5000 },
+		);
+		const verifyButtons = Array.from(
+			container.querySelectorAll("button"),
+		).filter((b) => (b.textContent ?? "").trim() === "Verifikasi");
+		fireEvent.click(verifyButtons[0]);
+		await waitFor(
+			() => {
+				expect(
+					get(toasts).some((t) => t.message.includes("terverifikasi")),
+				).toBe(true);
+			},
+			{ timeout: 5000 },
+		);
+		const { getPayments } = await import("$lib/db/queries");
+		const payments = await getPayments(res.participantId);
+		expect(payments.some((p) => p.isVerified)).toBe(true);
+	}, 30000);
+
+	it("tab verifikasi: tolak wajib alasan + tercatat rejectReason", async () => {
+		const { registerParticipant } = await import("$lib/db/register");
+		const { submitPayment } = await import("$lib/db/payment");
+		const res = await registerParticipant({
+			competitionId: mancing.id,
+			name: "Fani Ditolak UI",
+			phone: "081244433322",
+		});
+		await submitPayment(
+			{
+				participantId: res.participantId,
+				competitionId: mancing.id,
+				method: "bank_transfer",
+				amount: 25000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"dp",
+			mancing,
+		);
+		const { container } = render(AdminPanel);
+		await waitFor(
+			() => {
+				expect(container.textContent ?? "").toContain("Fani Ditolak UI");
+			},
+			{ timeout: 5000 },
+		);
+		const buttons = () =>
+			Array.from(container.querySelectorAll("button")).map((b) => ({
+				el: b,
+				text: b.textContent ?? "",
+			}));
+		const tolak = buttons().find((b) => b.text.includes("Tolak"));
+		expect(tolak).toBeDefined();
+		fireEvent.click(must(tolak).el);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Alasan penolakan");
+		});
+		const input = Array.from(container.querySelectorAll("input")).find((i) =>
+			i.className.includes("input"),
+		) as HTMLInputElement | null;
+		expect(input).toBeDefined();
+		fireEvent.input(must(input), { target: { value: "Bukti buram" } });
+		const confirm = buttons().find((b) => b.text.includes("Konfirmasi Tolak"));
+		fireEvent.click(must(confirm).el);
+		await waitFor(
+			() => {
+				expect(get(toasts).some((t) => t.message.includes("ditolak"))).toBe(
+					true,
+				);
+			},
+			{ timeout: 5000 },
+		);
+		const { getMergedPayments } = await import("$lib/db/admin");
+		const all = await getMergedPayments();
+		const rejected = all.find((p) => p.participantId === res.participantId);
+		expect(rejected?.rejectReason).toBe("Bukti buram");
+	}, 30000);
 });

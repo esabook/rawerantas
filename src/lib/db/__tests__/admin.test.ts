@@ -13,17 +13,36 @@ vi.mock("$env/static/public", () => ({
 }));
 
 import {
+	adminActorHash,
 	advanceRound,
+	demoAuditLogs,
+	getMergedPayments,
+	getUnverifiedPayments,
+	rejectPayment,
 	resetDemoAdminState,
 	saveCompetition,
 	savePaymentConfig,
+	verifyPayment,
 } from "$lib/db/admin";
-import { getCompetitions, getPaymentConfigs } from "$lib/db/queries";
+import { submitPayment } from "$lib/db/payment";
+import {
+	getCompetitions,
+	getPaymentConfigs,
+	getPayments,
+} from "$lib/db/queries";
+import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";
 import { demoCompetitions, demoPaymentConfigs } from "$lib/demo/generator";
 import { setDemoMode } from "$lib/demo/store";
 
 const mancing = demoCompetitions()[0];
 const aduan = demoCompetitions()[1];
+function must<T>(v: T | undefined | null, msg = "nilai wajib ada"): T {
+	if (v == null) {
+		throw new Error(msg);
+	}
+	return v;
+}
+
 const qris = demoPaymentConfigs().find((c) => c.method === "qris");
 if (!qris) {
 	throw new Error("seed qris tidak ada");
@@ -33,6 +52,130 @@ describe("admin domain", () => {
 	beforeEach(async () => {
 		await setDemoMode(true);
 		await resetDemoAdminState();
+		await resetDemoRegistrations();
+	});
+
+	it("verify payment → isVerified + verified_by + audit row", async () => {
+		const competition = demoCompetitions()[0];
+		const res = await registerParticipant({
+			competitionId: competition.id,
+			name: "Budi Verifikasi",
+			phone: "081234567890",
+		});
+		await submitPayment(
+			{
+				participantId: res.participantId,
+				competitionId: competition.id,
+				method: "qris",
+				amount: 25000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"dp",
+			competition,
+		);
+		const unverified = await getUnverifiedPayments();
+		const pending = unverified.find(
+			(p) => p.participantId === res.participantId,
+		);
+		expect(pending).toBeDefined();
+		const hash = await adminActorHash();
+		const { status } = await verifyPayment(must(pending).id, hash);
+		expect(status).toBe("verified");
+		const payments = await getPayments(res.participantId);
+		const verified = payments.find(
+			(p) => p.participantId === res.participantId,
+		);
+		expect(verified?.isVerified).toBe(true);
+		expect(verified?.verifiedBy).toBe(hash);
+		const audits = await demoAuditLogs();
+		expect(audits[0]?.action).toBe("verify_payment");
+		expect(audits[0]?.entityId).toBe(must(pending).id);
+		expect(audits[0]?.actorHash).toBe(hash);
+	});
+
+	it("verify lunas → status peserta fully_paid", async () => {
+		const competition = demoCompetitions()[0];
+		const res = await registerParticipant({
+			competitionId: competition.id,
+			name: "Cici Lunas",
+			phone: "081298765432",
+		});
+		await submitPayment(
+			{
+				participantId: res.participantId,
+				competitionId: competition.id,
+				method: "qris",
+				amount: 25000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"dp",
+			competition,
+		);
+		await submitPayment(
+			{
+				participantId: res.participantId,
+				competitionId: competition.id,
+				method: "qris",
+				amount: 25000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"full",
+			competition,
+		);
+		const hash = await adminActorHash();
+		const payments = await getPayments(res.participantId);
+		for (const p of payments) {
+			if (p.participantId === res.participantId) {
+				await verifyPayment(p.id, hash);
+			}
+		}
+		const { demoLocalParticipants } = await import("$lib/db/register");
+		const local = await demoLocalParticipants();
+		expect(local.find((p) => p.id === res.participantId)?.status).toBe(
+			"fully_paid",
+		);
+	});
+
+	it("reject payment → reason + audit row", async () => {
+		const competition = demoCompetitions()[0];
+		const res = await registerParticipant({
+			competitionId: competition.id,
+			name: "Dedi Ditolak",
+			phone: "081233344455",
+		});
+		await submitPayment(
+			{
+				participantId: res.participantId,
+				competitionId: competition.id,
+				method: "bank_transfer",
+				amount: 25000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"dp",
+			competition,
+		);
+		const pending = (await getUnverifiedPayments()).find(
+			(p) => p.participantId === res.participantId,
+		);
+		expect(pending).toBeDefined();
+		const hash = await adminActorHash();
+		const { status } = await rejectPayment(
+			must(pending).id,
+			hash,
+			"Bukti tidak terbaca",
+		);
+		expect(status).toBe("rejected");
+		const all = await getMergedPayments();
+		const rejected = all.find((p) => p.id === must(pending).id);
+		expect(rejected?.isVerified).toBe(false);
+		expect(rejected?.rejectReason).toBe("Bukti tidak terbaca");
+		const audits = await demoAuditLogs();
+		expect(audits[0]?.action).toBe("reject_payment");
+		expect(audits[0]?.payload?.reason).toBe("Bukti tidak terbaca");
 	});
 
 	it("saveCompetition → getCompetitions merge override", async () => {

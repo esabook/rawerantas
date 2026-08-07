@@ -5,7 +5,6 @@ import {
 	demoLayanganScores,
 	demoMancingScores,
 	demoParticipants,
-	demoPayments,
 } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
 import type {
@@ -139,7 +138,8 @@ export async function getPayments(
 	participantId?: string,
 ): Promise<ParticipantPayment[]> {
 	if (get(demoMode)) {
-		const all = demoPayments();
+		const { getMergedPayments } = await import("./admin");
+		const all = await getMergedPayments();
 		return participantId
 			? all.filter((p) => p.participantId === participantId)
 			: all;

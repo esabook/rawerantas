@@ -37,7 +37,9 @@ async function saveDemoPayment(
 ): Promise<void> {
 	await localPut(STORE, payment);
 	const regs = await localGetAll<Participant>(localStores.registrations);
-	const updated = regs.map((r) => (r.id === participant.id ? participant : r));
+	const updated = regs.map((r) =>
+		r.id === participant.id ? { ...r, status: participant.status } : r,
+	);
 	for (const r of updated) {
 		await localPut(localStores.registrations, r);
 	}

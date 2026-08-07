@@ -1,11 +1,40 @@
 import { get } from "svelte/store";
-import { demoCompetitions, demoPaymentConfigs } from "$lib/demo/generator";
+import {
+	demoCompetitions,
+	demoPaymentConfigs,
+	demoPayments,
+} from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
+import { sha256Hex } from "$lib/security/pin";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
-import type { Competition, PaymentConfig } from "./queries";
+import type {
+	Competition,
+	Participant,
+	ParticipantPayment,
+	PaymentConfig,
+} from "./queries";
 
 const COMP_STORE = localStores.competitions;
 const CONFIG_STORE = localStores.paymentConfigs;
+const PAYMENT_STORE = localStores.payments;
+const AUDIT_STORE = localStores.auditLogs;
+
+export interface AuditRecord {
+	id: string;
+	action: string;
+	entityType: string;
+	entityId: string;
+	actorHash: string;
+	payload: Record<string, unknown> | null;
+	idempotencyKey: string;
+	createdAt: Date | string;
+}
+
+export interface PaymentWithMeta extends ParticipantPayment {
+	participantName: string;
+	competitionName: string;
+	rejectReason?: string | null;
+}
 
 /** Override kompetisi dari penyimpanan lokal admin (demo). */
 export async function getLocalCompetitions(): Promise<
@@ -113,4 +142,211 @@ export async function advanceRound(
 
 export async function resetDemoAdminState(): Promise<void> {
 	await Promise.all([localClear(COMP_STORE), localClear(CONFIG_STORE)]);
+}
+
+/** Hash PIN admin sebagai actor hash untuk audit (`verified_by`/`recorded_by`). */
+export async function adminActorHash(): Promise<string> {
+	const { pinForKind } = await import("$lib/security/pin");
+	return sha256Hex(pinForKind("admin"));
+}
+
+async function audit(
+	action: string,
+	entityType: string,
+	entityId: string,
+	actorHash: string,
+	payload: Record<string, unknown> | null,
+): Promise<void> {
+	const record: AuditRecord = {
+		id: crypto.randomUUID(),
+		action,
+		entityType,
+		entityId,
+		actorHash,
+		payload,
+		idempotencyKey: crypto.randomUUID(),
+		createdAt: new Date(),
+	};
+	if (get(demoMode)) {
+		await localPut(AUDIT_STORE, record);
+		return;
+	}
+	const { supabase } = await import("./supabaseClient");
+	const { error } = await supabase.from("audit_logs").insert({
+		action,
+		entity_type: entityType,
+		entity_id: entityId,
+		actor_hash: actorHash,
+		payload,
+		idempotency_key: record.idempotencyKey,
+	});
+	if (error) {
+		throw new Error(`audit: ${error.message}`);
+	}
+}
+
+/** Semua audit lokal (demo) — urutan terbaru dulu. */
+export async function demoAuditLogs(): Promise<AuditRecord[]> {
+	const rows = await localGetAll<AuditRecord>(AUDIT_STORE);
+	return rows.sort(
+		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+	);
+}
+
+/** Gabungan payment seed + lokal (demo), diperkaya nama peserta & lomba. */
+export async function getMergedPayments(): Promise<PaymentWithMeta[]> {
+	if (!get(demoMode)) {
+		const { getPayments } = await import("./queries");
+		return (await getPayments()) as PaymentWithMeta[];
+	}
+	const [local, seed, localParticipants, seedParticipants, competitions] =
+		await Promise.all([
+			localGetAll<ParticipantPayment>(PAYMENT_STORE),
+			Promise.resolve(demoPayments()),
+			import("./register").then(({ demoLocalParticipants }) =>
+				demoLocalParticipants(),
+			),
+			import("./queries").then(({ getParticipants }) => getParticipants()),
+			getMergedCompetitions(false),
+		]);
+	const participants = [...localParticipants, ...seedParticipants].reduce<
+		Map<string, Participant>
+	>((acc, p) => {
+		acc.set(p.id, p);
+		return acc;
+	}, new Map());
+	const merged = [...local, ...seed].reduce<Map<string, ParticipantPayment>>(
+		(acc, p) => {
+			acc.set(p.id, p);
+			return acc;
+		},
+		new Map(),
+	);
+	return [...merged.values()].map((p) => {
+		const participant = participants.get(p.participantId);
+		return {
+			...p,
+			participantName: participant?.name ?? "—",
+			competitionName:
+				competitions.find((c) => c.id === participant?.competitionId)?.name ??
+				"—",
+		};
+	});
+}
+
+/** Payment belum diverifikasi — untuk dashboard admin. */
+export async function getUnverifiedPayments(): Promise<PaymentWithMeta[]> {
+	const all = await getMergedPayments();
+	return all.filter((p) => !p.isVerified);
+}
+
+async function recalcParticipantStatus(participantId: string): Promise<void> {
+	const { getPayments } = await import("./queries");
+	const { demoLocalParticipants } = await import("./register");
+	const [payments, local] = await Promise.all([
+		getPayments(participantId),
+		demoLocalParticipants(),
+	]);
+	const verifiedTotal = payments
+		.filter((p) => p.isVerified)
+		.reduce((sum, p) => sum + Number(p.amount), 0);
+	const participant = local.find((p) => p.id === participantId);
+	if (!participant) {
+		return;
+	}
+	const { getCompetitions } = await import("./queries");
+	const competitions = await getCompetitions(false);
+	const fee =
+		competitions.find((c) => c.id === participant.competitionId)?.fee ?? 0;
+	const next: Participant = {
+		...participant,
+		status: verifiedTotal >= fee ? "fully_paid" : "dp_paid",
+	};
+	await localPut(localStores.registrations, next);
+}
+
+/**
+ * Verifikasi pembayaran (demo + live). Demo: update payment lokal +
+ * status peserta (lunas → fully_paid) + catat audit.
+ */
+export async function verifyPayment(
+	paymentId: string,
+	actorHash: string,
+): Promise<{ ok: boolean; status: string }> {
+	if (get(demoMode)) {
+		const payments = await localGetAll<ParticipantPayment>(PAYMENT_STORE);
+		const payment = payments.find((p) => p.id === paymentId);
+		if (!payment) {
+			throw new Error("Pembayaran tidak ditemukan.");
+		}
+		const updated = {
+			...payment,
+			isVerified: true,
+			verifiedBy: actorHash,
+			rejectReason: null,
+		};
+		await localPut(PAYMENT_STORE, updated);
+		await recalcParticipantStatus(payment.participantId);
+		await audit(
+			"verify_payment",
+			"participant_payments",
+			paymentId,
+			actorHash,
+			{ participantId: payment.participantId, amount: payment.amount },
+		);
+		return { ok: true, status: "verified" };
+	}
+	const { supabase } = await import("./supabaseClient");
+	const { error } = await supabase
+		.from("participant_payments")
+		.update({ is_verified: true, verified_by: actorHash, reject_reason: null })
+		.eq("id", paymentId);
+	if (error) {
+		throw new Error(`verifyPayment: ${error.message}`);
+	}
+	await audit("verify_payment", "participant_payments", paymentId, actorHash, {
+		actorHash,
+	});
+	return { ok: true, status: "verified" };
+}
+
+/** Tolak pembayaran dengan alasan (demo + live). */
+export async function rejectPayment(
+	paymentId: string,
+	actorHash: string,
+	reason: string,
+): Promise<{ ok: boolean; status: string }> {
+	if (get(demoMode)) {
+		const payments = await localGetAll<ParticipantPayment>(PAYMENT_STORE);
+		const payment = payments.find((p) => p.id === paymentId);
+		if (!payment) {
+			throw new Error("Pembayaran tidak ditemukan.");
+		}
+		await localPut(PAYMENT_STORE, {
+			...payment,
+			isVerified: false,
+			verifiedBy: null,
+			rejectReason: reason,
+		});
+		await audit(
+			"reject_payment",
+			"participant_payments",
+			paymentId,
+			actorHash,
+			{ participantId: payment.participantId, reason },
+		);
+		return { ok: true, status: "rejected" };
+	}
+	const { supabase } = await import("./supabaseClient");
+	const { error } = await supabase
+		.from("participant_payments")
+		.update({ is_verified: false, verified_by: null, reject_reason: reason })
+		.eq("id", paymentId);
+	if (error) {
+		throw new Error(`rejectPayment: ${error.message}`);
+	}
+	await audit("reject_payment", "participant_payments", paymentId, actorHash, {
+		reason,
+	});
+	return { ok: true, status: "rejected" };
 }

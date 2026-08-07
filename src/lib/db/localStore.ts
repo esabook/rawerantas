@@ -150,6 +150,7 @@ export const localStores = {
 	checkins: "demo_checkins",
 	competitions: "demo_competitions",
 	paymentConfigs: "demo_payment_configs",
+	auditLogs: "demo_audit_logs",
 } as const;
 
 /** Bersihkan semua store lokal demo (backend aktif). */
