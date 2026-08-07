@@ -7,6 +7,7 @@
 	import { getCompetitions } from "$lib/db/queries";
 	import type { Competition } from "$lib/db/queries";
 	import { demoMode } from "$lib/demo/store";
+	import { env } from "$lib/env";
 	import { online } from "$lib/offline/networkStore";
 	import { announce } from "$lib/tts/ttsAnnouncer";
 
@@ -110,7 +111,7 @@
 </script>
 
 <svelte:head>
-	<title>Leaderboard | Rawera 2026</title>
+	<title>Leaderboard | {env.appName}</title>
 </svelte:head>
 
 <div class="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-8">

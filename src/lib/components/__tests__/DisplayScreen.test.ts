@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { cleanup, render, waitFor } from "@testing-library/svelte";
 import { get } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -105,15 +104,16 @@ describe("DisplayScreen", () => {
 		});
 		h.spoken.length = 0;
 
-		const target = mockParticipants.find(
-			(p) => p.competitionId === demoCompetitions()[0].id,
-		);
+		const compId = demoCompetitions()[0].id;
+		const target = [
+			...mockParticipants.filter((p) => p.competitionId === compId),
+		].at(-1);
 		if (!target) {
 			throw new Error("seed mancing kosong");
 		}
 		const { submitMancingScore } = await import("$lib/db/scores");
 		await submitMancingScore({
-			competitionId: demoCompetitions()[0].id,
+			competitionId: compId,
 			participantId: target.id,
 			fishWeightGram: 999_999,
 			isJackpot: false,
@@ -135,6 +135,24 @@ describe("DisplayScreen", () => {
 		expect(h.spoken).toHaveLength(0);
 		await vi.advanceTimersByTimeAsync(DISPLAY_POLL_MS * 2 + 100);
 		expect(h.spoken).toHaveLength(0);
+	});
+
+	it("round maju via admin → header ronde ikut update di poll", async () => {
+		const { container } = render(DisplayScreen);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Mancing Lele");
+		});
+		await vi.advanceTimersByTimeAsync(DISPLAY_CYCLE_MS + 100);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Aduan Layangan");
+		});
+		const { advanceRound } = await import("$lib/db/admin");
+		const { round } = await advanceRound(demoCompetitions()[1].id);
+		expect(round).toBe(2);
+		await vi.advanceTimersByTimeAsync(DISPLAY_POLL_MS + 100);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Ronde 2");
+		});
 	});
 
 	it("koneksi putus → last-known tetap tampil + banner kecil", async () => {

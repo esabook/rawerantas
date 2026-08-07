@@ -4,8 +4,8 @@
 	import { undoable } from "$lib/components/toast/toastStore";
 	import {
 		advanceRound,
-		saveCompetitionLocal,
-		savePaymentConfigLocal,
+		saveCompetition,
+		savePaymentConfig,
 	} from "$lib/db/admin";
 	import { getCompetitions, getPaymentConfigs } from "$lib/db/queries";
 	import type { Competition, PaymentConfig } from "$lib/db/queries";
@@ -45,7 +45,7 @@
 		savingId = c.id;
 		error = "";
 		try {
-			await saveCompetitionLocal(c);
+			await saveCompetition(c);
 			undoable("Konfigurasi kompetisi tersimpan.", { onConfirm: () => {} });
 			await load();
 		} catch (e) {
@@ -62,7 +62,7 @@
 		savingId = cfg.id;
 		error = "";
 		try {
-			await savePaymentConfigLocal(cfg);
+			await savePaymentConfig(cfg);
 			undoable("Konfigurasi pembayaran tersimpan.", { onConfirm: () => {} });
 			await load();
 		} catch (e) {

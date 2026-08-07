@@ -112,6 +112,12 @@
 		announce(`${topName} memimpin ${comp.name}`);
 	};
 
+	const refreshCompetitions = async (): Promise<Competition[]> => {
+		const list = await getCompetitions(true);
+		competitions = list;
+		return list;
+	};
+
 	const refresh = async (announceOnShow = false) => {
 		const comp = competition;
 		if (!comp) {
@@ -206,7 +212,7 @@
 
 		pollTimer = setInterval(() => {
 			if (demo) {
-				void refresh(false);
+				void refreshCompetitions().then(() => refresh(false));
 			}
 		}, DISPLAY_POLL_MS);
 
@@ -273,6 +279,17 @@
 								announce(`${p.name ?? "Peserta"} sudah check-in`);
 								void refresh(false);
 							}
+						},
+					)
+					.on(
+						"postgres_changes",
+						{
+							event: "UPDATE",
+							schema: "public",
+							table: "competitions",
+						},
+						() => {
+							void refreshCompetitions().then(() => refresh(false));
 						},
 					)
 					.subscribe();

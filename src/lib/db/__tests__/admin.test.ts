@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$env/static/public", () => ({
@@ -16,8 +15,8 @@ vi.mock("$env/static/public", () => ({
 import {
 	advanceRound,
 	resetDemoAdminState,
-	saveCompetitionLocal,
-	savePaymentConfigLocal,
+	saveCompetition,
+	savePaymentConfig,
 } from "$lib/db/admin";
 import { getCompetitions, getPaymentConfigs } from "$lib/db/queries";
 import { demoCompetitions, demoPaymentConfigs } from "$lib/demo/generator";
@@ -36,14 +35,14 @@ describe("admin domain", () => {
 		await resetDemoAdminState();
 	});
 
-	it("saveCompetitionLocal → getCompetitions merge override", async () => {
-		await saveCompetitionLocal({ ...mancing, fee: 75000 });
+	it("saveCompetition → getCompetitions merge override", async () => {
+		await saveCompetition({ ...mancing, fee: 75000 });
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === mancing.id)?.fee).toBe(75000);
 	});
 
-	it("savePaymentConfigLocal toggle non-aktif → tidak muncul di getPaymentConfigs(true)", async () => {
-		await savePaymentConfigLocal({ ...qris, isActive: false });
+	it("savePaymentConfig toggle non-aktif → tidak muncul di getPaymentConfigs(true)", async () => {
+		await savePaymentConfig({ ...qris, isActive: false });
 		const all = await getPaymentConfigs(false);
 		expect(all.find((c) => c.id === qris.id)?.isActive).toBe(false);
 		const active = await getPaymentConfigs(true);
@@ -65,7 +64,7 @@ describe("admin domain", () => {
 	});
 
 	it("reset membersihkan override", async () => {
-		await saveCompetitionLocal({ ...mancing, fee: 90000 });
+		await saveCompetition({ ...mancing, fee: 90000 });
 		await resetDemoAdminState();
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === mancing.id)?.fee).toBe(mancing.fee);
