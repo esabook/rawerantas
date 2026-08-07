@@ -192,3 +192,13 @@ Format entri:
 - Temuan backlog (P2, tidak dikerjakan): `src/lib/components/ui/` (shadcn button/input/card/dialog/slider/select/separator) 0 importer — dead code bundle; duplikasi `toScoreRow`/`formatScore` antara LeaderboardBoard & DisplayScreen — kandidat refactor util bersama. Diputuskan tidak dihapus sesi ini (scope audit visual; keputusan buang shadcn = keputusan arsitektur, catat dulu).
 - Verifikasi tambahan: kontras dihitung manual atas token (`muted-foreground #a3a3a3` on `muted #262626` = 4.6:1 pass; gold #d97706 on #0a0a0a = 5.2:1; secondary-foreground on gold = 4.9:1) — semua ambang aman.
 - Gates: test 194/194 (35 file) · check 0 · lint 0 · build ✓.
+
+## 2026-08-07 (lanjutan 3) — landing sport broadcast `d5c333b`
+
+- Permintaan user: poles landing nuansa sport/lomba (FIFA/PES/BAS-fishing), font Sekuya utk header, uppercase utk CTA/button, kartu lomba horizontal scroll, seed layangan+mancing utk admin lokal.
+- **Font**: Google Fonts `Sekuya` (rilis 2026) hanya punya weight 400 TTF; @fontsource/sekuya@5.3.0 menyediakan woff2 latin-400 (OFL-1.1) — dipakai self-host (`@import "@fontsource/sekuya/latin-400.css"`), offline SW-cacheable. Variable/700-900 tidak ada → header berat >400 pakai faux-bold (font-synthesis default). `--font-display: "Sekuya"` token; diterapkan h1-h3 (base layer) + brand AppShell. Diputuskan TIDAK pakai CDN Google Fonts (offline kiosk requirement).
+- **Uppercase global**: `.btn` utility + `tracking-wider`; BottomNav label `uppercase tracking-wider` (menu action). Aman utk test — CSS text-transform tidak mengubah DOM.
+- **HeroSection**: props baru `competitionCount`/`quotaTotal` (dari `+page.svelte` via `getCompetitions`); stat strip scoreboard (LOMBA/KUOTA/TANGGAL — tanggal diparse dari `env.eventDate` `toLocaleDateString id-ID`); kicker badge gold + pulse dot; CTA diperbesar.
+- **CompetitionList**: grid→carousel `snap-x snap-mandatory no-scrollbar` (utility baru), kartu `w-72 shrink-0`, top accent bar (gold=live/muted=tutup), badge LIVE pulsing red-400, label `${liveCount} LIVE`, skeleton horizontal. `data-testid="competition-card"` dipertahankan.
+- **Seed**: ternyata sudah lengkap sejak awal (mancing 50 skor, layangan aduan 30, hias 25; 3 lomba isActive) — DEMO_MODE query via `demo*` functions; tidak ada perubahan data. Admin lokal langsung lihat top3 tiap lomba.
+- Gates: test 194/194 · check 0 · lint 0 · build ✓ (font ter-bundle: `sekuya-latin-400-normal.*.woff2` di assets).
