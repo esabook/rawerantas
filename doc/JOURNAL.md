@@ -168,3 +168,11 @@ Format entri:
   +audit row, verify lunas → status fully_paid, reject → reason + audit,
   list unverified) + 2 komponen (verifikasi via UI, tolak wajib alasan).
   Commit `9c6f304`. Gates: test 194/194 (35 file) · check 0 · lint 0 · build ✓.
+
+## 2026-08-07
+
+- Sesi review UI skill impeccable (scope: styling global) — commit `4e05d3c` — Temuan kritis: kelas `.btn`, `.btn-gold`, `.btn-ghost`, `.btn-sm`, `.input`, `text-gold`, `bg-gold`, `border-gold`, `accent-gold` dipakai ±130× di seluruh Svelte (landing, daftar, juri, admin, checkin, display) tapi TIDAK PERNAH didefinisikan di CSS sejak commit awal (`git log -S` kosong) — UI tampil dengan styling browser default. Fix: daftarkan `--color-gold: var(--secondary)` di `@theme inline` (semua utility `*-gold` + modifier opacity + `accent-gold` otomatis tersedia) + 5 `@utility`: `btn` (netral: bg-muted/40, hover, focus ring gold, disabled), `btn-gold` (primary emas), `btn-ghost` (outline), `btn-sm`, `input` (border + focus ring gold).
+- Penyimpangan: kartu konten `glass-panel` → solid (`border-border/60 bg-background/60`) agar konsisten dgn panel lain; `glass-panel` dipertahankan HANYA utk elemen sticky/floating (AppShell header, BottomNav, OfflineBanner, toast). CountdownTimer: layout inline 8 angka (overflow mobile) → grid 4 kotak, blok detik aksen gold. BottomNav: active state pill `bg-gold/10 text-gold` (ikon ikut warna via currentColor) menggantikan `aria-current:text-secondary` yang tak menaungi ikon. HeroSection: eyebrow uppercase+Sparkles (AI-kicker) → badge pill gold.
+- Keputusan: `.env` lokal terisi (`PUBLIC_BASE_URL`, PIN 1708/1945, demo true) — 4 test pecah karena mengasumsikan env kosong (`buildCheckinUrl` base url, QRCode placeholder, PinGate DEMO_PIN fallback). Fix mengikuti pola repo: tiap test file mock `$env/static/public` sendiri (PinGate.test.ts, QRCode.test.ts, thermal.test.ts) — test deterministik terlepas dari `.env` dev. Bukan ubah `.env` (nilai dev milik user).
+- Verifikasi tambahan: test 194/194 (35 file) · check 0 · lint 0 · build ✓ — kegagalan 4 test dikonfirmasi pre-existing (stash perubahan → gagal sama).
+- Task `A7-04` `BLOCKED` → `WAIT` — syarat lepas `A7-01` `DONE` terpenuhi (commit `9c6f304`); fase 7 lengkap, tarik saat fase 8 aktif.

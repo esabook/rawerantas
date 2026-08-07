@@ -307,7 +307,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       VERIFY: bun run check && bun run build && manual preview
       Edge: layar tidur — Wake Lock API + fallback; TTS off → mode hening (jangan error); display di route group yang exclude nav (cek F0-05); koneksi putus → last-known + banner kecil (jangan layar hitam).
 
-- [ ] `A7-04` · `FE/BLOCKED/P2/E:S` · `DEP:A7-01` · `BLOCKS:Q8-04` — Export + data lock: tombol export CSV (peserta, pembayaran, peringkat per lomba) + **toggle data lock** (blokir semua tulis non-admin, set flag + audit); done when test: CSV kolom lengkap, lock ON → tulis non-admin ditolak. — BLOCKED: butuh manusia `D1-03` → `A7-01` (rantai) — syarat lepas: `A7-01` `DONE`.
+- [ ] `A7-04` · `FE/WAIT/P2/E:S` · `DEP:A7-01` · `BLOCKS:Q8-04` — Export + data lock: tombol export CSV (peserta, pembayaran, peringkat per lomba) + **toggle data lock** (blokir semua tulis non-admin, set flag + audit); done when test: CSV kolom lengkap, lock ON → tulis non-admin ditolak. — WAIT: fase 7 selesai; tarik saat fase 8 aktif (lihat START.md).
       FILES: src/lib/utils/export.ts (baru), src/lib/components/DataLockControl.svelte (baru), src/lib/components/__tests__/DataLockControl.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: CSV dengan nilai koma → escape benar (RFC 4180); export offline → queue + notif; lock permanen per acara (tidak ada unlock UI) — pastikan teks konfirmasi tegas.
