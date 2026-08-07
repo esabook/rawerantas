@@ -17,7 +17,7 @@
 <div class="flex min-h-dvh flex-col bg-background text-foreground">
 	<header class="glass-panel sticky top-0 z-40 border-b border-white/10">
 		<div class="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-3">
-			<a href="/" class="flex items-center gap-2 text-base font-semibold">
+			<a href="/" class="font-display flex items-center gap-2 text-lg font-extrabold tracking-tight">
 				<span class="text-secondary">Pesta Rakyat</span>
 				<span class="text-muted-foreground">Agustusan</span>
 			</a>

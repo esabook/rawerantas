@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn-svelte/tailwind.css";
+@import "@fontsource/sekuya/latin-400.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -38,6 +39,7 @@
 	--font-sans:
 		system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto,
 		"Helvetica Neue", Arial, sans-serif;
+	--font-display: "Sekuya", var(--font-sans);
 	--color-success: var(--success);
 	--color-success-foreground: var(--success-foreground);
 	--color-gold: var(--secondary);
@@ -90,7 +92,7 @@
 }
 
 @utility btn {
-	@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-muted/40 px-4 py-2.5 text-sm font-semibold text-foreground transition-[transform,color,background-color,border-color] duration-150 select-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+	@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-muted/40 px-4 py-2.5 text-sm font-semibold text-foreground uppercase tracking-wider transition-[transform,color,background-color,border-color] duration-150 select-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
 }
 
 @utility btn-gold {
@@ -107,6 +109,13 @@
 
 @utility input {
 	@apply w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility no-scrollbar {
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
 }
 
 @media print {
@@ -154,6 +163,7 @@
 	h1,
 	h2,
 	h3 {
+		font-family: var(--font-display);
 		text-wrap: balance;
 	}
 }

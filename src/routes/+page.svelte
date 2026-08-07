@@ -23,12 +23,14 @@
 	let top3 = $state<Map<string, RankSummary[]>>(new Map());
 	let loading = $state(true);
 	let loadError = $state("");
+	const totalQuota = $derived(
+		competitions.reduce((sum, c) => sum + c.totalQuota, 0),
+	);
 
 	onMount(async () => {
 		try {
 			const list = await getCompetitions();
-			competitions = list;
-			const summaries = new Map<string, RankSummary[]>();
+			competitions = list;			const summaries = new Map<string, RankSummary[]>();
 			for (const c of list) {
 				const table = tableForMode[c.scoringMode];
 				const rows = await getLeaderboard(c.id, table);
@@ -66,7 +68,7 @@
 </svelte:head>
 
 <main class="pb-16">
-	<HeroSection />
+	<HeroSection competitionCount={competitions.length} quotaTotal={totalQuota} />
 
 	{#if loadError}
 		<p class="mx-auto max-w-3xl px-4 text-sm text-destructive" role="alert">

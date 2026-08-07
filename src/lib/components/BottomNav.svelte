@@ -31,7 +31,7 @@
 			>
 				<span class="flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-1 {active ? 'bg-gold/10 text-gold' : 'text-muted-foreground'}">
 					<item.icon class="h-6 w-6" />
-					<span class="{active ? 'font-semibold' : ''}">{item.label}</span>
+					<span class="text-[10px] uppercase tracking-wider {active ? 'font-semibold' : ''}">{item.label}</span>
 				</span>
 			</a>
 		{/each}
