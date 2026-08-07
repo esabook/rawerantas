@@ -40,6 +40,7 @@
 		"Helvetica Neue", Arial, sans-serif;
 	--color-success: var(--success);
 	--color-success-foreground: var(--success-foreground);
+	--color-gold: var(--secondary);
 	--color-sidebar: var(--card);
 	--color-sidebar-foreground: var(--foreground);
 	--color-sidebar-primary: var(--primary);
@@ -86,6 +87,26 @@
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
 	border: 1px solid rgb(255 255 255 / 0.1);
+}
+
+@utility btn {
+	@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-muted/40 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors duration-150 select-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+}
+
+@utility btn-gold {
+	@apply border-transparent bg-gold text-background hover:bg-gold/90 focus-visible:ring-gold/60;
+}
+
+@utility btn-ghost {
+	@apply border-border/60 bg-transparent hover:bg-muted/60;
+}
+
+@utility btn-sm {
+	@apply gap-1.5 rounded-md px-3 py-1.5 text-xs;
+}
+
+@utility input {
+	@apply w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 @media print {

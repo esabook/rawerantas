@@ -68,7 +68,7 @@
 </script>
 
 <div
-	class="glass-panel mx-auto flex w-full max-w-md flex-col items-center gap-3 px-6 py-6 text-center {status === 'live' ? 'border-gold bg-gold/10' : ''}"
+	class="mx-auto flex w-full max-w-md flex-col items-center gap-3 rounded-xl border border-border/60 bg-background/60 px-6 py-6 text-center {status === 'live' ? 'border-gold bg-gold/10' : ''}"
 	role="status"
 	aria-live="polite"
 >
@@ -84,15 +84,23 @@
 			{statusLabel[status]}
 		</p>
 		{#if parts && status === "segera"}
-			<div class="flex items-baseline gap-2" aria-label="countdown">
-				<span class="text-3xl font-bold tabular-nums">{parts.days}</span>
-				<span class="text-sm text-muted-foreground">hari</span>
-				<span class="text-3xl font-bold tabular-nums">{pad(parts.hours)}</span>
-				<span class="text-sm text-muted-foreground">jam</span>
-				<span class="text-3xl font-bold tabular-nums">{pad(parts.minutes)}</span>
-				<span class="text-sm text-muted-foreground">menit</span>
-				<span class="text-3xl font-bold tabular-nums">{pad(parts.seconds)}</span>
-				<span class="text-sm text-muted-foreground">detik</span>
+			<div class="grid w-full grid-cols-4 gap-2" aria-label="countdown">
+				<div class="flex flex-col items-center gap-1 rounded-xl border border-border/60 bg-background/80 px-1 py-2.5">
+					<span class="text-2xl font-bold tabular-nums">{parts.days}</span>
+					<span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">hari</span>
+				</div>
+				<div class="flex flex-col items-center gap-1 rounded-xl border border-border/60 bg-background/80 px-1 py-2.5">
+					<span class="text-2xl font-bold tabular-nums">{pad(parts.hours)}</span>
+					<span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">jam</span>
+				</div>
+				<div class="flex flex-col items-center gap-1 rounded-xl border border-border/60 bg-background/80 px-1 py-2.5">
+					<span class="text-2xl font-bold tabular-nums">{pad(parts.minutes)}</span>
+					<span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">menit</span>
+				</div>
+				<div class="flex flex-col items-center gap-1 rounded-xl border border-gold/40 bg-gold/10 px-1 py-2.5">
+					<span class="text-2xl font-bold tabular-nums text-gold">{pad(parts.seconds)}</span>
+					<span class="text-[10px] font-medium uppercase tracking-wide text-gold">detik</span>
+				</div>
 			</div>
 		{:else if status === "live"}
 			<p class="text-2xl font-bold text-gold">Live!</p>

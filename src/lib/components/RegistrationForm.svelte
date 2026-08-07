@@ -153,7 +153,7 @@
 </script>
 
 {#if submitted}
-	<div class="glass-panel mx-auto w-full max-w-md rounded-xl p-6 text-center" role="status">
+	<div class="mx-auto w-full max-w-md rounded-xl border border-border/60 bg-background/60 p-6 text-center" role="status">
 		<Ticket class="mx-auto h-10 w-10 text-gold" aria-hidden="true" />
 		<h2 class="mt-3 text-xl font-bold">
 			{submitted.queued ? "Pendaftaran masuk antrean" : "Berhasil terdaftar"}

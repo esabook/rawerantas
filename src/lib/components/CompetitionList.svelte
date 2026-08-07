@@ -27,7 +27,7 @@
 	{#if loading}
 		<div class="grid gap-3 sm:grid-cols-2">
 			{#each [1, 2, 3, 4] as i}
-				<div class="glass-panel h-32 animate-pulse rounded-xl" aria-label="loading card"></div>
+				<div class="h-32 animate-pulse rounded-xl border border-border/60 bg-background/60" aria-label="loading card"></div>
 			{/each}
 		</div>
 	{:else if competitions.length === 0}
@@ -35,7 +35,7 @@
 	{:else}
 		<div class="grid gap-3 sm:grid-cols-2">
 			{#each competitions as c}
-				<div class="glass-panel rounded-xl p-4 {isLive(c) ? '' : 'opacity-60'}" data-testid="competition-card">
+				<div class="rounded-xl border border-border/60 bg-background/60 p-4 {isLive(c) ? '' : 'opacity-60'}" data-testid="competition-card">
 					<div class="flex items-start justify-between gap-2">
 						<h3 class="font-semibold">{c.name}</h3>
 						{#if !isLive(c)}
