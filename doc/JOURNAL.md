@@ -176,3 +176,12 @@ Format entri:
 - Keputusan: `.env` lokal terisi (`PUBLIC_BASE_URL`, PIN 1708/1945, demo true) — 4 test pecah karena mengasumsikan env kosong (`buildCheckinUrl` base url, QRCode placeholder, PinGate DEMO_PIN fallback). Fix mengikuti pola repo: tiap test file mock `$env/static/public` sendiri (PinGate.test.ts, QRCode.test.ts, thermal.test.ts) — test deterministik terlepas dari `.env` dev. Bukan ubah `.env` (nilai dev milik user).
 - Verifikasi tambahan: test 194/194 (35 file) · check 0 · lint 0 · build ✓ — kegagalan 4 test dikonfirmasi pre-existing (stash perubahan → gagal sama).
 - Task `A7-04` `BLOCKED` → `WAIT` — syarat lepas `A7-01` `DONE` terpenuhi (commit `9c6f304`); fase 7 lengkap, tarik saat fase 8 aktif.
+
+## 2026-08-07 (lanjutan)
+
+- Sesi SFX/tactile feedback (scope: audio + haptic + press) — commit `f564ad7` — `src/lib/audio/sfx.ts` baru: Web Audio synth murni (tanpa file asset, bundle ringan) — `tap` (keypress 880Hz 45ms), `coin` (Mario: B5 987.77Hz → E6 1318.51Hz, gap 75ms), `fanfare` (arpeggio C5–C6 utk MUDUN/advance round), `confirm` (dua nada turun 660→440 utk PUTUS/hasil), `error` (sawtooth 200→110Hz buzz), `slider` (tick triangle halus). AudioContext lazy-init + `resume()` otomatis tiap nada → ter-unlock dari gesture sentuh pertama; guard `typeof window` + `AudioContext` absen (test happy-dom aman). Store `sfxEnabled` (default true) + preferensi localStorage, pola sama dgn ttsAnnouncer.
+- Keputusan: `vibrate()` haptic — `navigator.vibrate` guard (Android saja; iOS/desktop tak berdampak, tak error).
+- Keputusan: `SoundToggle` jadi MASTER audio toggle (SFX + TTS sekaligus), dipasang di header `AppShell` (sebelumnya komponen yatim, tak dirender di mana pun). Default suara NYALA — feedback taktil harus terasa sejak masuk panel juri; test lama mengasumsikan default mati → diperbarui (harap "Suara: nyala" awal, klik → mati, disabled saat API TTS tak ada DAN SFX mati).
+- Keputusan: feedback per aksi sesuai kondisi lapangan — digit keypad (PinGate/Mancing) = tap halus + vibrate 10ms; sukses simpan/verifikasi/check-in/PIN benar = coin + vibrate 80ms; MUDUN = fanfare (momen puncak); PUTUS = confirm; tolak/lockout/error = buzz + vibrate [120,60,120]; advance round = fanfare + vibrate panjang. Slider hias = tick di `onchange` (saat release, tak spam saat drag).
+- Verifikasi tambahan: `btn` dapat `active:scale-[0.97]` + transition transform — press feedback visual taktil (layer: terang/gelap sama).
+- Gates: test 194/194 (35 file) · check 0 · lint 0 (biome import-sort fix ttsAnnouncer.test.ts) · build ✓.
