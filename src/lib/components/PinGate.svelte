@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Lock } from "@lucide/svelte";
+	import { sfx, vibrate } from "$lib/audio/sfx";
 	import { grantStillValid, readGrant, verifyPin, type PinKind } from "$lib/security/pin";
 
 	let {
@@ -30,6 +31,8 @@
 		if (locked || verifying || pin.length >= 4) {
 			return;
 		}
+		sfx.tap();
+		vibrate(10);
 		pin += digit;
 		if (pin.length === 4) {
 			await submit();
@@ -40,6 +43,7 @@
 		if (verifying || locked) {
 			return;
 		}
+		sfx.backspace();
 		pin = pin.slice(0, -1);
 		error = "";
 	};
@@ -54,8 +58,12 @@
 			await verifyPin(kind, pin);
 			unlocked = true;
 			pin = "";
+			sfx.coin();
+			vibrate([40, 30, 60]);
 		} catch (e) {
 			pin = "";
+			sfx.error();
+			vibrate([120, 60, 120]);
 			if (e instanceof Error) {
 				if (e.message.includes("Kunci")) {
 					locked = true;

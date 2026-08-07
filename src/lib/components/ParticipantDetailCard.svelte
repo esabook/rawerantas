@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CheckCircle2, Loader2, LogIn, UserCheck, XCircle } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { sfx, vibrate } from "$lib/audio/sfx";
 	import { undoable } from "$lib/components/toast/toastStore";
 	import {
 		CheckinError,
@@ -58,12 +59,18 @@
 				undoable("Peserta sudah check-in sebelumnya.", {
 					onConfirm: () => {},
 				});
+				sfx.confirm();
+				vibrate(40);
 			} else {
 				undoable("Check-in berhasil.", { onConfirm: () => {} });
+				sfx.coin();
+				vibrate([80, 40, 120]);
 			}
 			await load();
 			onDone?.();
 		} catch (e) {
+			sfx.error();
+			vibrate([120, 60, 120]);
 			error =
 				e instanceof CheckinError || e instanceof Error
 					? e.message

@@ -9,6 +9,7 @@
 		ShieldCheck,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { sfx, vibrate } from "$lib/audio/sfx";
 	import { undoable } from "$lib/components/toast/toastStore";
 	import {
 		advanceRound,
@@ -67,7 +68,9 @@
 			await saveCompetition(c);
 			undoable("Konfigurasi kompetisi tersimpan.", { onConfirm: () => {} });
 			await load();
+			sfx.confirm();
 		} catch (e) {
+			sfx.error();
 			error = e instanceof Error ? e.message : "Gagal menyimpan.";
 		} finally {
 			savingId = null;
@@ -84,7 +87,9 @@
 			await savePaymentConfig(cfg);
 			undoable("Konfigurasi pembayaran tersimpan.", { onConfirm: () => {} });
 			await load();
+			sfx.confirm();
 		} catch (e) {
+			sfx.error();
 			error = e instanceof Error ? e.message : "Gagal menyimpan.";
 		} finally {
 			savingId = null;
@@ -104,7 +109,11 @@
 				onConfirm: () => {},
 			});
 			await load();
+			sfx.coin();
+			vibrate(80);
 		} catch (e) {
+			sfx.error();
+			vibrate([120, 60, 120]);
 			error = e instanceof Error ? e.message : "Gagal verifikasi.";
 		} finally {
 			actingPayment = null;
@@ -131,6 +140,8 @@
 			rejectReason[p.id] = "";
 			rejectOpen[p.id] = false;
 			await load();
+			sfx.error();
+			vibrate([120, 60, 120]);
 		} catch (e) {
 			error = e instanceof Error ? e.message : "Gagal menolak.";
 		} finally {
@@ -150,7 +161,11 @@
 				onConfirm: () => {},
 			});
 			await load();
+			sfx.fanfare();
+			vibrate([80, 40, 120, 40, 80]);
 		} catch (e) {
+			sfx.error();
+			vibrate([120, 60, 120]);
 			error = e instanceof Error ? e.message : "Gagal advance round.";
 		} finally {
 			advancing = null;

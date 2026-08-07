@@ -1,24 +1,37 @@
 <script lang="ts">
 	import { Volume2, VolumeX } from "@lucide/svelte";
 	import {
+		loadSfxPreference,
+		setSfxEnabled,
+		sfxEnabled,
+	} from "$lib/audio/sfx";
+	import {
 		loadTtsPreference,
 		setTtsEnabled,
 		ttsAvailable,
-		ttsEnabled,
 		ttsSpeaking,
 	} from "$lib/tts/ttsAnnouncer";
 
+	loadSfxPreference();
 	loadTtsPreference();
+
+	const toggle = () => {
+		const next = !$sfxEnabled;
+		setSfxEnabled(next);
+		if ($ttsAvailable) {
+			setTtsEnabled(next);
+		}
+	};
 </script>
 
 <button
 	type="button"
 	class="btn btn-ghost inline-flex items-center gap-2"
-	onclick={() => setTtsEnabled(!$ttsEnabled)}
-	disabled={!$ttsAvailable}
-	aria-pressed={$ttsEnabled}
+	onclick={toggle}
+	disabled={!$sfxEnabled && !$ttsAvailable}
+	aria-pressed={$sfxEnabled}
 >
-	{#if $ttsEnabled}
+	{#if $sfxEnabled}
 		<Volume2 class="h-4 w-4" aria-hidden="true" />
 		Suara: nyala
 	{:else}

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setSfxEnabled } from "$lib/audio/sfx";
 import SoundToggle from "$lib/components/SoundToggle.svelte";
 import {
 	announce,
@@ -152,15 +153,16 @@ describe("SoundToggle", () => {
 		stubSynthesis();
 		ttsAvailable.set(true);
 		render(SoundToggle);
-		expect(screen.getByRole("button", { name: /suara: mati/i })).toBeTruthy();
-		await fireEvent.click(screen.getByRole("button"));
 		expect(screen.getByRole("button", { name: /suara: nyala/i })).toBeTruthy();
+		await fireEvent.click(screen.getByRole("button"));
+		expect(screen.getByRole("button", { name: /suara: mati/i })).toBeTruthy();
 		expect(screen.getByRole("button").getAttribute("aria-pressed")).toBe(
-			"true",
+			"false",
 		);
 
 		vi.unstubAllGlobals();
 		ttsAvailable.set(false);
+		setSfxEnabled(false);
 		await tick();
 		expect(screen.getByRole("button").getAttribute("disabled")).not.toBeNull();
 	});

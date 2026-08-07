@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CheckCircle2, Loader2, Pencil, Wind } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { sfx, vibrate } from "$lib/audio/sfx";
 	import { undoable } from "$lib/components/toast/toastStore";
 	import {
 		computeHiasTotal,
@@ -62,6 +63,8 @@
 	const select = async (p: Participant) => {
 		selectedId = p.id;
 		error = "";
+		sfx.tap();
+		vibrate(10);
 		const score = await getHiasScore(competitionId, p.id);
 		aesthetic = score?.aesthetic ?? 80;
 		stability = score?.stability ?? 80;
@@ -94,7 +97,11 @@
 			});
 			scored[selected.id] = { total: totalPreview, editable: true };
 			await load();
+			sfx.coin();
+			vibrate(80);
 		} catch (e) {
+			sfx.error();
+			vibrate([120, 60, 120]);
 			error = e instanceof Error ? e.message : "Gagal menyimpan skor.";
 		} finally {
 			submitting = false;
@@ -158,6 +165,7 @@
 					max="100"
 					bind:value={aesthetic}
 					class="accent-gold"
+					onchange={() => sfx.slider()}
 				/>
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
@@ -171,6 +179,7 @@
 					max="100"
 					bind:value={stability}
 					class="accent-gold"
+					onchange={() => sfx.slider()}
 				/>
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
@@ -184,6 +193,7 @@
 					max="100"
 					bind:value={creativity}
 					class="accent-gold"
+					onchange={() => sfx.slider()}
 				/>
 			</label>
 			<div class="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3">

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CheckCircle2, Loader2, Trophy, Wind, X } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { sfx, vibrate } from "$lib/audio/sfx";
 	import { undoable } from "$lib/components/toast/toastStore";
 	import { getParticipants } from "$lib/db/queries";
 	import type { Participant } from "$lib/db/queries";
@@ -81,7 +82,16 @@
 				onConfirm: () => {},
 			});
 			results = await getRoundResults(competitionId, round);
+			if (status === "menang") {
+				sfx.fanfare();
+				vibrate([60, 40, 100]);
+			} else {
+				sfx.confirm();
+				vibrate(60);
+			}
 		} catch (e) {
+			sfx.error();
+			vibrate([120, 60, 120]);
 			error =
 				e instanceof Error ? e.message : "Gagal menyimpan hasil.";
 		} finally {

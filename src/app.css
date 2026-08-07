@@ -90,7 +90,7 @@
 }
 
 @utility btn {
-	@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-muted/40 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors duration-150 select-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+	@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-muted/40 px-4 py-2.5 text-sm font-semibold text-foreground transition-[transform,color,background-color,border-color] duration-150 select-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
 }
 
 @utility btn-gold {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CheckCircle2, Fish, Loader2, TriangleAlert } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { sfx, vibrate } from "$lib/audio/sfx";
 	import {
 		hasJackpot,
 		InvalidWeightError,
@@ -53,12 +54,16 @@
 	const press = (digit: string) => {
 		error = "";
 		if (digit === "⌫") {
+			sfx.backspace();
 			digits = digits.slice(0, -1);
 			return;
 		}
 		if (digits.length >= 6) {
+			sfx.error();
 			return;
 		}
+		sfx.tap();
+		vibrate(10);
 		digits = digits === "0" ? digit : digits + digit;
 	};
 
@@ -72,6 +77,8 @@
 		}
 		if (await hasJackpot(competitionId, selectedP.id)) {
 			jackpotConfirm = true;
+			sfx.confirm();
+			vibrate([30, 20, 30]);
 			return false;
 		}
 		return true;
@@ -115,7 +122,11 @@
 			digits = "";
 			jackpot = false;
 			jackpotConfirm = false;
+			sfx.coin();
+			vibrate(80);
 		} catch (e) {
+			sfx.error();
+			vibrate([120, 60, 120]);
 			error =
 				e instanceof InvalidWeightError || e instanceof Error
 					? e.message

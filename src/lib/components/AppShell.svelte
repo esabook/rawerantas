@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import BottomNav from './BottomNav.svelte';
+	import SoundToggle from './SoundToggle.svelte';
 
 	interface Props {
 		children?: Snippet;
@@ -20,6 +21,7 @@
 				<span class="text-secondary">Pesta Rakyat</span>
 				<span class="text-muted-foreground">Agustusan</span>
 			</a>
+			<SoundToggle />
 		</div>
 	</header>
 
