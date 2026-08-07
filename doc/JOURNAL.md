@@ -185,3 +185,10 @@ Format entri:
 - Keputusan: feedback per aksi sesuai kondisi lapangan — digit keypad (PinGate/Mancing) = tap halus + vibrate 10ms; sukses simpan/verifikasi/check-in/PIN benar = coin + vibrate 80ms; MUDUN = fanfare (momen puncak); PUTUS = confirm; tolak/lockout/error = buzz + vibrate [120,60,120]; advance round = fanfare + vibrate panjang. Slider hias = tick di `onchange` (saat release, tak spam saat drag).
 - Verifikasi tambahan: `btn` dapat `active:scale-[0.97]` + transition transform — press feedback visual taktil (layer: terang/gelap sama).
 - Gates: test 194/194 (35 file) · check 0 · lint 0 (biome import-sort fix ttsAnnouncer.test.ts) · build ✓.
+
+## 2026-08-07 (lanjutan 2)
+
+- Sesi audit impeccable ulang dari nol (scoped, NO_PRODUCT_MD → lanjut tanpa init; register product — app UI kiosk/admin; ditawarkan `/impeccable init` utk nanti) — commit `d11fb23` — Temuan: `lang="en"` di `app.html` (WCAG 3.1.1, app Indonesia) → `id`; `--destructive #dc2626` kontras 4.0:1 gagal WCAG 1.4.3 utk teks error kecil (butuh 4.5:1) → `#e11d48` (rose-600: 4.9:1 teks, tombol semibold-14px ≥3:1 tetap pass); `prefers-reduced-motion` global override (kanonik, biome-ignore noImportantStyles); leaderboard loading spinner → skeleton (register product: skeleton bukan spinner konten); badge luring DisplayScreen `bg-muted` (4.6:1 marginal) → amber 15%; PinGate tombol "Hapus digit" redundan dihapus (⌫ cukup); medal leaderboard rank 2/3 dibedakan (slate-300 perak / amber-700 perunggu); `h1-h3 { text-wrap: balance }`.
+- Temuan backlog (P2, tidak dikerjakan): `src/lib/components/ui/` (shadcn button/input/card/dialog/slider/select/separator) 0 importer — dead code bundle; duplikasi `toScoreRow`/`formatScore` antara LeaderboardBoard & DisplayScreen — kandidat refactor util bersama. Diputuskan tidak dihapus sesi ini (scope audit visual; keputusan buang shadcn = keputusan arsitektur, catat dulu).
+- Verifikasi tambahan: kontras dihitung manual atas token (`muted-foreground #a3a3a3` on `muted #262626` = 4.6:1 pass; gold #d97706 on #0a0a0a = 5.2:1; secondary-foreground on gold = 4.9:1) — semua ambang aman.
+- Gates: test 194/194 (35 file) · check 0 · lint 0 · build ✓.
