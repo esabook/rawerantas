@@ -144,3 +144,27 @@ Format entri:
   OK). Gates: test 189/189 (35 file) · check 0 error · lint 0 · build ✓ · bundle
   client bersih better-sqlite3 (chunk lazy). TTS test sebelumnya gagal juga di
   main bersih (bukan regresi sqlite).
+- SESI 4 — `A7-01` dashboard verifikasi pembayaran (demo-first) + audit log:
+  tab "Verifikasi" default di AdminPanel — daftar payment belum diverifikasi
+  (nama peserta + lomba, metode, nominal, bukti), tombol Verifikasi / Tolak
+  (wajib alasan, input inline), render gambar proof (http only), verifikasi
+  langsung → recalc status peserta (fully_paid/dp_paid vs fee). DB:
+  `verifyPayment`/`rejectPayment` dua jalur — demo: update local payment +
+  recalc + audit; live: supabase `participant_payments` + `participants` +
+  `audit_logs` insert. Audit: store idb baru `demo_audit_logs` (DB_VERSION 9→10),
+  `AuditRecord` (id, action, entityType, entityId, actorHash, payload,
+  idempotencyKey, createdAt), actor = `sha256Hex(pinForKind("admin"))`.
+  `getMergedPayments` demo merge seed + local payments + enrich nama peserta.
+  Keputusan: A7-01 dikerjakan demo-first walau TASKS menandai BLOCKED oleh
+  `D1-03` (apply RLS = eksekusi manusia) — preseden `A7-02`/`A7-03` yang juga
+  BLOCKED tapi DONE; jalur live dikodekan, tinggal manusia apply SQL.
+  Bug ditemukan: `saveDemoPayment` menimpa peserta registrasi asli dgn object
+  kosong (name "") — overwrite hanya status kini; `getMergedPayments` enrich
+  pakai `getParticipants` seed-only → peserta lokal "—" — fix merge peserta
+  lokal + seed via Map. UI test pertama kena tab default (klik tombol tab
+  "Verifikasi (22)" bukan aksi) — selektor exact match; test body cold >
+  default vitest timeout 5s (transform/import dingin ~17s) → per-test
+  timeout 30s utk test baru. Test baru: 5 db (verify → isVerified+verified_by
+  +audit row, verify lunas → status fully_paid, reject → reason + audit,
+  list unverified) + 2 komponen (verifikasi via UI, tolak wajib alasan).
+  Commit `9c6f304`. Gates: test 194/194 (35 file) · check 0 · lint 0 · build ✓.

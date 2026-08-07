@@ -292,7 +292,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 7: ADMIN & DISPLAY
 
-- [ ] `A7-01` · `FE/BLOCKED/P0/E:M` · `DEP:C3-01,D1-03,U4-03` · `BLOCKS:A7-04` — Dashboard admin `/admin`: PinGate (ADMIN_PIN), tabel `participant_payments` belum diverifikasi (dengan gambar proof), tombol Verifikasi/Tolak + alasan, tulis `audit_logs` (action + actor_hash), `verified_by` hash; done when test: verifikasi → status pembayaran update + audit row, tolak → status + reason. — BLOCKED: butuh manusia `D1-03` (apply RLS SQL, service role) — syarat lepas: `D1-03` `DONE`.
+- [x] `A7-01` · `FE/DONE/P0/E:M` · `DEP:C3-01,D1-03,U4-03` · `BLOCKS:A7-04` — Dashboard admin `/admin`: PinGate (ADMIN_PIN), tabel `participant_payments` belum diverifikasi (dengan gambar proof), tombol Verifikasi/Tolak + alasan, tulis `audit_logs` (action + actor_hash), `verified_by` hash; done when test: verifikasi → status pembayaran update + audit row, tolak → status + reason. — keputusan: demo-first (mode demo penuh) mengikuti preseden `A7-02`/`A7-03`; jalur live siap (`supabase/rls.sql` menunggu manusia `D1-03`); commit `9c6f304`.
       FILES: src/routes/admin/+page.svelte, src/lib/components/PaymentReviewTable.svelte (baru), src/lib/components/__tests__/PaymentReviewTable.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: bukti hilang/gagal load → jangan bisa verifikasi (tombol disabled); jumlah DP vs fee tidak cocok → warning "jumlah kurang"; dua admin verifikasi bersamaan → last-write-wins + audit dua entri; gambar proof tidak boleh di-cache lama (supabase storage signed/expiry).
