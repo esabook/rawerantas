@@ -56,6 +56,7 @@ import {
 	saveCompetition,
 	savePaymentConfig,
 	setDataLock,
+	undoCheckIn,
 	verifyPayment,
 } from "$lib/db/admin";
 import { localPut, localStores } from "$lib/db/localStore";
@@ -441,6 +442,51 @@ describe("verify/reject live via RPC (B1-3)", () => {
 			expect(sb.rpcs.at(-1)?.fn).toBe("set_data_lock");
 			expect(sb.rpcs.at(-1)?.args).toMatchObject({ p_locked: true });
 			expect(locked.locked).toBe(true);
+		});
+		describe("undoCheckIn recalc status (B2-6/F11/A9)", () => {
+			beforeEach(async () => {
+				await setDemoMode(true);
+				await resetDemoAdminState();
+				await resetDemoRegistrations();
+			});
+
+			it("undo peserta yang lunas → status tetap fully_paid, bukan dp_paid", async () => {
+				const competition = demoCompetitions()[0];
+				const res = await registerParticipant({
+					competitionId: competition.id,
+					name: "Ung Lunas",
+					phone: "081234500060",
+				});
+				// bayar lunas (fee) + verifikasi
+				await submitPayment(
+					{
+						participantId: res.participantId,
+						competitionId: competition.id,
+						method: "qris",
+						amount: competition.fee,
+						proofBlob: null,
+						isCash: false,
+					},
+					"full",
+					competition,
+				);
+				const payment = (await getPayments(res.participantId))[0];
+				if (!payment) throw new Error("payment tidak ada");
+				await verifyPayment(payment.id, await adminActorHash());
+				// check-in lalu undo
+				const { checkInParticipant, resetDemoCheckins } = await import(
+					"$lib/db/checkin"
+				);
+				await resetDemoCheckins();
+				await checkInParticipant(res.participantId);
+				await undoCheckIn(res.participantId);
+				// status lokal tetap fully_paid (tidak turun ke dp_paid)
+				const { demoLocalParticipants } = await import("$lib/db/register");
+				const local = await demoLocalParticipants();
+				expect(local.find((p) => p.id === res.participantId)?.status).toBe(
+					"fully_paid",
+				);
+			});
 		});
 	});
 });

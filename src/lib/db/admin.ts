@@ -371,11 +371,31 @@ export async function undoCheckIn(participantId: string): Promise<void> {
 		await localDelete(localStores.checkins, participantId);
 		return;
 	}
-	const { getSupabase } = await import("./queries");
+	// B2-6/F11/A9: jangan hardcode dp_paid — hitung ulang status dari total
+	// terverifikasi (fee vs total), seperti recalc di RPC.
+	const { getSupabase, getPayments, getCompetitions, getParticipantById } =
+		await import("./queries");
 	const { supabase } = await getSupabase();
+	const [payments, participant, competitions] = await Promise.all([
+		getPayments(participantId),
+		getParticipantById(participantId),
+		getCompetitions(false),
+	]);
+	const verifiedTotal = payments
+		.filter((p) => p.isVerified && !p.rejectReason?.trim())
+		.reduce((s, p) => s + Number(p.amount), 0);
+	const comp = competitions.find((c) => c.id === participant?.competitionId);
+	const fee = comp?.fee ?? 0;
+	const minDp = comp?.minDp ?? 0;
+	const status =
+		verifiedTotal >= fee
+			? "fully_paid"
+			: verifiedTotal >= minDp
+				? "dp_paid"
+				: "registered";
 	const { error } = await supabase
 		.from("participants")
-		.update({ status: "dp_paid", checked_in_at: null })
+		.update({ status, checked_in_at: null })
 		.eq("id", participantId);
 	if (error) {
 		throw new Error(`undoCheckIn: ${error.message}`);
