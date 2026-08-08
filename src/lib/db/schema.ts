@@ -69,24 +69,34 @@ export const sponsors = pgTable("sponsors", {
 		.notNull(),
 });
 
-export const participants = pgTable("participants", {
-	id: uuid("id").primaryKey().defaultRandom(),
-	competitionId: uuid("competition_id")
-		.notNull()
-		.references(() => competitions.id),
-	ticketNumber: text("ticket_number").notNull().unique(),
-	lapakNumber: text("lapak_number"),
-	name: text("name").notNull(),
-	phone: text("phone").notNull(),
-	status: text("status")
-		.$type<ParticipantStatus>()
-		.notNull()
-		.default("registered"),
-	checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
-	createdAt: timestamp("created_at", { withTimezone: true })
-		.defaultNow()
-		.notNull(),
-});
+export const participants = pgTable(
+	"participants",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		competitionId: uuid("competition_id")
+			.notNull()
+			.references(() => competitions.id),
+		ticketNumber: text("ticket_number").notNull().unique(),
+		lapakNumber: text("lapak_number"),
+		name: text("name").notNull(),
+		phone: text("phone").notNull(),
+		status: text("status")
+			.$type<ParticipantStatus>()
+			.notNull()
+			.default("registered"),
+		checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		// B1-4/F3: dedupe registrasi per (competition_id, phone) — setara rls.sql.
+		uniqueIndex("participants_competition_phone_idx").on(
+			table.competitionId,
+			table.phone,
+		),
+	],
+);
 
 export const participantPayments = pgTable("participant_payments", {
 	id: uuid("id").primaryKey().defaultRandom(),

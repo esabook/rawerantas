@@ -782,6 +782,91 @@ $$;
 grant execute on function verify_payment(uuid, text) to anon, authenticated;
 grant execute on function reject_payment(uuid, text, text) to anon, authenticated;
 
+-- Sequence tiket peserta — bebas kolisi Date.now()%1M (F2), format kanonik T-.
+create sequence if not exists participant_ticket_seq;
+
+-- B1-4 (F1, F2, F3, F12, A16): registrasi peserta via RPC. Kuota direservasi
+-- atomik (fast-path dedupe dulu agar double-tap tidak membuang slot), nomor
+-- tiket dari sequence, dedupe idempoten via ON CONFLICT (competition_id, phone).
+create or replace function register_participant(
+	p_competition uuid,
+	p_name text,
+	p_phone text,
+	p_idempotency_key uuid default gen_random_uuid()
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_existing participants%rowtype;
+	v_competition_name text;
+	v_ticket text;
+	v_inserted boolean;
+begin
+	if p_name is null or trim(p_name) = '' then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_name');
+	end if;
+	if p_phone is null or trim(p_phone) = '' then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_phone');
+	end if;
+
+	-- Fast path: sudah terdaftar utk lomba ini (double-tap umum) — tanpa
+	-- membuang slot kuota.
+	select * into v_existing
+	from participants
+	where competition_id = p_competition and phone = p_phone;
+	if found then
+		return jsonb_build_object(
+			'ok', true,
+			'participantId', v_existing.id,
+			'ticketNumber', v_existing.ticket_number,
+			'duplicated', true
+		);
+	end if;
+
+	-- Reservasi kuota atomik (F1/A16): decrement hanya bila masih ada slot.
+	update competitions set total_quota = total_quota - 1
+	where id = p_competition and total_quota > 0
+	returning name into v_competition_name;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'quota_full');
+	end if;
+
+	-- Nomor tiket dari sequence global (F2).
+	v_ticket := 'T-' || lpad(nextval('participant_ticket_seq')::text, 6, '0');
+
+	-- Dedupe idempoten (F3): bila ada race pendaftaran nomor sama, kembalikan
+	-- baris existing (slot yang sudah direservasi barusan jadi terbuang — kasus
+	-- ekstrem concurrency, diterima).
+	insert into participants (competition_id, name, phone, ticket_number, status)
+	values (p_competition, trim(p_name), p_phone, v_ticket, 'registered')
+	on conflict (competition_id, phone)
+	do update set id = participants.id
+	returning id, ticket_number, (xmax = 0) as inserted
+	into v_existing.id, v_ticket, v_inserted;
+
+	if not v_inserted then
+		return jsonb_build_object(
+			'ok', true,
+			'participantId', v_existing.id,
+			'ticketNumber', v_ticket,
+			'duplicated', true
+		);
+	end if;
+
+	return jsonb_build_object(
+		'ok', true,
+		'participantId', v_existing.id,
+		'ticketNumber', v_ticket,
+		'duplicated', false
+	);
+end;
+$$;
+
+grant execute on function register_participant(uuid, text, text, uuid)
+	to anon, authenticated;
+
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
 	with check (bucket_id = 'proof-images');

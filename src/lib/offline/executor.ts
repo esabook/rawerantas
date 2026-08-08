@@ -1,4 +1,4 @@
-import { nextTicketNumber, normalizePhone } from "$lib/db/register";
+import { normalizePhone } from "$lib/db/register";
 import { PROOF_IMAGES_BUCKET } from "$lib/db/storage";
 import type { ExecuteOp, SyncResult } from "./sync";
 
@@ -189,21 +189,26 @@ async function executeRegister(
 	payload: Record<string, unknown>,
 ): Promise<SyncResult> {
 	const phone = normalizePhone(payload.phone as string);
-	const { data: existing } = await supabase
-		.from("participants")
-		.select("id")
-		.eq("competition_id", payload.competitionId as string)
-		.eq("phone", phone)
-		.maybeSingle();
-	if (existing) {
-		return "conflict";
+	// B1-4 (F1/F2/F3/F12): registrasi via RPC — kuota atomik, tiket sequence,
+	// dedupe idempoten di server (bukan insert/cari manual).
+	let rpcResponse: { data: unknown; error: unknown };
+	try {
+		rpcResponse = await supabase.rpc("register_participant", {
+			p_competition: payload.competitionId,
+			p_name: payload.name,
+			p_phone: phone,
+			p_idempotency_key: payload.idempotencyKey ?? null,
+		});
+	} catch {
+		return "error";
 	}
-	const { error } = await supabase.from("participants").insert({
-		competition_id: payload.competitionId,
-		name: payload.name,
-		phone,
-		ticket_number: nextTicketNumber(Date.now() % 1_000_000),
-		status: "registered",
-	});
-	return error ? (isUniqueViolation(error) ? "conflict" : "error") : "ok";
+	if (rpcResponse.error) {
+		return "error";
+	}
+	const result = rpcResponse.data as
+		| { ok?: boolean; reason?: string }
+		| undefined;
+	// Kuota penuh / penolakan bisnis deterministik → hentikan retry sebagai
+	// conflict; error lain → retry.
+	return result?.ok === true ? "ok" : "conflict";
 }

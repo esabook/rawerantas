@@ -288,4 +288,58 @@ describe("executor offline — pembayaran via RPC (QW-6/F15/A20, B1-1)", () => {
 		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
 		expect(result).toBe("conflict");
 	});
+	describe("executor offline — register via RPC (B1-4/F1/F2/F3/F12)", () => {
+		beforeEach(() => {
+			captured.rpcs.length = 0;
+			captured.rpcError = null;
+			captured.rpcResult = {
+				ok: true,
+				participantId: "p-live-1",
+				ticketNumber: "T-000001",
+				duplicated: false,
+			};
+		});
+
+		function registerEntry(payload: Record<string, unknown>): QueueEntry {
+			return {
+				idempotencyKey: "register:c-1:r1",
+				endpoint: "/rest/participants",
+				payload,
+				timestamp: 4,
+				retries: 0,
+				status: "pending",
+			};
+		}
+
+		const REGISTER_PAYLOAD = {
+			competitionId: "c-1",
+			name: "Budi Offline",
+			phone: "081234567890",
+			idempotencyKey: "idem-reg-1",
+		};
+
+		it("RPC register_participant → ok, phone ternormalisasi + idempotency", async () => {
+			const result = await executeQueueEntry(registerEntry(REGISTER_PAYLOAD));
+			expect(result).toBe("ok");
+			expect(captured.rpcs.at(-1)?.fn).toBe("register_participant");
+			expect(captured.rpcs.at(-1)?.args).toMatchObject({
+				p_competition: "c-1",
+				p_name: "Budi Offline",
+				p_phone: "+6281234567890",
+				p_idempotency_key: "idem-reg-1",
+			});
+		});
+
+		it("RPC kuota penuh → conflict (berhenti retry)", async () => {
+			captured.rpcResult = { ok: false, reason: "quota_full" };
+			const result = await executeQueueEntry(registerEntry(REGISTER_PAYLOAD));
+			expect(result).toBe("conflict");
+		});
+
+		it("RPC error → error (retry)", async () => {
+			captured.rpcError = new Error("db down");
+			const result = await executeQueueEntry(registerEntry(REGISTER_PAYLOAD));
+			expect(result).toBe("error");
+		});
+	});
 });

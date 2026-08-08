@@ -72,10 +72,10 @@ export async function findParticipantsByPhone(
 	if (error) {
 		throw new Error(`findParticipantsByPhone: ${error.message}`);
 	}
-		return (data ?? []).map((row) =>
-			normalizeParticipantRow(row as Record<string, unknown>),
-		);
-	}
+	return (data ?? []).map((row) =>
+		normalizeParticipantRow(row as Record<string, unknown>),
+	);
+}
 
 async function saveDemoRegistration(participant: Participant): Promise<void> {
 	await localPut(STORE, participant);
@@ -110,64 +110,73 @@ export async function registerParticipant(
 	if (get(demoMode)) {
 		return registerParticipantDemo(input);
 	}
+	const phone = normalizePhone(input.phone);
+	// B1-4: satu UUID idempotensi utk RPC & kunci antrean (F12).
+	const idempotencyKey = crypto.randomUUID();
 	const { supabase } = await import("./supabaseClient");
 	try {
-		const { data, error } = await supabase
-			.from("participants")
-			.insert({
-				competition_id: input.competitionId,
-				name: input.name,
-				phone: normalizePhone(input.phone),
-				ticket_number: nextTicketNumber(Date.now() % 1_000_000),
-				status: "registered",
-			})
-			.select()
-			.single();
+		// B1-4: registrasi via RPC — kuota atomik, tiket sequence, dedupe (F1/F2/F3).
+		const { data, error } = await supabase.rpc("register_participant", {
+			p_competition: input.competitionId,
+			p_name: input.name,
+			p_phone: phone,
+			p_idempotency_key: idempotencyKey,
+		});
 		if (error) {
 			throw error;
 		}
-		const participant = normalizeParticipantRow(
-			data as Record<string, unknown>,
-		);
+		const result = data as
+			| {
+					ok: boolean;
+					participantId?: string;
+					ticketNumber?: string;
+					duplicated?: boolean;
+					reason?: string;
+			  }
+			| undefined;
+		if (!result?.ok) {
+			if (result?.reason === "quota_full") {
+				const competition = demoCompetitions().find(
+					(c) => c.id === input.competitionId,
+				);
+				throw new QuotaFullError(competition?.name ?? "tersebut");
+			}
+			throw new Error(registerRpcMessage(result?.reason));
+		}
 		return {
-			participantId: participant.id,
-			ticketNumber: participant.ticketNumber,
-			duplicated: false,
+			participantId: result.participantId ?? "",
+			ticketNumber: result.ticketNumber ?? null,
+			duplicated: result.duplicated ?? false,
 			queued: false,
 		};
 	} catch (e) {
-		const { data: existing } = await supabase
-			.from("participants")
-			.select("id, ticket_number")
-			.eq("competition_id", input.competitionId)
-			.eq("phone", normalizePhone(input.phone))
-			.maybeSingle();
-		if (existing) {
-			return {
-				participantId: existing.id,
-				ticketNumber: existing.ticket_number,
-				duplicated: true,
-				queued: false,
-			};
-		}
 		if (!isOfflineError(e)) {
 			throw e;
 		}
-		await enqueue(
-			`register:${input.competitionId}:${normalizePhone(input.phone)}`,
-			"/rest/participants",
-			{
-				competitionId: input.competitionId,
-				name: input.name,
-				phone: normalizePhone(input.phone),
-			},
-		);
+		await enqueue(idempotencyKey, "/rest/participants", {
+			competitionId: input.competitionId,
+			name: input.name,
+			phone,
+			idempotencyKey,
+		});
 		return {
 			participantId: "",
 			ticketNumber: null,
 			duplicated: false,
 			queued: true,
 		};
+	}
+}
+
+/** Pesan ramah utk reason penolakan RPC `register_participant`. */
+function registerRpcMessage(reason: string | undefined): string {
+	switch (reason) {
+		case "invalid_name":
+			return "Nama peserta tidak valid.";
+		case "invalid_phone":
+			return "Nomor WhatsApp tidak valid.";
+		default:
+			return "Pendaftaran ditolak server. Coba lagi.";
 	}
 }
 
