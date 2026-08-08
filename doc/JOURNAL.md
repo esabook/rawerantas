@@ -404,4 +404,38 @@ Format entri:
 - Catatan: A34 masih terbuka utk saveCompetition/savePaymentConfig/advanceRound
   (di luar FILES B1-3) → kandidat /rawe2. B2-7 (audit best-effort) kini
   kandidat SUPERSEDED karena audit verify/reject sudah di RPC.
+## 2026-08-09 (dini hari 3) — Batch 1 TUNTAS (8/8) via /rawe3
+
+- Rekonsiliasi awal: B1-1..B1-3 sudah committed; lanjut B1-4..B1-8. Semua item
+  diverifikasi, commit per item, gates check 0 + lint 0 + suite hijau.
+- **B1-4** (F1,F2,F3,F12,A16,A7,A1,A39 sebagian) — `ded8f57`: RPC
+  register_participant (fast-path dedupe → decrement kuota atomik → tiket dari
+  sequence participant_ticket_seq → ON CONFLICT (competition_id,phone));
+  schema.ts unique (F3); register.elive + executor via RPC; idempotency_key
+  utk retry (F12). CARRYOVER: A7/A39 import masih generate tiket lokal.
+- **B1-5** (F7,A21,A22) — `7cd0c63`: RPC check_in (for update; guard
+  disqualified/payment_rejected/minimal DP; audit+recorded_by); checkin.ts
+  live via RPC; offline catat optimistik lokal (F7); executor drain via RPC.
+- **B1-6** (F4,A18) — `f533fb6`: cabut policy tulis publik yang kini via RPC
+  (payments INSERT/UPDATE, participants INSERT, DELETE skor, revoke grant
+  delete skor). SISA tulis publik DIJAGA (scores/hias insert, sponsors,
+  configs, participants UPDATE undoCheckIn, audit_logs) — carryover batch
+  lanjutan (B3-4 dll).
+- **B1-7** (A18 lanjutan, A25) — `658d790`: RPC delete_score (tabel
+  whitelist; delete via id atau idempotency_key; audit); executor delete via
+  RPC; removeScore/removeLayanganScore opsi actorHash.
+- **B1-8** (A17) — `0de0cdc`: tabel data_lock single-row + RPC set_data_lock
+  (audit on/off) + guard data_lock_is_locked() di SEMUA RPC tulis; guard
+  'locked' di mapper pesan; getDataLock/setDataLock (demo+live); toggle
+  AdminPanel. Tulis langsung (skor/hias/sponsor/config/undoCheckIn) belum
+  di-guard client — hanya RPC; carryover.
+- **Batch 1 gate**: suite 270/270 (40 file) · check 0 · lint 0. Nol-limbo:
+  8/8 DONE.
+- **PENTING human queue**: `supabase/rls.sql` kini berisi SEMUA RPC +
+  migrasi (idempotency_key payments, unique participant phone, sequence
+  tiket, data_lock) + penarikan policy B1-6. WAJIB di-apply via Supabase
+  Dashboard dgn urutan: section 1 (schema) → 5 (RPC) → 7 (data_lock) → 6
+  (cabut policy, TERAKHIR agar app tidak mati). Checklist pra-acara = gate
+  rilis setelah apply.
+- Next: Batch 2 (pembayaran & status, P1) — B2-1..B2-7.
   referensi file:baris baru di-spot-check terhadap source.

@@ -203,7 +203,7 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     competitions & payment_configs UPDATE, participants UPDATE (undoCheckIn), audit_logs INSERT — dicatat utk
     batch lanjutan (B3-4 dll). Apply SQL = human queue.
   - VERIFY: uji anon ditolak + alur app tetap jalan · apply = human queue
-  - Commit: —
+  - Commit: `f533fb6`
 - [x] **B1-7** — Undo skor via RPC ber-audit (pengganti DELETE publik) — Temuan: A18 (lanjutan), pasangan A25
   - FILES: `supabase/rls.sql`, `src/lib/db/scores.ts`, `src/lib/db/layangan.ts`, `src/lib/offline/executor.ts`, test
   - Plan: `delete_score(idempotency_key, actor)` + audit; `removeScore`/tombstone pindah ke RPC.
@@ -212,11 +212,16 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     Executor delete cases via RPC; removeScore/removeLayanganScore opsi actorHash utk audit payload.
   - VERIFY: test scores/layangan
   - Commit: `658d790`
-- [ ] **B1-8** — Data lock pasca-acara — Temuan: A17
+- [x] **B1-8** — Data lock pasca-acara — Temuan: A17
   - FILES: `supabase/rls.sql` (flag + prosedur), `src/lib/db/admin.ts`, `src/lib/components/AdminPanel.svelte`, test
   - Plan: flag lock dihormati semua tulis client + prosedur DB tertulis + audit lock on/off.
+  - Bukti: admin.test.ts 18 PASS (2 data-lock) · suite 270/270 · check 0 · lint 0
+  - Keputusan: tabel data_lock single-row + RPC set_data_lock (audit on/off) + guard data_lock_is_locked() di
+    SEMUA RPC tulis B1-1..B1-7 (locked → reason 'locked'). getDataLock/setDataLock (demo lokal + live RPC);
+    toggle di AdminPanel (tab Metode pembayaran); case 'locked' di semua mapper pesan. Tulis langsung (skor/
+    hias/sponsor/config/undoCheckIn) belum di-guard client-side — hanya RPC; dicatat carryover.
   - VERIFY: test admin + checklist prosedur
-  - Commit: —
+  - Commit: `0de0cdc`
 
 ## Batch 2 — Pembayaran & status (P1)
 
