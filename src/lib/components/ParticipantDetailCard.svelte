@@ -91,6 +91,20 @@
 		}
 	};
 
+	// QW-4/A10: alasan check-in terblokir — tombol dinonaktifkan alih-alih
+	// melempar error saat diklik. Status layak hanya dp_paid/fully_paid
+	// (cermin guard checkInParticipant di checkin.ts).
+	const checkinBlockedReason = $derived.by((): string => {
+		if (!summary) return "";
+		if (summary.status === "disqualified") {
+			return "Peserta didiskualifikasi.";
+		}
+		if (summary.status !== "dp_paid" && summary.status !== "fully_paid") {
+			return "Belum memenuhi syarat masuk (minimal DP dibayar).";
+		}
+		return "";
+	});
+
 	const payCash = async () => {
 		if (
 			!summary ||
@@ -253,9 +267,7 @@
 				type="button"
 				class="btn btn-gold h-12 text-base"
 				onclick={() => void checkin()}
-				disabled={checking ||
-					paying ||
-					summary.status === "disqualified"}
+				disabled={checking || paying || checkinBlockedReason !== ""}
 			>
 				{#if checking}
 					<Loader2 class="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -265,6 +277,11 @@
 					Check-in Peserta
 				{/if}
 			</button>
+			{#if checkinBlockedReason !== ""}
+				<p class="text-xs text-muted-foreground" role="status">
+					{checkinBlockedReason}
+				</p>
+			{/if}
 		{:else}
 			<p
 				class="flex items-center gap-1.5 text-sm text-emerald-600"

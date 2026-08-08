@@ -75,7 +75,7 @@ describe("ParticipantDetailCard", () => {
 		});
 	});
 
-	it("peserta registered → tombol check-in tampil, klik → error syarat", async () => {
+	it("peserta registered → tombol check-in nonaktif + alasan tampil tanpa klik (QW-4/A10)", async () => {
 		const { container } = render(ParticipantDetailCard, {
 			participantId: registered.id,
 			onDone: () => {},
@@ -83,17 +83,15 @@ describe("ParticipantDetailCard", () => {
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("Terdaftar");
 		});
-		fireEvent.click(
-			Array.from(container.querySelectorAll("button")).find((b) =>
-				(b.textContent ?? "").includes("Check-in"),
-			) as Element,
-		);
-		await waitFor(
-			() => {
-				expect((container.textContent ?? "").includes("minimal DP")).toBe(true);
-			},
-			{ timeout: 5000 },
-		);
+		// Alasan langsung tampil; tombol check-in ada tetapi dinonaktifkan.
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("minimal DP");
+		});
+		const btn = Array.from(container.querySelectorAll("button")).find((b) =>
+			(b.textContent ?? "").includes("Check-in"),
+		) as HTMLButtonElement | undefined;
+		expect(btn).toBeTruthy();
+		expect(btn?.disabled).toBe(true);
 	});
 
 	it("peserta sudah check-in → info, tanpa tombol", async () => {

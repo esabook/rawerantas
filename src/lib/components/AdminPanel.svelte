@@ -1115,6 +1115,15 @@
 										<td class="px-3 py-2">
 											{#if row.checkedIn}
 												<button type="button" class="btn btn-ghost px-2 py-1 text-xs" onclick={() => void panitiaUndoCheckIn(row)} disabled={panitiaSaving !== null}><Undo2 class="h-3.5 w-3.5" aria-hidden="true" />Batalkan</button>
+											{:else if row.paidStatus === "none"}
+												<!-- QW-4/A10: belum DP / ditolak / didiskualifikasi → check-in pasti
+													 ditolak checkin.ts; nonaktifkan + alasan, bukan tombol yang gagal. -->
+												<span
+													class="inline-flex items-center gap-1 rounded-md border border-border/60 px-2 py-1 text-xs text-muted-foreground"
+													title="Belum memenuhi syarat masuk (minimal DP dibayar)"
+												>
+													<BadgeCheck class="h-3.5 w-3.5" aria-hidden="true" />Belum layak
+												</span>
 											{:else}
 												<button type="button" class="btn btn-gold px-2 py-1 text-xs" onclick={() => void panitiaCheckIn(row)} disabled={panitiaSaving !== null}><BadgeCheck class="h-3.5 w-3.5" aria-hidden="true" />Check-in</button>
 											{/if}

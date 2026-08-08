@@ -396,4 +396,30 @@ describe("AdminPanel", () => {
 			),
 		).toBe(true);
 	}, 30000);
+
+	it("tab Panitia: peserta belum layak → 'Belum layak' tanpa tombol check-in; peserta DP → tombol aktif (QW-4/A10)", async () => {
+		const { container } = render(AdminPanel);
+		await clickTab(container, "Panitia");
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Belum layak");
+		});
+		// Baris peserta belum bayar: tanpa tombol Check-in (diganti label + alasan).
+		const unpaidRow = Array.from(container.querySelectorAll("tr")).find(
+			(row) => (row.textContent ?? "").includes("Belum layak"),
+		);
+		expect(unpaidRow).toBeDefined();
+		expect(
+			Array.from(must(unpaidRow).querySelectorAll("button")).some((b) =>
+				(b.textContent ?? "").includes("Check-in"),
+			),
+		).toBe(false);
+		// Peserta yang sudah DP/lunas tetap punya tombol Check-in aktif.
+		const checkinButtons = Array.from(
+			container.querySelectorAll("button"),
+		).filter((b) => (b.textContent ?? "").trim() === "Check-in");
+		expect(checkinButtons.length).toBeGreaterThan(0);
+		expect(
+			checkinButtons.some((b) => !(b as HTMLButtonElement).disabled),
+		).toBe(true);
+	});
 });
