@@ -268,3 +268,39 @@ Format entri:
   jadi belum terbukti bermasalah.
 - Gates: test 209/209 · check 0 · lint 0 · build ✓ · verifikasi visual browser
   360×740 (scrollWidth=clientWidth=360, 3 item BottomNav utuh & terjangkau).
+
+## 2026-08-08 — audit & perkaya doc2 v2 + tracker eksekusi `8be61c9`
+
+- Permintaan user: lengkapi & perkaya `doc2/*.md` — cek end-to-end + edge case
+  sisi admin/panitia/juri, minimalkan keluhan/gap/fitur kurang; scan/audit bug
+  & improvement alur peserta end-to-end. Dilanjutkan: mekanisme eksekusi yang
+  sadar drift/miss/gap + shortcut skill.
+- Audit penuh terhadap kode (db/offline/security/routes/komponen/rls.sql) vs
+  kedua dokumen: **semua temuan lama (F1–F13, A1–A16) terverifikasi akurat**,
+  satu koreksi: F3 — unique `(competition_id, phone)` ternyata SUDAH ada di
+  `rls.sql:144` (absen hanya di `schema.ts` drizzle); narasi F3 direvisi.
+- 25 temuan baru sisi admin/panitia/juri (A17–A41) — terbesar: data lock §6.4
+  tak terimplementasi; DELETE publik pada skor (sabotase); panel juri mati
+  offline di mode live; tombstone undo pakai kunci antrean (ghost score);
+  executor menjatuhkan `flight_duration_ms`; semantik `mudun`; papan aduan
+  akumulasi lintas babak; realtime publication tak dikonfigurasi; PIN
+  plaintext di bundle + fallback `123456` senyap; flag demo build-time.
+- 12 temuan baru sisi peserta (F14–F25) — terbesar: pembayaran tanpa
+  idempotency (baris ganda via double-tap/retry/drain); gagal upload bukti
+  ditelan → deadlock dengan F8; error palsu + risiko tagih dobel offline;
+  teks UI menjanjikan resubmit yang tak ada; mode lunas memaksa fee penuh.
+- Dokumen diperkaya seksi operasional: audit E2E per peran (4 tabel),
+  cross-check ARCHITECTURE vs implementasi (16 butir, 5 ❌ / 4 ⚠️), matriks
+  perjalanan peserta 10 tahap, perluasan desain RPC (9 item), rekomendasi
+  P0/P1/P2, checklist pra-acara.
+- `doc2/FIX-TRACKER.md`: pemetaan 66 temuan → 39 item / 5 batch + protokol
+  anti-drift (re-verify referensi, scope lock, 1 item = 1 commit), anti-miss
+  (status terminal + audit nol-limbo), anti-gap (temuan baru = item baru,
+  test wajib, keputusan manusia eksplisit), rekonsiliasi git per sesi.
+  Gap check programmatically: 66/66 ID terpetakan.
+- Skill baru: `.opencode/skills/rawe2` (audit ulang doc2) & `rawe3`
+  (eksekutor FIX-TRACKER). Keputusan: eksekusi fix di sesi baru via `/rawe3`,
+  mulai Batch 0; Batch 1 butuh human queue apply `rls.sql`.
+- Tidak ada perubahan kode pada sesi ini (murni dokumen + skill), sesuai
+  karakter review. Gates: tabel markdown konsisten (check kolom), seluruh
+  referensi file:baris baru di-spot-check terhadap source.
