@@ -362,11 +362,14 @@
 		const verifiedAmount = verifiedAmountFor(participant);
 		const pending = pendingPaymentsFor(participant).length;
 		const rejected = rejectedPaymentsFor(participant).length;
-		if (
-			participant.status === "fully_paid" ||
-			participant.status === "checked_in"
-		)
-			return "Lunas";
+		// B2-2/F19: checked_in ≠ lunas; tampilkan sisa bila masih ada tagihan.
+		if (participant.status === "fully_paid") return "Lunas";
+		if (participant.status === "checked_in") {
+			const remaining = remainingFor(participant);
+			return remaining > 0
+				? `Sudah masuk — sisa Rp ${remaining.toLocaleString("id-ID")}`
+				: "Sudah masuk — lunas";
+		}
 		if (pending > 0) return "Menunggu verifikasi";
 		if (rejected > 0) return "Pembayaran ditolak";
 		if (verifiedAmount > 0) return "DP terverifikasi";
@@ -725,7 +728,10 @@
 								><BadgeCheck
 									class="h-4 w-4"
 									aria-hidden="true"
-								/>Siap bertanding</span
+								/>{participant.status === "checked_in" &&
+								remainingFor(participant) > 0
+									? "Sudah masuk — tagihan sisa"
+									: "Siap bertanding"}</span
 							>
 						{/if}
 					</div>
@@ -776,6 +782,7 @@
 				<TicketCard
 					participant={selectedTicket}
 					competition={competitionFor(selectedTicket)}
+					remaining={remainingFor(selectedTicket)}
 					printWidth={80}
 				/>
 			</div>
