@@ -19,6 +19,7 @@ const CONFIG_STORE = localStores.paymentConfigs;
 const SPONSOR_STORE = localStores.sponsors;
 const PAYMENT_STORE = localStores.payments;
 const AUDIT_STORE = localStores.auditLogs;
+const LOCK_STORE = localStores.dataLock;
 
 export interface AuditRecord {
 	id: string;
@@ -510,6 +511,8 @@ function verifyRpcMessage(reason: string | undefined): string {
 			return "Pembayaran sudah terverifikasi.";
 		case "no_proof":
 			return "Verifikasi ditolak: bukti pembayaran tidak ada.";
+		case "locked":
+			return "Data terkunci setelah acara selesai. Verifikasi ditutup.";
 		default:
 			return "Verifikasi ditolak server. Coba lagi.";
 	}
@@ -575,7 +578,80 @@ function rejectRpcMessage(reason: string | undefined): string {
 			return "Pembayaran sudah terverifikasi dan tidak dapat ditolak.";
 		case "invalid_reason":
 			return "Alasan penolakan wajib diisi.";
+		case "locked":
+			return "Data terkunci setelah acara selesai. Penolakan ditutup.";
 		default:
 			return "Penolakan ditolak server. Coba lagi.";
 	}
+}
+
+export interface DataLockState {
+	locked: boolean;
+	lockedAt: Date | null;
+	lockedBy: string | null;
+}
+
+/** Baca status data lock (demo: lokal; live: via RPC/get). */
+export async function getDataLock(): Promise<DataLockState> {
+	if (get(demoMode)) {
+		const rows = await localGetAll<DataLockState & { id: string }>(LOCK_STORE);
+		const row = rows.find((r) => r.id === "lock");
+		return row
+			? {
+					locked: row.locked,
+					lockedAt: row.lockedAt ?? null,
+					lockedBy: row.lockedBy ?? null,
+				}
+			: { locked: false, lockedAt: null, lockedBy: null };
+	}
+	const { supabase } = await import("./supabaseClient");
+	const { data, error } = await supabase
+		.from("data_lock")
+		.select("is_locked, locked_at, locked_by")
+		.single();
+	if (error) {
+		throw new Error(`getDataLock: ${error.message}`);
+	}
+	const row = data as
+		| { is_locked: boolean; locked_at: string | null; locked_by: string | null }
+		| undefined;
+	return {
+		locked: row?.is_locked ?? false,
+		lockedAt: row?.locked_at ? new Date(row.locked_at) : null,
+		lockedBy: row?.locked_by ?? null,
+	};
+}
+
+/** Setel/lepas data lock (demo: lokal; live: via RPC set_data_lock + audit). */
+export async function setDataLock(
+	locked: boolean,
+	actorHash: string,
+): Promise<DataLockState> {
+	if (get(demoMode)) {
+		const state: DataLockState & { id: string } = {
+			id: "lock",
+			locked,
+			lockedAt: locked ? new Date() : null,
+			lockedBy: locked ? actorHash : null,
+		};
+		await localPut(LOCK_STORE, state);
+		return state;
+	}
+	const { supabase } = await import("./supabaseClient");
+	const { data, error } = await supabase.rpc("set_data_lock", {
+		p_locked: locked,
+		p_actor_hash: actorHash,
+	});
+	if (error) {
+		throw new Error(`setDataLock: ${error.message}`);
+	}
+	const result = data as { ok?: boolean; reason?: string } | undefined;
+	if (!result?.ok) {
+		throw new Error(
+			result?.reason === "locked"
+				? "Data terkunci."
+				: "Gagal mengubah data lock.",
+		);
+	}
+	return getDataLock();
 }

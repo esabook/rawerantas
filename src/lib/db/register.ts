@@ -175,6 +175,8 @@ function registerRpcMessage(reason: string | undefined): string {
 			return "Nama peserta tidak valid.";
 		case "invalid_phone":
 			return "Nomor WhatsApp tidak valid.";
+		case "locked":
+			return "Data terkunci setelah acara selesai. Pendaftaran ditutup.";
 		default:
 			return "Pendaftaran ditolak server. Coba lagi.";
 	}

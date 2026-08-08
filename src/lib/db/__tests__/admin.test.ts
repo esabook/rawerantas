@@ -22,6 +22,7 @@ const sb = vi.hoisted(() => ({
 		payment_method: "qris",
 		proof_image_url: "https://cdn.test/p.jpg",
 	} as Record<string, unknown> | null,
+	lockRow: null as Record<string, unknown> | null,
 }));
 
 vi.mock("$lib/db/supabaseClient", () => ({
@@ -32,12 +33,12 @@ vi.mock("$lib/db/supabaseClient", () => ({
 			if (sb.rpcError) throw sb.rpcError;
 			return { data: sb.rpcResult, error: null };
 		},
-		// verifyPayment live melakukan pre-fetch bukti sebelum RPC.
 		from: () => ({
 			select: () => ({
 				eq: () => ({
 					maybeSingle: async () => ({ data: sb.proofRow, error: null }),
 				}),
+				single: async () => ({ data: sb.lockRow, error: null }),
 			}),
 		}),
 	},
@@ -47,12 +48,14 @@ import {
 	adminActorHash,
 	advanceRound,
 	demoAuditLogs,
+	getDataLock,
 	getMergedPayments,
 	getUnverifiedPayments,
 	rejectPayment,
 	resetDemoAdminState,
 	saveCompetition,
 	savePaymentConfig,
+	setDataLock,
 	verifyPayment,
 } from "$lib/db/admin";
 import { localPut, localStores } from "$lib/db/localStore";
@@ -404,5 +407,40 @@ describe("verify/reject live via RPC (B1-3)", () => {
 		await expect(
 			rejectPayment("pay-1", await adminActorHash(), "x"),
 		).rejects.toThrow("sudah terverifikasi");
+	});
+	describe("data lock (B1-8/A17)", () => {
+		beforeEach(async () => {
+			sb.rpcResult = { ok: true };
+			sb.rpcError = null;
+			sb.rpcs.length = 0;
+			await setDemoMode(true);
+			await resetDemoAdminState();
+		});
+
+		it("demo: setDataLock benar → getDataLock merefleksikan", async () => {
+			const hash = await adminActorHash();
+			expect((await getDataLock()).locked).toBe(false);
+			const locked = await setDataLock(true, hash);
+			expect(locked.locked).toBe(true);
+			expect(locked.lockedBy).toBe(hash);
+			expect((await getDataLock()).locked).toBe(true);
+			await setDataLock(false, hash);
+			expect((await getDataLock()).locked).toBe(false);
+		});
+
+		it("live: setDataLock via RPC set_data_lock + getDataLock", async () => {
+			await setDemoMode(false);
+			sb.rpcResult = { ok: true, locked: true };
+			// getDataLock live memakai select dari tabel data_lock — mock from().
+			sb.lockRow = {
+				is_locked: true,
+				locked_at: "2026-08-17T10:00:00Z",
+				locked_by: "hash",
+			};
+			const locked = await setDataLock(true, await adminActorHash());
+			expect(sb.rpcs.at(-1)?.fn).toBe("set_data_lock");
+			expect(sb.rpcs.at(-1)?.args).toMatchObject({ p_locked: true });
+			expect(locked.locked).toBe(true);
+		});
 	});
 });

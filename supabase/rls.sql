@@ -496,6 +496,9 @@ declare
 	v_verified_total integer;
 	v_new_status text;
 begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
 	select * into v_participant from participants where id = p_participant_id;
 	if not found then
 		return jsonb_build_object('ok', false, 'reason', 'participant_not_found');
@@ -600,6 +603,9 @@ declare
 	v_payment participant_payments%rowtype;
 	v_participant participants%rowtype;
 begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
 	select * into v_payment from participant_payments where id = p_payment_id;
 	if not found then
 		return jsonb_build_object('ok', false, 'reason', 'payment_not_found');
@@ -694,6 +700,9 @@ as $$
 declare
 	v_payment participant_payments%rowtype;
 begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
 	select * into v_payment
 	from participant_payments
 	where id = p_payment_id
@@ -743,6 +752,9 @@ as $$
 declare
 	v_payment participant_payments%rowtype;
 begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
 	if p_reason is null or trim(p_reason) = '' then
 		return jsonb_build_object('ok', false, 'reason', 'invalid_reason');
 	end if;
@@ -804,6 +816,9 @@ declare
 	v_ticket text;
 	v_inserted boolean;
 begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
 	if p_name is null or trim(p_name) = '' then
 		return jsonb_build_object('ok', false, 'reason', 'invalid_name');
 	end if;
@@ -884,6 +899,9 @@ declare
 	v_total integer;
 	v_rejected boolean;
 begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
 	select * into v_participant
 	from participants
 	where id = p_participant_id
@@ -957,6 +975,9 @@ as $$
 declare
 	v_deleted integer;
 begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
 	if p_table not in ('scores_mancing', 'scores_layangan') then
 		return jsonb_build_object('ok', false, 'reason', 'invalid_table');
 	end if;
@@ -997,6 +1018,56 @@ grant execute on function delete_score(text, uuid, uuid, text) to anon, authenti
 
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
+-- ============================================================
+-- 7. Data lock pasca-acara (B1-8) — A17
+-- Lock memblokir SEMUA tulis setelah acara selesai. Tabel single-row;
+-- setiap RPC tulis (B1-1..B1-7) menolak saat terkunci lewat data_lock_is_locked().
+-- ============================================================
+create table if not exists data_lock (
+	singleton boolean primary key default true check (singleton = true),
+	is_locked boolean not null default false,
+	locked_at timestamptz,
+	locked_by text,
+	created_at timestamptz not null default now()
+);
+insert into data_lock (singleton) values (true) on conflict do nothing;
+
+create or replace function data_lock_is_locked() returns boolean
+language sql security definer set search_path = public
+as $$
+	select is_locked from data_lock where singleton = true;
+$$;
+
+-- Setel/lepas lock (admin, ber-PIN via actor_hash) + audit.
+create or replace function set_data_lock(
+	p_locked boolean,
+	p_actor_hash text default null
+) returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+begin
+	update data_lock
+	set is_locked = p_locked,
+		locked_at = case when p_locked then now() else null end,
+		locked_by = case when p_locked then coalesce(p_actor_hash, 'guest') else null end
+	where singleton = true;
+
+	insert into audit_logs (action, entity_type, entity_id, actor_hash, payload, idempotency_key)
+	values (
+		'data_lock',
+		'app_settings',
+		'data_lock',
+		coalesce(p_actor_hash, 'guest'),
+		jsonb_build_object('locked', p_locked),
+		gen_random_uuid()
+	);
+
+	return jsonb_build_object('ok', true, 'locked', p_locked);
+end;
+$$;
+
+grant execute on function data_lock_is_locked() to anon, authenticated;
+grant execute on function set_data_lock(boolean, text) to anon, authenticated;
 -- ============================================================
 -- 6. Cabut tulis publik yang kini lewat RPC (B1-6) — F4, A18
 --    Urutan: RPC B1-1..B1-5 & B1-7 sudah siap → baru dicabut di sini.

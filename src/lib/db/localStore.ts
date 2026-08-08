@@ -161,6 +161,7 @@ export const localStores = {
 	paymentConfigs: "demo_payment_configs",
 	sponsors: "demo_sponsors",
 	auditLogs: "demo_audit_logs",
+	dataLock: "demo_data_lock",
 } as const;
 
 /** Bersihkan semua store lokal demo (backend aktif). */

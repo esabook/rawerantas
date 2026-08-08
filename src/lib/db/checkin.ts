@@ -279,6 +279,8 @@ function checkinRpcMessage(reason: string | undefined): string {
 			return "Pembayaran peserta ditolak admin.";
 		case "not_eligible":
 			return "Belum memenuhi syarat masuk (minimal DP dibayar).";
+		case "locked":
+			return "Data terkunci setelah acara selesai. Check-in ditutup.";
 		default:
 			return "Check-in ditolak server. Coba lagi.";
 	}

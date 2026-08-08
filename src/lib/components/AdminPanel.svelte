@@ -8,6 +8,7 @@
 		ExternalLink,
 		FileUp,
 		Loader2,
+		Lock,
 		Pencil,
 		Plus,
 		Save,
@@ -24,13 +25,16 @@
 	import {
 		advanceRound,
 		adminActorHash,
+		getDataLock,
 		getMergedPayments,
 		getPanitiaParticipants,
 		rejectPayment,
 		saveCompetition,
 		savePaymentConfig,
+		setDataLock,
 		undoCheckIn,
 		verifyPayment,
+		type DataLockState,
 		type PanitiaParticipant,
 		type PaymentWithMeta,
 	} from "$lib/db/admin";
@@ -191,19 +195,21 @@
 
 	const load = async () => {
 		try {
-			const [comps, cfgs, allPayments, sponsorList, panitia] =
+			const [comps, cfgs, allPayments, sponsorList, panitia, lock] =
 				await Promise.all([
 					getCompetitions(false),
 					getPaymentConfigs(false),
 					getMergedPayments(),
 					getSponsors(),
 					getPanitiaParticipants(),
+					getDataLock(),
 				]);
 			competitions = comps;
 			configs = cfgs;
 			payments = allPayments;
 			sponsors = sponsorList;
 			panitiaParticipants = panitia;
+			dataLock = lock;
 			error = "";
 		} catch (e) {
 			error = e instanceof Error ? e.message : "Gagal memuat data admin.";
@@ -602,6 +608,36 @@
 		actionReason = "";
 		rejectionTemplate = "";
 	}
+
+	// B1-8/A17: data lock pasca-acara.
+	let dataLock = $state<DataLockState>({
+		locked: false,
+		lockedAt: null,
+		lockedBy: null,
+	});
+	let lockSaving = $state(false);
+
+	const toggleDataLock = async () => {
+		if (lockSaving) return;
+		lockSaving = true;
+		error = "";
+		try {
+			const next = await setDataLock(!dataLock.locked, await adminActorHash());
+			dataLock = next;
+			undoable(
+				next.locked
+					? "Data terkunci — semua tulis diblokir."
+					: "Data dibuka kembali.",
+				{ onConfirm: () => {} },
+			);
+			sfx.confirm();
+		} catch (e) {
+			sfx.error();
+			error = e instanceof Error ? e.message : "Gagal mengubah data lock.";
+		} finally {
+			lockSaving = false;
+		}
+	};
 
 	const verify = async (p: PaymentWithMeta) => {
 		if (actingPayment !== null) return;
@@ -1177,6 +1213,41 @@
 						</div>
 					</div>
 				{/each}
+			</section>
+			<section
+				class="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-background/60 p-4"
+				aria-labelledby="data-lock-title"
+			>
+				<div class="flex items-center justify-between gap-3">
+					<div>
+						<h2 id="data-lock-title" class="text-base font-bold">
+							Data lock pasca-acara
+						</h2>
+						<p class="text-xs text-muted-foreground">
+							Blokir semua perubahan data (pembayaran, skor, check-in,
+							pendaftaran) setelah acara selesai.
+						</p>
+					</div>
+					<button
+						type="button"
+						class="btn {dataLock.locked ? 'btn-destructive' : 'btn-gold'} shrink-0"
+						onclick={() => void toggleDataLock()}
+						disabled={lockSaving}
+					>
+						{#if lockSaving}
+							<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+						{:else}
+							<Lock class="h-4 w-4" aria-hidden="true" />
+						{/if}
+						{dataLock.locked ? "Buka kunci" : "Kunci data"}
+					</button>
+				</div>
+				{#if dataLock.locked}
+					<p class="text-xs text-destructive" role="status">
+						Data terkunci pada{" "}
+						{dataLock.lockedAt?.toLocaleString("id-ID") ?? "waktu tak dikenal"}.
+					</p>
+				{/if}
 			</section>
 		{/if}
 	{/if}

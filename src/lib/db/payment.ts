@@ -219,6 +219,8 @@ function submitPaymentReasonMessage(reason: string | undefined): string {
 			return "Nominal di bawah DP minimal.";
 		case "bad_increment":
 			return `Nominal DP harus kelipatan Rp ${PAYMENT_AMOUNT_STEP.toLocaleString("id-ID")}.`;
+		case "locked":
+			return "Data terkunci setelah acara selesai. Hubungi panitia.";
 		default:
 			return "Pembayaran ditolak server. Periksa kembali data lalu coba lagi.";
 	}
@@ -321,6 +323,8 @@ function resubmitReasonMessage(reason: string | undefined): string {
 			return "Nomor WhatsApp tidak cocok dengan data peserta.";
 		case "invalid_amount":
 			return "Nominal pembayaran tidak valid.";
+		case "locked":
+			return "Data terkunci setelah acara selesai. Hubungi panitia.";
 		default:
 			return "Permintaan kirim ulang ditolak server. Hubungi panitia bila tetap gagal.";
 	}
