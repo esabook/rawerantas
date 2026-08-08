@@ -438,4 +438,27 @@ Format entri:
   (cabut policy, TERAKHIR agar app tidak mati). Checklist pra-acara = gate
   rilis setelah apply.
 - Next: Batch 2 (pembayaran & status, P1) — B2-1..B2-7.
+## 2026-08-09 (dini hari 4) — Batch 2 TUNTAS (7/7) via /rawe3
+
+- **B2-1** (F6,F18) — `01554aa`: validateAmount mode full memakai nominal yang
+  dikirim (default sisa fee-paid); RegistrantProfile remainingFor + rincian
+  "Sisa tagihan" + blokir overpayment.
+- **B2-2** (F19) — `ce82735`: label checked_in dgn sisa → "Sudah masuk — sisa
+  Rp X" (paymentStateFor, badge, TicketCard via prop remaining).
+- **B2-3** (F21) — `2edd548`: loadProfile memakai isOfflineError — jangan
+  hapus sesi guest saat jaringan gagal.
+- **B2-4** (F7,F16) — `ebdfb94`: checkInParticipant return queued saat
+  offline; ParticipantDetailCard syncPending badge; payCash offline tidak
+  tampilkan error misleading. CARRYOVER: remaining utk op queued di
+  getCheckinSummary (perlu integrasi queue IDB).
+- **B2-5** (A8,A31) — `4fc0a44`: submitCashPayment izinkan checked_in (alur
+  tagih sisa gerbang) + guard pending yang menutupi sisa (anti double-charge);
+  peringatan pending di modal settle AdminPanel. Guard kuota onsite = produk.
+- **B2-6** (F11,A9) — `d6d2e81`: undoCheckIn hitung ulang status dari total
+  terverifikasi (bukan hardcode dp_paid).
+- **B2-7** (A34) — `581faa5`: audit() live jadi best-effort (console.warn,
+  tidak throw) utk saveCompetition/savePaymentConfig/advanceRound; verify/
+  reject sudah audit di transaksi RPC (B1-3).
+- **Batch 2 gate**: suite 274/274 · check 0 · lint 0. Nol-limbo: 7/7 DONE.
+- Next: Batch 3 (Juri & papan skor) — B3-1..B3-7.
   referensi file:baris baru di-spot-check terhadap source.

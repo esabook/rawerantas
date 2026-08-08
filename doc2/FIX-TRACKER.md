@@ -273,7 +273,7 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
   - Bukti: suite 274/274 · check 0 · lint 0
   - Keputusan: audit() live jadi best-effort (console.warn, tidak throw) utk sisa caller
     (saveCompetition/savePaymentConfig/advanceRound); verify/reject sudah audit di transaksi RPC (B1-3).
-  - Commit: —
+  - Commit: `581faa5`
 
 ## Batch 3 — Juri & papan skor (P1)
 
