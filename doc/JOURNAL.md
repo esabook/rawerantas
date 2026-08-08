@@ -350,4 +350,45 @@ Format entri:
   queue via dashboard Supabase). Urutan saklek: RPC B1-1..B1-5 & B1-7 siap
   dulu, baru B1-6 cabut policy publik.
 
+## 2026-08-09 (dini hari) — Batch 1: B1-1 & B1-2 selesai via /rawe3
+
+- Sesi lanjutan Batch 1 (fondasi server RPC+RLS). Rekonsiliasi awal: Batch 0
+  sudah tuntas (0631cdb), tree bersih. Urutan saklek dihormati: RPC dikerjakan
+  sebelum B1-6 cabut policy.
+- **B1-1** (F14, F24, A19, F9) — commit `51c7826`:
+  - rls.sql: kolom `idempotency_key uuid unique` di participant_payments
+    (migrasi idempoten: add column → backfill gen_random_uuid → NOT NULL →
+    index unique) + RPC `submit_payment` SECURITY DEFINER: cek ownership
+    (p_phone bila diberikan), validasi nominal server-side (fee=lunas; selain
+    itu >= min_dp kelipatan 500), `ON CONFLICT (idempotency_key) DO NOTHING`
+    (kembalikan baris existing utk retry), recalc status dari total
+    terverifikasi (F5 tanpa status optimistik; F9 satu transaksi).
+  - schema.ts mirror kolom; generator.ts mockPayments + idempotencyKey.
+  - payment.ts live via `rpc('submit_payment')`; satu UUID utk RPC & kunci
+    antrean (F24); payload/phone dikirim; pesan ramah reason penolakan.
+  - executor executePayment via RPC (gagal->error retry; penolakan bisnis->
+    conflict).
+  - Keputusan: p_phone OPSIONAL (skip check bila null) — caller UI di luar
+    FILES B1-1; phone dienumerasi bertahap. Tunai (p_is_cash) tetap verified
+    saat insert.
+- **B1-2** (F8, F17) — commit `4ced1b7`:
+  - rls.sql: RPC `resubmit_payment` — hanya baris belum-verified (pending/
+    ditolak) boleh diubah; reset reject + nominal/bukti; ownership p_phone;
+    audit_logs.
+  - payment.ts: `resubmitPayment` (demo update lokal; live upload+RPC;
+    offline -> pesan "Sedang offline"). CELAH: op resubmit belum punya jalur
+    executor/antrean (executor.ts di luar FILES B1-2) — dicatat utk item
+    lanjutan bila dibutuhkan.
+  - RegistrantProfile: tombol "Kirim ulang pembayaran" (+ modal mode
+    resubmit, judul & label dinamis); teks F17 kini riil (bukan janji kosong).
+- Gates tiap item: check 0 · lint 0 · suite penuh (242 → 247 dengan tambahan
+  test). Test baru: payment +5 resubmit (demo, verified-ditolak, live RPC,
+  already_verified, offline).
+- Peringatan sesi: koneksi beberapa kali putus; tiap item di-commit sebelum
+  pindah berikutnya sehingga state tetap konsisten (rekonsiliasi via git log
+  + tracker). SQL (`supabase/rls.sql`) BELUM di-apply — human queue via
+  Supabase Dashboard (lihat item & instruksi di tracker).
+- Next: B1-3 (verify_payment/reject_payment RPC + recalc status + guard
+  state), B1-4 (register_participant), B1-5 (check_in), B1-7 (undo skor RPC),
+  lalu B1-6 cabut policy publik.
   referensi file:baris baru di-spot-check terhadap source.

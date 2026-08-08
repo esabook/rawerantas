@@ -141,17 +141,25 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
 
 ## Batch 1 — Fondasi server: RPC + RLS (P0; butuh human queue apply SQL)
 
-- [ ] **B1-1** — RPC `submit_payment` + kolom `idempotency_key` pembayaran — Temuan: F14, F24, A19, F9
+- [x] **B1-1** — RPC `submit_payment` + kolom `idempotency_key` pembayaran — Temuan: F14, F24, A19, F9
   - FILES: `supabase/rls.sql`, `src/lib/db/schema.ts`, `src/lib/db/payment.ts`, `src/lib/offline/executor.ts`, test
   - Plan: kolom `idempotency_key uuid unique` (+backfill); RPC SECURITY DEFINER: ownership via phone, amount ≥ minDp
     & kelipatan, `ON CONFLICT (idempotency_key) DO NOTHING`; client & executor pindah `rpc()`; jangan set status optimistik.
+  - Bukti: payment.test.ts 13 PASS · executor.test.ts 11 PASS · suite penuh 242/242 · `bun run check` 0 · lint scoped 0
+  - Keputusan: p_phone dibuat opsional (skip check bila null) karena caller UI (RegistrantProfile/RegistrationForm)
+    di luar FILES B1-1 — enumerations phone diaktifkan bertahap saat caller diupdate; tunai (p_is_cash) tetap
+    is_verified=true saat insert; status di-recalc dari total terverifikasi di dalam RPC (F5/F9). SQL = human queue.
   - VERIFY: test payment/executor · apply SQL = human queue
-  - Commit: —
-- [ ] **B1-2** — RPC `resubmit_payment` + jalur UI — Temuan: F8, F17
+  - Commit: `51c7826`
+- [x] **B1-2** — RPC `resubmit_payment` + jalur UI — Temuan: F8, F17
   - FILES: `supabase/rls.sql`, `src/lib/db/payment.ts`, `src/lib/components/RegistrantProfile.svelte`, test
   - Plan: resubmit baris rejected/pending (ownership phone); tombol "Kirim ulang bukti"; perbaiki teks janji F17.
+  - Bukti: payment.test.ts 18 PASS (5 resubmit) · suite 247/247 · `bun run check` 0 · lint 0
+  - Keputusan: RPC resubmit_payment hanya menyentuh baris belum-verified; p_phone opsional (skip bila null);
+    offline resubmit dilempar ke pesan jelas (antrean executor resubmit = celah, di luar FILES B1-2 — catat utk
+    item lanjutan). UI: tombol "Kirim ulang pembayaran" di kartu profil + modal mode resubmit; teks F17 jadi nyata.
   - VERIFY: test payment + RegistrantProfile
-  - Commit: —
+  - Commit: `4ced1b7`
 - [ ] **B1-3** — RPC `verify_payment`/`reject_payment` + guard state + recalc status — Temuan: F5, A2, A33, A34
   - FILES: `supabase/rls.sql`, `src/lib/db/admin.ts`, test admin
   - Plan: transisi hanya pending→verified/rejected (rejected→verified eksplisit); recalc `participants.status`
