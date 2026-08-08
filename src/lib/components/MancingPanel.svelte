@@ -46,9 +46,12 @@
 	);
 
 	onMount(() => {
-		void getParticipants(competitionId).then((rows) => {
-			participants = rows;
-		});
+		// B3-1/A23: offline-safe — kegagalan fetch tidak boleh mengosongkan panel.
+		void getParticipants(competitionId)
+			.then((rows) => {
+				participants = rows;
+			})
+			.catch(() => {});
 	});
 
 	const press = (digit: string) => {
@@ -75,7 +78,15 @@
 		if (!selectedP) {
 			return true;
 		}
-		if (await hasJackpot(competitionId, selectedP.id)) {
+		// B3-1/A24: kegagalan hasJackpot (offline) dianggap "tidak diketahui" —
+		// lewati konfirmasi ganda & lanjut submit, bukan memblokir skor jackpot.
+		let alreadyJackpot = false;
+		try {
+			alreadyJackpot = await hasJackpot(competitionId, selectedP.id);
+		} catch {
+			alreadyJackpot = false;
+		}
+		if (alreadyJackpot) {
 			jackpotConfirm = true;
 			sfx.confirm();
 			vibrate([30, 20, 30]);

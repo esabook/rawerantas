@@ -41,19 +41,24 @@
 	const canSubmit = $derived(selectedId !== null && !submitting);
 
 	const load = async () => {
-		const rows = await getParticipants(competitionId);
-		participants = rows;
-		const map: Record<string, { total: number; editable: boolean }> = {};
-		for (const p of rows) {
-			const score = await getHiasScore(competitionId, p.id);
-			if (score) {
-				map[p.id] = {
-					total: score.totalWeighted,
-					editable: isWithinEditWindow(score),
-				};
+		// B3-1/A23: offline-safe — kegagalan fetch tidak boleh mengosongkan panel.
+		try {
+			const rows = await getParticipants(competitionId);
+			participants = rows;
+			const map: Record<string, { total: number; editable: boolean }> = {};
+			for (const p of rows) {
+				const score = await getHiasScore(competitionId, p.id);
+				if (score) {
+					map[p.id] = {
+						total: score.totalWeighted,
+						editable: isWithinEditWindow(score),
+					};
+				}
 			}
+			scored = map;
+		} catch {
+			// pertahankan data yang sudah ada.
 		}
-		scored = map;
 	};
 
 	onMount(() => {

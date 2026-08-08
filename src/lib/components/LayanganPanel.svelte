@@ -80,12 +80,17 @@
 	);
 
 	const load = async () => {
-		const [rows, roundResults] = await Promise.all([
-			getParticipants(competitionId),
-			getRoundResults(competitionId, round),
-		]);
-		participants = rows;
-		results = roundResults;
+		// B3-1/A23: offline-safe — kegagalan fetch tidak boleh mengosongkan panel.
+		try {
+			const [rows, roundResults] = await Promise.all([
+				getParticipants(competitionId),
+				getRoundResults(competitionId, round),
+			]);
+			participants = rows;
+			results = roundResults;
+		} catch {
+			// pertahankan data yang sudah ada; juri tetap bisa menilai offline.
+		}
 	};
 
 	onMount(() => {
@@ -176,7 +181,7 @@
 					onConfirm: () => {},
 				},
 			);
-			results = await getRoundResults(competitionId, round);
+			results = await getRoundResults(competitionId, round).catch(() => results);
 			selectedParticipant = null;
 			resetTimer();
 			if (status === "menang") {
