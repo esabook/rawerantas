@@ -468,4 +468,79 @@ describe("resubmitPayment (B1-2/F8/F17)", () => {
 		).rejects.toThrow("Sedang offline");
 		expect(await peekBatch(10)).toHaveLength(0);
 	});
+	describe("submitCashPayment check-in & pending (B2-5/A8/A31)", () => {
+		beforeEach(async () => {
+			await setDemoMode(true);
+			await resetDemoRegistrations();
+			await resetDemoPayments();
+		});
+
+		it("peserta checked_in masih bisa dilunasi tunai (A31)", async () => {
+			const res = await registerParticipant({
+				competitionId,
+				name: "Cahyo Checkin",
+				phone: "081234500050",
+			});
+			// tandai checked_in via local checkin record
+			const { localPut, localStores } = await import("$lib/db/localStore");
+			await localPut(localStores.checkins, {
+				participantId: res.participantId,
+				checkedInAt: new Date(),
+				recordedBy: "panitia",
+			});
+			const out = await submitCashPayment(
+				{ participantId: res.participantId, competitionId },
+				{ fee: competition.fee },
+			);
+			expect(out).toEqual({ paymentId: null, queued: false });
+		});
+
+		it("pending yang menutupi sisa → tolak tunai (A8)", async () => {
+			const res = await registerParticipant({
+				competitionId,
+				name: "Bayu Pending",
+				phone: "081234500051",
+			});
+			// pending DP 25000 (dari fee 100000, minDp 25000) → belum menutupi sisa
+			await submitPayment(
+				{
+					participantId: res.participantId,
+					competitionId,
+					method: "qris",
+					amount: 25000,
+					proofBlob: null,
+					isCash: false,
+				},
+				"dp",
+				competition,
+			);
+			// pending 25000 < sisa 100000 → masih boleh bayar tunai sisa
+			const out = await submitCashPayment(
+				{ participantId: res.participantId, competitionId },
+				{ fee: competition.fee },
+			);
+			expect(out).toEqual({ paymentId: null, queued: false });
+
+			// pending penuh (100000) menutupi sisa → tolak
+			await resetDemoPayments();
+			await submitPayment(
+				{
+					participantId: res.participantId,
+					competitionId,
+					method: "qris",
+					amount: 100000,
+					proofBlob: null,
+					isCash: false,
+				},
+				"full",
+				competition,
+			);
+			await expect(
+				submitCashPayment(
+					{ participantId: res.participantId, competitionId },
+					{ fee: competition.fee },
+				),
+			).rejects.toThrow("pending");
+		});
+	});
 });

@@ -115,7 +115,6 @@
 			paying ||
 			checking ||
 			summary.paymentRejected ||
-			summary.status === "checked_in" ||
 			summary.remaining <= 0
 		) {
 			return;
@@ -263,7 +262,7 @@
 			<p class="text-sm text-destructive" role="alert">{error}</p>
 		{/if}
 
-		{#if !summary.paymentRejected && summary.status !== "checked_in" && summary.remaining > 0}
+		{#if !summary.paymentRejected && summary.remaining > 0}
 			<button
 				type="button"
 				class="btn btn-ghost h-11 text-sm"

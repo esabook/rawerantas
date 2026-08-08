@@ -282,6 +282,18 @@
 		return p.isVerified && !p.rejectReason && remainingForParticipant(p) > 0;
 	}
 
+	// B2-5/A8: true bila peserta punya pembayaran pending lain (selain yang
+	// sedang di-settle) yang bisa menutupi sisa → peringatan double-charge.
+	function settleHasPendingWarning(p: PaymentWithMeta): boolean {
+		return payments.some(
+			(pay) =>
+				pay.participantId === p.participantId &&
+				pay.id !== p.id &&
+				!pay.isVerified &&
+				!pay.rejectReason,
+		);
+	}
+
 	function methodLabel(method: string): string {
 		return paymentMethodLabels[method] ?? method.replaceAll("_", " ");
 	}
@@ -1271,6 +1283,12 @@
 						<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
 								<p>{paymentAction === "verify" ? "Anda akan menandai pembayaran ini sebagai terverifikasi." : paymentAction === "settle" ? `Sisa Rp ${remainingForParticipant(selectedPayment).toLocaleString("id-ID")} akan dicatat sebagai pembayaran tunai dan peserta menjadi lunas.` : "Anda akan menolak pembayaran ini dan menyimpan alasan penolakan."}</p>
 					</div>
+					{#if paymentAction === "settle" && settleHasPendingWarning(selectedPayment)}
+						<div class="mb-4 flex gap-2 rounded-lg border border-rose-300/30 bg-rose-300/10 p-3 text-xs text-rose-200" role="alert">
+							<AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+							<p>Peserta ini masih punya pembayaran pending yang bisa menutupi sisa. Verifikasi atau tolak dulu agar tidak double-charge.</p>
+						</div>
+					{/if}
 				{/if}
 
 				<div class="grid min-w-0 grid-cols-1 gap-3 rounded-xl border border-border/70 bg-background/40 p-3 text-sm sm:grid-cols-2">

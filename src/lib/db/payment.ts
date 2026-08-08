@@ -347,9 +347,8 @@ export async function submitCashPayment(
 	if (participant.status === "disqualified") {
 		throw new Error("Peserta didiskualifikasi.");
 	}
-	if (participant.status === "checked_in") {
-		throw new Error("Peserta sudah check-in.");
-	}
+	// B2-5/A31: izinkan pelunasan utk checked_in — alur gerbang menagih sisa
+	// tunai di check-in (ARCHITECTURE §7). Guard rejected tetap di bawah.
 	if (!competition || competition.fee <= 0) {
 		throw new Error("Kompetisi tidak ditemukan.");
 	}
@@ -366,9 +365,19 @@ export async function submitCashPayment(
 	const paid = payments
 		.filter((p) => p.isVerified && !p.rejectReason?.trim())
 		.reduce((sum, p) => sum + Number(p.amount), 0);
+	const pendingAmount = payments
+		.filter((p) => !p.isVerified && !p.rejectReason?.trim())
+		.reduce((sum, p) => sum + Number(p.amount), 0);
 	const remaining = Math.max(0, competition.fee - paid);
 	if (remaining === 0) {
 		throw new Error("Peserta sudah lunas.");
+	}
+	// B2-5/A8: jangan double-charge — pending yang menutupi sisa harus
+	// diselesaikan (verify/tolak) dulu sebelum tagih tunai.
+	if (pendingAmount >= remaining) {
+		throw new Error(
+			"Ada pembayaran pending yang menutupi sisa. Selesaikan (verifikasi) atau tolak dulu sebelum menagih tunai.",
+		);
 	}
 
 	return persistPayment(
