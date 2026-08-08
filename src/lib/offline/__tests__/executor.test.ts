@@ -16,6 +16,7 @@ vi.mock("$env/static/public", () => ({
 
 const captured = vi.hoisted(() => ({
 	inserts: [] as Array<{ table: string; row: Record<string, unknown> }>,
+	deletes: [] as Array<{ table: string; column: string; value: unknown }>,
 }));
 
 vi.mock("$lib/db/supabaseClient", () => ({
@@ -25,6 +26,12 @@ vi.mock("$lib/db/supabaseClient", () => ({
 				captured.inserts.push({ table, row });
 				return { error: null };
 			},
+			delete: () => ({
+				eq: (column: string, value: unknown) => {
+					captured.deletes.push({ table, column, value });
+					return { error: null };
+				},
+			}),
 		}),
 	},
 }));
@@ -56,6 +63,7 @@ const PAYLOAD = {
 describe("executor offline — skor layangan (QW-1/A26)", () => {
 	beforeEach(() => {
 		captured.inserts.length = 0;
+		captured.deletes.length = 0;
 	});
 
 	it("drain antrean menulis flight_duration_ms ke scores_layangan", async () => {
@@ -85,5 +93,70 @@ describe("executor offline — skor layangan (QW-1/A26)", () => {
 			"flight_duration_ms",
 			null,
 		);
+	});
+});
+
+function deleteEntry(
+	endpoint: string,
+	payload: Record<string, unknown>,
+): QueueEntry {
+	return {
+		idempotencyKey: `score-delete:${JSON.stringify(payload)}`,
+		endpoint,
+		payload,
+		timestamp: 2,
+		retries: 0,
+		status: "pending",
+	};
+}
+
+describe("executor offline — delete skor (QW-2/A25)", () => {
+	beforeEach(() => {
+		captured.inserts.length = 0;
+		captured.deletes.length = 0;
+	});
+
+	it("tombstone dgn idempotencyKey → delete via kolom idempotency_key (mancing)", async () => {
+		const result = await executeQueueEntry(
+			deleteEntry("/rest/scores/mancing/delete", {
+				idempotencyKey: "uuid-idem-1",
+			}),
+		);
+		expect(result).toBe("ok");
+		expect(captured.deletes).toEqual([
+			{ table: "scores_mancing", column: "idempotency_key", value: "uuid-idem-1" },
+		]);
+	});
+
+	it("tombstone dgn scoreId → delete via kolom id (mancing)", async () => {
+		const result = await executeQueueEntry(
+			deleteEntry("/rest/scores/mancing/delete", { scoreId: "db-uuid-9" }),
+		);
+		expect(result).toBe("ok");
+		expect(captured.deletes).toEqual([
+			{ table: "scores_mancing", column: "id", value: "db-uuid-9" },
+		]);
+	});
+
+	it("tombstone dgn idempotencyKey → delete via kolom idempotency_key (layangan)", async () => {
+		const result = await executeQueueEntry(
+			deleteEntry("/rest/scores/layangan/delete", {
+				idempotencyKey: "uuid-idem-2",
+			}),
+		);
+		expect(result).toBe("ok");
+		expect(captured.deletes).toEqual([
+			{ table: "scores_layangan", column: "idempotency_key", value: "uuid-idem-2" },
+		]);
+	});
+
+	it("tombstone dgn scoreId → delete via kolom id (layangan)", async () => {
+		const result = await executeQueueEntry(
+			deleteEntry("/rest/scores/layangan/delete", { scoreId: "db-uuid-8" }),
+		);
+		expect(result).toBe("ok");
+		expect(captured.deletes).toEqual([
+			{ table: "scores_layangan", column: "id", value: "db-uuid-8" },
+		]);
 	});
 });

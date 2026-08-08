@@ -140,6 +140,13 @@ export async function removeScore(
 		if (removed) {
 			return;
 		}
+		// Entri antrean sudah ter-drain: `id` adalah idempotency_key DB
+		// (kunci antrean == UUID idempotensi sejak QW-2/A25) — hapus lewat
+		// kolom itu; `.eq("id", kunci)` lama tak pernah cocok (ghost score).
+		await enqueue(`score-delete:${id}`, "/rest/scores/mancing/delete", {
+			idempotencyKey: id,
+		});
+		return;
 	}
 	await enqueue(`score-delete:${id}`, "/rest/scores/mancing/delete", {
 		scoreId: id,
@@ -187,8 +194,10 @@ export async function submitMancingScore(
 		if (!isOfflineError(e)) {
 			throw e;
 		}
-		const key = `score-mancing:${input.competitionId}:${input.participantId}:${Date.now()}`;
-		await enqueue(key, "/rest/scores/mancing", {
+		// Kunci antrean = UUID idempotensi DB (QW-2/A25): bila entri ter-drain
+		// sebelum undo, removePending(id) gagal dan tombstone tetap bisa
+		// menghapus baris via kolom idempotency_key.
+		await enqueue(idempotencyKey, "/rest/scores/mancing", {
 			competitionId: input.competitionId,
 			participantId: input.participantId,
 			fishWeightGram: gram,
@@ -196,7 +205,7 @@ export async function submitMancingScore(
 			recordedBy: input.recordedBy,
 			idempotencyKey,
 		});
-		return { queued: true, id: key };
+		return { queued: true, id: idempotencyKey };
 	}
 }
 

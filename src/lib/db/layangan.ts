@@ -152,6 +152,13 @@ export async function removeLayanganScore(
 		if (removed) {
 			return;
 		}
+		// Entri antrean sudah ter-drain: `id` adalah idempotency_key DB
+		// (kunci antrean == UUID idempotensi sejak QW-2/A25) — hapus lewat
+		// kolom itu; `.eq("id", kunci)` lama tak pernah cocok (ghost score).
+		await enqueue(`score-layangan-delete:${id}`, "/rest/scores/layangan/delete", {
+			idempotencyKey: id,
+		});
+		return;
 	}
 	await enqueue(`score-layangan-delete:${id}`, "/rest/scores/layangan/delete", {
 		scoreId: id,
@@ -200,8 +207,10 @@ export async function submitLayanganResult(
 		if (!isOfflineError(e)) {
 			throw e;
 		}
-		const key = `score-layangan:${input.competitionId}:${input.participantId}:${Date.now()}`;
-		await enqueue(key, "/rest/scores/layangan", {
+		// Kunci antrean = UUID idempotensi DB (QW-2/A25): bila entri ter-drain
+		// sebelum undo, removePending(id) gagal dan tombstone tetap bisa
+		// menghapus baris via kolom idempotency_key.
+		await enqueue(idempotencyKey, "/rest/scores/layangan", {
 			competitionId: input.competitionId,
 			participantId: input.participantId,
 			round: input.round,
@@ -210,6 +219,6 @@ export async function submitLayanganResult(
 			recordedBy: input.recordedBy,
 			idempotencyKey,
 		});
-		return { queued: true, id: key };
+		return { queued: true, id: idempotencyKey };
 	}
 }

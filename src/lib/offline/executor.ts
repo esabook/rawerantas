@@ -55,13 +55,16 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 				}),
 			);
 
-		case "/rest/scores/mancing/delete":
+		case "/rest/scores/mancing/delete": {
+			// QW-2/A25: undo pasca-drain tiba sebagai idempotencyKey, bukan
+			// UUID baris — pilih kolom sesuai identitas di payload.
+			const column =
+				payload.idempotencyKey !== undefined ? "idempotency_key" : "id";
+			const value = (payload.idempotencyKey ?? payload.scoreId) as string;
 			return toResult(() =>
-				supabase
-					.from("scores_mancing")
-					.delete()
-					.eq("id", payload.scoreId as string),
+				supabase.from("scores_mancing").delete().eq(column, value),
 			);
+		}
 
 		case "/rest/scores/layangan":
 			return toResult(() =>
@@ -76,13 +79,15 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 				}),
 			);
 
-		case "/rest/scores/layangan/delete":
+		case "/rest/scores/layangan/delete": {
+			// QW-2/A25: sama seperti mancing — dukung delete via idempotency_key.
+			const column =
+				payload.idempotencyKey !== undefined ? "idempotency_key" : "id";
+			const value = (payload.idempotencyKey ?? payload.scoreId) as string;
 			return toResult(() =>
-				supabase
-					.from("scores_layangan")
-					.delete()
-					.eq("id", payload.scoreId as string),
+				supabase.from("scores_layangan").delete().eq(column, value),
 			);
+		}
 
 		case "/rest/scores/layangan-hias":
 			if (payload.existing) {
