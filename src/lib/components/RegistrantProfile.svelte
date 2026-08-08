@@ -177,7 +177,7 @@
 		const competition = competitionFor(participant);
 		paymentAmount = String(
 			paymentMode === "full"
-				? (competition?.fee ?? 0)
+				? remainingFor(participant)
 				: (competition?.minDp ?? 0),
 		);
 		if (paymentConfigs.length === 0) {
@@ -203,13 +203,13 @@
 
 	const setPaymentMode = (mode: "dp" | "full") => {
 		paymentMode = mode;
-		const competition = paymentParticipant
-			? competitionFor(paymentParticipant)
-			: undefined;
+		const participant = paymentParticipant;
 		paymentAmount = String(
 			mode === "full"
-				? (competition?.fee ?? 0)
-				: (competition?.minDp ?? 0),
+				? participant
+					? remainingFor(participant)
+					: 0
+				: (paymentParticipant ? competitionFor(paymentParticipant)?.minDp ?? 0 : 0),
 		);
 		paymentSubmitError = "";
 	};
@@ -278,6 +278,14 @@
 				"Pembayaran ini sudah ditolak panitia dan tidak dapat dibayar ulang.";
 			return;
 		}
+		// B2-1/F6/F18: mode lunas tidak boleh menagih melebihi sisa tagihan.
+		if (paymentMode === "full" && paymentParticipant) {
+			const remaining = remainingFor(paymentParticipant);
+			if (paymentAmountNumber > remaining) {
+				paymentSubmitError = `Nominal melebihi sisa tagihan Rp ${remaining.toLocaleString("id-ID")}.`;
+				return;
+			}
+		}
 		paymentSubmitting = true;
 		paymentSubmitError = "";
 		try {
@@ -315,6 +323,12 @@
 		paymentsFor(participant)
 			.filter((payment) => payment.isVerified)
 			.reduce((total, payment) => total + payment.amount, 0);
+
+	// B2-1/F6/F18: sisa tagihan utk "Lanjut lunas" = fee - total terverifikasi.
+	const remainingFor = (participant: Participant) => {
+		const competition = competitionFor(participant);
+		return Math.max(0, (competition?.fee ?? 0) - verifiedAmountFor(participant));
+	};
 
 	const pendingPaymentsFor = (participant: Participant) =>
 		paymentsFor(participant).filter(
@@ -818,9 +832,20 @@
 				<div
 					class="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-relaxed text-amber-100"
 				>
-					{paymentMode === "full"
-						? "DP Anda sudah tercatat. Selesaikan pembayaran ke nominal tiket untuk menjadi lunas."
-						: "Pendaftaran tercatat. Bayar minimal DP agar status dapat diproses panitia."}
+					{#if paymentMode === "full"}
+						{paymentParticipant.status === "dp_paid"
+							? "DP Anda sudah tercatat. Selesaikan pembayaran sisa tagihan untuk menjadi lunas."
+							: "Lunasi seluruh tagihan untuk menjadi lunas."}
+						{#if paymentParticipant}
+							<span class="mt-1 block font-semibold">
+								Sisa tagihan: Rp {remainingFor(paymentParticipant).toLocaleString(
+									"id-ID",
+								)}
+							</span>
+						{/if}
+					{:else}
+						Pendaftaran tercatat. Bayar minimal DP agar status dapat diproses panitia.
+					{/if}
 				</div>
 
 				{#if paymentParticipant.status !== "dp_paid"}

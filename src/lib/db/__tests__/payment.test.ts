@@ -93,8 +93,18 @@ describe("validateAmount", () => {
 		);
 	});
 
-	it("mode lunas memakai fee kompetisi", () => {
-		expect(validateAmount(1, competition, "full")).toBe(100_000);
+	it("mode lunas memakai nominal yang dikirim (sisa), bukan fee otomatis (B2-1)", () => {
+		expect(validateAmount(25_000, competition, "full")).toBe(25_000);
+		expect(validateAmount(100_000, competition, "full")).toBe(100_000);
+	});
+
+	it("mode lunas menolak nominal tidak valid (B2-1)", () => {
+		expect(() => validateAmount(0, competition, "full")).toThrow(
+			InvalidDpIncrementError,
+		);
+		expect(() => validateAmount(Number.NaN, competition, "full")).toThrow(
+			InvalidDpIncrementError,
+		);
 	});
 });
 

@@ -76,7 +76,12 @@ export function validateAmount(
 	mode: "dp" | "full",
 ): number {
 	if (mode === "full") {
-		return competition?.fee ?? amount;
+		// B2-1/F6/F18: jangan selalu memakai fee penuh — pakai nominal yang
+		// dikirim (default sisa = fee - paid). Validasi integer positif.
+		if (!Number.isFinite(amount) || amount <= 0) {
+			throw new InvalidDpIncrementError();
+		}
+		return Math.round(amount);
 	}
 	if (!Number.isInteger(amount) || amount % PAYMENT_AMOUNT_STEP !== 0) {
 		throw new InvalidDpIncrementError();
