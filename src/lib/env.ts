@@ -39,3 +39,9 @@ if (!dev && PUBLIC_BASE_URL.length === 0) {
 		"[env] PUBLIC_BASE_URL kosong — QR e-tiket dan link wa.me akan salah. Isi di .env sebelum build rilis.",
 	);
 }
+
+if (!dev && PUBLIC_ENABLE_DEMO_MODE === "true") {
+	console.warn(
+		"[env] PUBLIC_ENABLE_DEMO_MODE=true pada build non-dev — registrasi/pembayaran/skor hanya tersimpan lokal per perangkat dan TIDAK masuk Supabase. Set false untuk produksi (QW-3/A41/F23).",
+	);
+}
