@@ -325,6 +325,9 @@ to anon, authenticated;
 grant delete on sponsors, scores_mancing, scores_layangan
 to anon, authenticated;
 
+-- UPDATE: grant penuh (bukan kolom-level) biar tidak ada miss "kolom lupa di-grant".
+-- Kolom lonjakan (created_at, id, total_weighted) tetap aman karena kode tidak
+-- pernah mengupdate-nya; RLS policy tetap membatasi baris via using(true).
 revoke update on
 	competitions,
 	payment_configs,
@@ -332,17 +335,13 @@ revoke update on
 	participant_payments,
 	scores_layangan_hias
 from anon, authenticated;
-grant update (name, fee, total_quota, scoring_mode, is_active, current_round)
-	on competitions to anon, authenticated;
-grant update (account_name, account_number, qris_image_url, instructions, is_active)
-	on payment_configs to anon, authenticated;
-grant update on sponsors to anon, authenticated;
-grant update (status, lapak_number, checked_in_at)
-	on participants to anon, authenticated;
-grant update (is_verified, verified_by, reject_reason)
-	on participant_payments to anon, authenticated;
-grant update (aesthetic, stability, creativity, edited_at, recorded_by)
-	on scores_layangan_hias to anon, authenticated;
+grant update on
+	competitions,
+	payment_configs,
+	participants,
+	participant_payments,
+	scores_layangan_hias
+to anon, authenticated;
 
 drop policy if exists "competitions public read" on competitions;
 create policy "competitions public read" on competitions

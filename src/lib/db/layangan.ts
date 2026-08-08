@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { demoLayanganScores } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
+import { isOfflineError } from "$lib/offline/networkStore";
 import { enqueue } from "$lib/offline/queue";
 import {
 	localClear,
@@ -195,7 +196,10 @@ export async function submitLayanganResult(
 			throw error;
 		}
 		return { queued: false, id: (data as { id: string }).id };
-	} catch {
+	} catch (e) {
+		if (!isOfflineError(e)) {
+			throw e;
+		}
 		const key = `score-layangan:${input.competitionId}:${input.participantId}:${Date.now()}`;
 		await enqueue(key, "/rest/scores/layangan", {
 			competitionId: input.competitionId,

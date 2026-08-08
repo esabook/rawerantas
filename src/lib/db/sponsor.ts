@@ -105,10 +105,12 @@ export async function uploadSponsorImage(file: File): Promise<string> {
 		return URL.createObjectURL(compressed);
 	}
 	const { supabase } = await getSupabase();
-	const path = `sponsors/${crypto.randomUUID()}.webp`;
+	const mime = compressed.type === "image/jpeg" ? "image/jpeg" : "image/webp";
+	const ext = mime === "image/jpeg" ? "jpg" : "webp";
+	const path = `sponsors/${crypto.randomUUID()}.${ext}`;
 	const { error } = await supabase.storage
 		.from(PROOF_IMAGES_BUCKET)
-		.upload(path, compressed, { contentType: "image/webp" });
+		.upload(path, compressed, { contentType: mime });
 	if (error) {
 		throw new Error(`uploadSponsorImage: ${error.message}`);
 	}

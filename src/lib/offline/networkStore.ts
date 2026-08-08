@@ -17,6 +17,27 @@ export function reportFetchFailure(): void {
 	setOnline(false);
 }
 
+/**
+ * Deteksi kegagalan jaringan (offline) vs error server nyata.
+ * Hanya error jaringlah yang boleh masuk antrean offline; error server
+ * (RLS/permission/500) harus direthrow biar tampil di UI, bukan diam-diam.
+ */
+export function isOfflineError(error: unknown): boolean {
+	if (typeof navigator !== "undefined" && navigator.onLine === false) {
+		return true;
+	}
+	if (error instanceof TypeError) {
+		return true;
+	}
+	if (typeof error === "object" && error !== null) {
+		const e = error as { status?: unknown; code?: unknown };
+		if (e.status === 0 || e.code === 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
 export async function refreshQueueCount(): Promise<void> {
 	const pending = await countByStatus("pending");
 	const dead = await countByStatus("dead");

@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { demoParticipants } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
+import { isOfflineError } from "$lib/offline/networkStore";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import type { Participant, ParticipantPayment } from "./queries";
@@ -227,7 +228,10 @@ export async function checkInParticipant(
 			eligibility: "ok",
 			summary: await getCheckinSummary(participantId),
 		};
-	} catch {
+	} catch (e) {
+		if (!isOfflineError(e)) {
+			throw e;
+		}
 		await enqueue(`checkin:${participantId}`, "/rest/participants/checkin", {
 			participantId,
 		});

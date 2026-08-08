@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
+import { isOfflineError } from "$lib/offline/networkStore";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import { normalizeParticipantRow, type Participant } from "./queries";
@@ -101,26 +102,6 @@ export function isValidPhone(raw: string): boolean {
 
 export function nextTicketNumber(seq: number): string {
 	return `T-${String(seq).padStart(6, "0")}`;
-}
-
-/** Deteksi kegagalan jaringan (offline) vs error server nyata. */
-function isOfflineError(error: unknown): boolean {
-	if (
-		typeof navigator !== "undefined" &&
-		navigator.onLine === false
-	) {
-		return true;
-	}
-	if (error instanceof TypeError) {
-		return true;
-	}
-	if (typeof error === "object" && error !== null) {
-		const e = error as { status?: unknown; code?: unknown };
-		if (e.status === 0 || e.code === 0) {
-			return true;
-		}
-	}
-	return false;
 }
 
 export async function registerParticipant(

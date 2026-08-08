@@ -1,5 +1,6 @@
 import { get } from "svelte/store";
 import { demoMode } from "$lib/demo/store";
+import { isOfflineError } from "$lib/offline/networkStore";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import type { Participant } from "./queries";
@@ -126,10 +127,18 @@ async function persistPayment(
 		const { supabase: sb } = await import("./supabaseClient");
 		let proofUrl: string | null = null;
 		if (input.proofBlob && !input.isCash) {
-			const path = `proofs/${input.participantId}/${Date.now()}.jpg`;
+			const mime =
+				input.proofBlob.type === "image/webp"
+					? "image/webp"
+					: input.proofBlob.type === "image/png"
+						? "image/png"
+						: "image/jpeg";
+			const ext =
+				mime === "image/webp" ? "webp" : mime === "image/png" ? "png" : "jpg";
+			const path = `proofs/${input.participantId}/${Date.now()}.${ext}`;
 			const { error: uploadError } = await sb.storage
 				.from(PROOF_IMAGES_BUCKET)
-				.upload(path, input.proofBlob, { contentType: "image/jpeg" });
+				.upload(path, input.proofBlob, { contentType: mime });
 			if (!uploadError) {
 				const { data } = sb.storage
 					.from(PROOF_IMAGES_BUCKET)
@@ -156,7 +165,10 @@ async function persistPayment(
 			.update({ status: mode === "full" ? "fully_paid" : "dp_paid" })
 			.eq("id", input.participantId);
 		return { paymentId: (data as { id: string }).id, queued: false };
-	} catch {
+	} catch (e) {
+		if (!isOfflineError(e)) {
+			throw e;
+		}
 		await enqueue(
 			`payment:${input.participantId}:${mode}:${Date.now()}`,
 			"/rest/payments",
@@ -168,6 +180,7 @@ async function persistPayment(
 				mode,
 				isCash: input.isCash,
 				proof: input.proofBlob ? await input.proofBlob.arrayBuffer() : null,
+				proofMime: input.proofBlob?.type ?? null,
 			},
 		);
 		return { paymentId: null, queued: true };

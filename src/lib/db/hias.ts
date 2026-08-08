@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { demoHiasScores } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
+import { isOfflineError } from "$lib/offline/networkStore";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import { getSupabase, normalizeHiasScoreRow } from "./queries";
@@ -221,7 +222,10 @@ export async function submitHiasScore(
 			throw error;
 		}
 		return { queued: false, participantId: input.participantId };
-	} catch {
+	} catch (e) {
+		if (!isOfflineError(e)) {
+			throw e;
+		}
 		await enqueue(
 			`score-hias:${input.competitionId}:${input.participantId}`,
 			"/rest/scores/layangan-hias",

@@ -129,11 +129,19 @@ async function executePayment(
 	let proofUrl: string | null = null;
 	const proof = payload.proof as ArrayBuffer | null;
 	if (proof && !payload.isCash) {
-		const blob = new Blob([proof], { type: "image/jpeg" });
-		const path = `proofs/${payload.participantId}/${Date.now()}.jpg`;
+		const mime =
+			(payload.proofMime as string) === "image/webp"
+				? "image/webp"
+				: (payload.proofMime as string) === "image/png"
+					? "image/png"
+					: "image/jpeg";
+		const ext =
+			mime === "image/webp" ? "webp" : mime === "image/png" ? "png" : "jpg";
+		const blob = new Blob([proof], { type: mime });
+		const path = `proofs/${payload.participantId}/${Date.now()}.${ext}`;
 		const { error: uploadError } = await supabase.storage
 			.from(PROOF_IMAGES_BUCKET)
-			.upload(path, blob, { contentType: "image/jpeg" });
+			.upload(path, blob, { contentType: mime });
 		if (!uploadError) {
 			const { data } = supabase.storage
 				.from(PROOF_IMAGES_BUCKET)
