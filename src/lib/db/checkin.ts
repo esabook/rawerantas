@@ -39,6 +39,8 @@ export interface CheckinSummary {
 	fee: number;
 	paid: number;
 	remaining: number;
+	pendingAmount: number;
+	pendingCount: number;
 	status: Participant["status"];
 	checkedInAt: Date | null;
 	paymentRejected: boolean;
@@ -144,6 +146,13 @@ export async function getCheckinSummary(
 	const paid = payments
 		.filter((p) => p.isVerified && !p.rejectReason?.trim())
 		.reduce((sum, p) => sum + Number(p.amount), 0);
+	const pendingPayments = payments.filter(
+		(p) => !p.isVerified && !p.rejectReason?.trim(),
+	);
+	const pendingAmount = pendingPayments.reduce(
+		(sum, p) => sum + Number(p.amount),
+		0,
+	);
 	const fee = competition?.fee ?? 0;
 	let status: Participant["status"] = checkin
 		? "checked_in"
@@ -165,6 +174,8 @@ export async function getCheckinSummary(
 		fee,
 		paid,
 		remaining: Math.max(0, fee - paid),
+		pendingAmount,
+		pendingCount: pendingPayments.length,
 		status,
 		checkedInAt: checkin?.checkedInAt ?? null,
 		paymentRejected: Boolean(rejectedPayment),

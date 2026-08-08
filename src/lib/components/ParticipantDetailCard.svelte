@@ -185,6 +185,24 @@
 			</span>
 		</div>
 
+		{#if summary.pendingAmount > 0}
+			<div
+				class="rounded-lg border border-sky-400/40 bg-sky-500/10 p-3 text-sm text-sky-700"
+				role="note"
+			>
+				<p class="font-semibold">
+					Pembayaran Rp {summary.pendingAmount.toLocaleString(
+						"id-ID",
+					)} menunggu verifikasi panitia
+					({summary.pendingCount} bukti).
+				</p>
+				<p class="mt-1 text-xs">
+					Jangan tagih ulang full. Sisa bayar di atas menghitung hanya
+					pembayaran yang sudah diverifikasi.
+				</p>
+			</div>
+		{/if}
+
 		{#if summary.paymentRejected}
 			<div
 				class="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-700"

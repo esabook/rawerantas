@@ -115,14 +115,15 @@
 	};
 
 	onMount(async () => {
-		if (new URLSearchParams(window.location.search).get("login") === "1") {
-			guestLoginError = "";
-			loginOpen = true;
-		}
 		const session = loadGuestSession();
 		if (session) {
 			guestSession = session;
 			void loadProfile(session.phone);
+		} else if (
+			new URLSearchParams(window.location.search).get("login") === "1"
+		) {
+			guestLoginError = "";
+			loginOpen = true;
 		}
 		sessionReady = true;
 		try {

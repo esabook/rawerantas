@@ -292,6 +292,95 @@ export async function getUnverifiedPayments(): Promise<PaymentWithMeta[]> {
 	return all.filter((p) => !p.isVerified);
 }
 
+export interface PanitiaParticipant {
+	participant: Participant;
+	competitionName: string;
+	totalPaid: number;
+	paidStatus: "none" | "dp" | "full";
+	paymentMethods: string[];
+	checkedIn: boolean;
+	checkedInAt: Date | null;
+}
+
+/** Peserta + info pembayaran & check-in untuk tab panitia di admin. */
+export async function getPanitiaParticipants(): Promise<PanitiaParticipant[]> {
+	const isDemo = get(demoMode);
+	const { getCompetitions, getParticipants, getPayments } = await import(
+		"./queries"
+	);
+	const [participants, payments, competitions] = await Promise.all([
+		getParticipants(),
+		getPayments(),
+		getCompetitions(false),
+	]);
+	const checkedInIds = new Set<string>();
+	if (isDemo) {
+		const { localGetAll, localStores } = await import("./localStore");
+		const checkins = await localGetAll<{ participantId: string }>(
+			localStores.checkins,
+		);
+		for (const c of checkins) {
+			checkedInIds.add(c.participantId);
+		}
+	}
+	const competitionNameMap = new Map(competitions.map((c) => [c.id, c.name]));
+	const paymentsByParticipant = new Map<string, ParticipantPayment[]>();
+	for (const p of payments) {
+		const list = paymentsByParticipant.get(p.participantId) ?? [];
+		list.push(p);
+		paymentsByParticipant.set(p.participantId, list);
+	}
+	return participants.map((participant) => {
+		const participantPayments = paymentsByParticipant.get(participant.id) ?? [];
+		const verified = participantPayments.filter(
+			(p) => p.isVerified && !p.rejectReason?.trim(),
+		);
+		const totalPaid = verified.reduce((sum, p) => sum + Number(p.amount), 0);
+		const methods = [
+			...new Set(participantPayments.map((p) => p.paymentMethod)),
+		];
+		const competition = participant.competitionId
+			? competitionNameMap.get(participant.competitionId)
+			: undefined;
+		// status lunas: pakai status peserta (dp_paid/fully_paid)
+		const paidStatus: "none" | "dp" | "full" =
+			participant.status === "fully_paid"
+				? "full"
+				: participant.status === "dp_paid"
+					? "dp"
+					: "none";
+		const checkedIn =
+			participant.status === "checked_in" || checkedInIds.has(participant.id);
+		return {
+			participant,
+			competitionName: competition ?? "—",
+			totalPaid,
+			paidStatus,
+			paymentMethods: methods,
+			checkedIn,
+			checkedInAt: participant.checkedInAt ?? null,
+		};
+	});
+}
+
+/** Undo check-in panitia (set kembali ke dp_paid/fully_paid). */
+export async function undoCheckIn(participantId: string): Promise<void> {
+	if (get(demoMode)) {
+		const { localDelete, localStores } = await import("./localStore");
+		await localDelete(localStores.checkins, participantId);
+		return;
+	}
+	const { getSupabase } = await import("./queries");
+	const { supabase } = await getSupabase();
+	const { error } = await supabase
+		.from("participants")
+		.update({ status: "dp_paid", checked_in_at: null })
+		.eq("id", participantId);
+	if (error) {
+		throw new Error(`undoCheckIn: ${error.message}`);
+	}
+}
+
 async function recalcParticipantStatus(participantId: string): Promise<void> {
 	const { getPayments } = await import("./queries");
 	const { demoLocalParticipants } = await import("./register");

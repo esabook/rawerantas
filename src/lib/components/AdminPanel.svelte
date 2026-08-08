@@ -13,6 +13,7 @@
 		Save,
 		ShieldCheck,
 		Trash2,
+		Undo2,
 		X,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
@@ -24,12 +25,16 @@
 		advanceRound,
 		adminActorHash,
 		getMergedPayments,
+		getPanitiaParticipants,
 		rejectPayment,
 		saveCompetition,
 		savePaymentConfig,
+		undoCheckIn,
 		verifyPayment,
+		type PanitiaParticipant,
 		type PaymentWithMeta,
 	} from "$lib/db/admin";
+	import { checkInParticipant } from "$lib/db/checkin";
 	import { submitCashPayment } from "$lib/db/payment";
 	import {
 		importParticipantRows,
@@ -47,7 +52,7 @@
 		type Sponsor,
 	} from "$lib/db/sponsor";
 
-	type AdminTab = "config" | "competition" | "sponsor" | "verify";
+	type AdminTab = "config" | "competition" | "sponsor" | "verify" | "panitia";
 	type PaymentStatus = "all" | "baru" | "lunas" | "belum_lunas" | "ditolak";
 	type PaymentAction = "verify" | "reject" | "settle";
 	type ImportStep = 1 | 2 | 3 | 4;
@@ -86,6 +91,9 @@
 	let configs = $state<PaymentConfig[]>([]);
 	let sponsors = $state<Sponsor[]>([]);
 	let payments = $state<PaymentWithMeta[]>([]);
+	let panitiaParticipants = $state<PanitiaParticipant[]>([]);
+	let panitiaSaving = $state<string | null>(null);
+	let panitiaFilter = $state("all");
 	let loading = $state(true);
 	let error = $state("");
 	let tab = $state<AdminTab>("verify");
@@ -183,16 +191,19 @@
 
 	const load = async () => {
 		try {
-			const [comps, cfgs, allPayments, sponsorList] = await Promise.all([
-				getCompetitions(false),
-				getPaymentConfigs(false),
-				getMergedPayments(),
-				getSponsors(),
-			]);
+			const [comps, cfgs, allPayments, sponsorList, panitia] =
+				await Promise.all([
+					getCompetitions(false),
+					getPaymentConfigs(false),
+					getMergedPayments(),
+					getSponsors(),
+					getPanitiaParticipants(),
+				]);
 			competitions = comps;
 			configs = cfgs;
 			payments = allPayments;
 			sponsors = sponsorList;
+			panitiaParticipants = panitia;
 			error = "";
 		} catch (e) {
 			error = e instanceof Error ? e.message : "Gagal memuat data admin.";
@@ -444,6 +455,50 @@
 			error = e instanceof Error ? e.message : "Gagal menghapus sponsor.";
 		} finally {
 			deletingSponsorId = null;
+		}
+	};
+
+	const panitiaCheckIn = async (row: PanitiaParticipant) => {
+		if (panitiaSaving !== null) return;
+		panitiaSaving = row.participant.id;
+		error = "";
+		try {
+			const result = await checkInParticipant(row.participant.id);
+			const msg =
+				result.eligibility === "already"
+					? "Peserta sudah check-in sebelumnya."
+					: "Peserta berhasil check-in.";
+			sfx.confirm();
+			undoable(msg, { onConfirm: () => {} });
+			await load();
+		} catch (e) {
+			sfx.error();
+			error = e instanceof Error ? e.message : "Gagal check-in peserta.";
+		} finally {
+			panitiaSaving = null;
+		}
+	};
+
+	const panitiaUndoCheckIn = async (row: PanitiaParticipant) => {
+		if (panitiaSaving !== null) return;
+		if (
+			typeof window !== "undefined" &&
+			!window.confirm(`Batalkan check-in ${row.participant.name}?`)
+		) {
+			return;
+		}
+		panitiaSaving = row.participant.id;
+		error = "";
+		try {
+			await undoCheckIn(row.participant.id);
+			sfx.confirm();
+			undoable("Check-in dibatalkan.", { onConfirm: () => {} });
+			await load();
+		} catch (e) {
+			sfx.error();
+			error = e instanceof Error ? e.message : "Gagal membatalkan check-in.";
+		} finally {
+			panitiaSaving = null;
 		}
 	};
 
@@ -722,6 +777,13 @@
 			>
 				Sponsor
 			</button>
+			<button
+				type="button"
+				class="btn shrink-0 snap-start whitespace-nowrap {tab === 'panitia' ? 'btn-gold' : ''}"
+				onclick={() => (tab = "panitia")}
+			>
+				Panitia ({panitiaParticipants.length})
+			</button>
 		</nav>
 
 		{#if tab === "verify"}
@@ -975,6 +1037,92 @@
 								</div>
 							</article>
 						{/each}
+					</div>
+				{/if}
+			</section>
+		{:else if tab === "panitia"}
+			<section class="flex min-w-0 flex-col gap-4" aria-labelledby="panitia-title">
+				<div class="flex min-w-0 flex-wrap items-end justify-between gap-3">
+					<div>
+						<h1 id="panitia-title" class="text-lg font-bold">Operasi panitia — check-in</h1>
+						<p class="text-xs text-muted-foreground">Kelola status check-in, pembayaran, dan metode pelunasan peserta.</p>
+					</div>
+					<label class="flex min-w-0 flex-col gap-1 text-sm">
+						<span class="text-xs text-muted-foreground">Filter check-in</span>
+						<select class="input min-w-0" bind:value={panitiaFilter}>
+							<option value="all">Semua</option>
+							<option value="belum">Belum check-in</option>
+							<option value="sudah">Sudah check-in</option>
+						</select>
+					</label>
+				</div>
+
+				<div class="grid min-w-0 gap-2 sm:grid-cols-3">
+					<div class="rounded-xl border border-border bg-background/60 p-3 text-center">
+						<p class="text-xs text-muted-foreground">Total peserta</p>
+						<p class="mt-1 text-2xl font-bold tabular-nums">{panitiaParticipants.length}</p>
+					</div>
+					<div class="rounded-xl border border-emerald-300/25 bg-emerald-300/5 p-3 text-center">
+						<p class="text-xs text-emerald-200">Sudah check-in</p>
+						<p class="mt-1 text-2xl font-bold tabular-nums text-emerald-200">{panitiaParticipants.filter((p) => p.checkedIn).length}</p>
+					</div>
+					<div class="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-center">
+						<p class="text-xs text-amber-200">Belum check-in</p>
+						<p class="mt-1 text-2xl font-bold tabular-nums text-amber-200">{panitiaParticipants.filter((p) => !p.checkedIn).length}</p>
+					</div>
+				</div>
+
+				{#if panitiaParticipants.length === 0}
+					<div class="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Belum ada peserta terdaftar.</div>
+				{:else}
+					<div class="min-w-0 overflow-x-auto rounded-xl border border-border">
+						<table class="w-full min-w-[720px] border-collapse text-sm">
+							<thead>
+								<tr class="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+									<th class="px-3 py-2 font-semibold">Peserta</th>
+									<th class="px-3 py-2 font-semibold">Lomba</th>
+									<th class="px-3 py-2 font-semibold">Check-in</th>
+									<th class="px-3 py-2 font-semibold">Pembayaran</th>
+									<th class="px-3 py-2 font-semibold">Metode</th>
+									<th class="px-3 py-2 font-semibold">Aksi</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each panitiaParticipants.filter((p) => panitiaFilter === "all" || (panitiaFilter === "sudah") === p.checkedIn) as row (row.participant.id)}
+									<tr class="border-b border-border/60 last:border-0">
+										<td class="px-3 py-2">
+											<p class="font-semibold">{row.participant.name}</p>
+											<p class="text-xs text-muted-foreground">{row.participant.ticketNumber}</p>
+										</td>
+										<td class="px-3 py-2 text-xs">{row.competitionName}</td>
+										<td class="px-3 py-2">
+											{#if row.checkedIn}
+												<span class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-xs text-emerald-200">Sudah</span>
+											{:else}
+												<span class="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-xs text-amber-200">Belum</span>
+											{/if}
+										</td>
+										<td class="px-3 py-2">
+											{#if row.paidStatus === "full"}
+												<span class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-xs text-emerald-200">Lunas</span>
+											{:else if row.paidStatus === "dp"}
+												<span class="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-xs text-amber-200">DP</span>
+											{:else}
+												<span class="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-xs text-rose-200">Belum</span>
+											{/if}
+										</td>
+										<td class="px-3 py-2 text-xs">{row.paymentMethods.length > 0 ? row.paymentMethods.map(methodLabel).join(", ") : "—"}</td>
+										<td class="px-3 py-2">
+											{#if row.checkedIn}
+												<button type="button" class="btn btn-ghost px-2 py-1 text-xs" onclick={() => void panitiaUndoCheckIn(row)} disabled={panitiaSaving !== null}><Undo2 class="h-3.5 w-3.5" aria-hidden="true" />Batalkan</button>
+											{:else}
+												<button type="button" class="btn btn-gold px-2 py-1 text-xs" onclick={() => void panitiaCheckIn(row)} disabled={panitiaSaving !== null}><BadgeCheck class="h-3.5 w-3.5" aria-hidden="true" />Check-in</button>
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
 					</div>
 				{/if}
 			</section>

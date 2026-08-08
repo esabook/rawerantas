@@ -391,6 +391,10 @@ drop policy if exists "participant_payments public insert" on participant_paymen
 create policy "participant_payments public insert" on participant_payments
 	for insert with check (true);
 
+drop policy if exists "participant_payments public read" on participant_payments;
+create policy "participant_payments public read" on participant_payments
+	for select using (true);
+
 drop policy if exists "scores_mancing public insert" on scores_mancing;
 create policy "scores_mancing public insert" on scores_mancing
 	for insert with check (true);
