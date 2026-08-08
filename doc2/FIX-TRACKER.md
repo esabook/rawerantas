@@ -171,12 +171,17 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     advanceRound (di luar FILES B1-3) — catat utk /rawe2. B2-7 kini kandidat SUPERSEDED (audit di RPC).
   - VERIFY: `bunx vitest run src/lib/db/__tests__/admin.test.ts`
   - Commit: `8f94dcd`
-- [ ] **B1-4** — RPC `register_participant`: kuota atomik + tiket sequence + dedupe + lapak — Temuan: F1, F2, F3, F12, A16, A7, A1, A39 (sebagian)
+- [x] **B1-4** — RPC `register_participant`: kuota atomik + tiket sequence + dedupe + lapak — Temuan: F1, F2, F3, F12, A16, A7, A1, A39 (sebagian)
   - FILES: `supabase/rls.sql` (RPC + unique `(competition_id, phone)` + sequence tiket + assign lapak),
     `src/lib/db/schema.ts`, `src/lib/db/register.ts`, `src/lib/offline/executor.ts`, `src/lib/db/participantImport.ts`, test
   - Plan: sesuai desain PESERTA-FLOW §5–6; deklarasi unique di `schema.ts`; import memakai sumber tiket/lapak server.
+  - Bukti: participant.test.ts 7 PASS (4 live) · executor.test.ts 14 PASS (3 register) · suite 260/260 · check 0 · lint 0
+  - Keputusan: RPC register_participant (fast-path dedupe lalu decrement kuota atomik; tiket dari sequence
+    participant_ticket_seq; ON CONFLICT (competition_id, phone) dedupe idempoten; idempotency_key utk retry).
+    register.ts live + executor pindah ke RPC. schema.ts deklarasi unique (F3). A7/A39 (import pakai sumber
+    tiket/lapak server) = CARRYOVER — import masih generate tiket lokal; dicatat utk item lanjutan/B4-7.
   - VERIFY: test register/executor/import
-  - Commit: —
+  - Commit: `ded8f57`
 - [ ] **B1-5** — RPC `check_in` + eligibility re-check + audit — Temuan: F7, A21, A22
   - FILES: `supabase/rls.sql`, `src/lib/db/checkin.ts`, `src/lib/offline/executor.ts`, test checkin
   - Plan: RPC memvalidasi (status, rejected, diskualifikasi) → set `checked_in` + `audit_logs`;
