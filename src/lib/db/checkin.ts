@@ -190,7 +190,11 @@ export async function getCheckinSummary(
 export async function checkInParticipant(
 	participantId: string,
 	recordedBy: string | null = null,
-): Promise<{ eligibility: CheckinEligibility; summary: CheckinSummary }> {
+): Promise<{
+	eligibility: CheckinEligibility;
+	summary: CheckinSummary;
+	queued?: boolean;
+}> {
 	const summary = await getCheckinSummary(participantId);
 	if (summary.status === "disqualified") {
 		throw new CheckinError("disqualified", "Peserta didiskualifikasi.");
@@ -264,6 +268,7 @@ export async function checkInParticipant(
 		return {
 			eligibility: "ok",
 			summary: await getCheckinSummary(participantId),
+			queued: true,
 		};
 	}
 }

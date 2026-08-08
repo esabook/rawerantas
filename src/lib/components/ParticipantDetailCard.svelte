@@ -30,6 +30,9 @@
 	let checking = $state(false);
 	let paying = $state(false);
 	let error = $state("");
+	// B2-4/F7/F16: true bila ada op queued (check-in / bayar tunai offline)
+	// yang belum tersinkron — tampilkan badge "menunggu sinkron".
+	let syncPending = $state(false);
 
 	const statusLabel: Record<string, string> = {
 		registered: "Terdaftar",
@@ -62,10 +65,11 @@
 		checking = true;
 		error = "";
 		try {
-			const { eligibility } = await checkInParticipant(
+			const { eligibility, queued } = await checkInParticipant(
 				participantId,
 				null,
 			);
+			syncPending = syncPending || Boolean(queued);
 			if (eligibility === "already") {
 				undoable("Peserta sudah check-in sebelumnya.", {
 					onConfirm: () => {},
@@ -119,19 +123,27 @@
 		paying = true;
 		error = "";
 		try {
-			await submitCashPayment(
+			const result = await submitCashPayment(
 				{
 					participantId: summary.participant.id,
 					competitionId: summary.participant.competitionId,
 				},
 				{ fee: summary.fee },
 			);
-			undoable("Pelunasan tunai berhasil dicatat.", {
-				onConfirm: () => {},
-			});
+			// B2-4/F16: op tunai offline masuk antrean — tandai "menunggu
+			// sinkron" & jangan tampilkan error misleading dari load() offline.
+			syncPending = syncPending || Boolean(result.queued);
+			undoable(
+				result.queued
+					? "Pelunasan tunai menunggu sinkron."
+					: "Pelunasan tunai berhasil dicatat.",
+				{ onConfirm: () => {} },
+			);
 			sfx.coin();
 			vibrate([80, 40, 120]);
-			await load();
+			if (!result.queued) {
+				await load();
+			}
 		} catch (e) {
 			sfx.error();
 			vibrate([120, 60, 120]);
@@ -234,6 +246,16 @@
 		{#if summary.checkedInAt}
 			<p class="text-xs text-muted-foreground" role="status">
 				Check-in: {summary.checkedInAt.toLocaleTimeString("id-ID")}
+			</p>
+		{/if}
+
+		{#if syncPending}
+			<p
+				class="mt-2 flex items-center gap-1.5 rounded-lg border border-sky-400/40 bg-sky-500/10 px-2 py-1.5 text-xs text-sky-700"
+				role="status"
+			>
+				<Loader2 class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+				Menunggu sinkron — perubahan tercatat di perangkat ini.
 			</p>
 		{/if}
 
