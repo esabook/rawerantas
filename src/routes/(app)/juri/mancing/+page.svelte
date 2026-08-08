@@ -12,13 +12,19 @@
 	let loading = $state(true);
 	let error = $state("");
 	let recordedBy = $state("");
+	let selectedId = $state<string | null>(null);
+	let roundWarning = $state("");
 
 	const mancing = $derived(
-		competitions.filter((c) =>
-			["terberat", "kumulatif", "jackpot_pita"].includes(c.scoringMode),
-		),
+		competitions
+			.filter((c) => c.isActive)
+			.filter((c) =>
+				["terberat", "kumulatif", "jackpot_pita"].includes(c.scoringMode),
+			),
 	);
-	const competition = $derived(mancing[0]);
+	const competition = $derived(
+		mancing.find((c) => c.id === selectedId) ?? mancing[0],
+	);
 
 	onMount(() => {
 		void sha256Hex(env.juriPin)
@@ -28,16 +34,29 @@
 			.catch(() => {
 				recordedBy = "";
 			});
-		void getCompetitions(false)
-			.then((rows) => {
-				competitions = rows;
-			})
-			.catch((e) => {
-				error = e instanceof Error ? e.message : "Gagal memuat kompetisi.";
-			})
-			.finally(() => {
-				loading = false;
-			});
+		const load = () =>
+			getCompetitions(false)
+				.then((rows) => {
+					competitions = rows;
+					// B3-2/A29: deteksi perubahan babak saat halaman terbuka.
+					const prev = competition;
+					if (prev) {
+						const next = rows.find((c) => c.id === prev.id);
+						if (next && next.currentRound !== prev.currentRound) {
+							roundWarning = `Babak berubah ke ${next.currentRound} oleh admin.`;
+						}
+					}
+				})
+				.catch((e) => {
+					error = e instanceof Error ? e.message : "Gagal memuat kompetisi.";
+				})
+				.finally(() => {
+					loading = false;
+				});
+		void load();
+		// B3-2/A29: polling 30 detik utk deteksi perubahan babak/reaktif.
+		const timer = setInterval(load, 30_000);
+		return () => clearInterval(timer);
 	});
 </script>
 
@@ -62,6 +81,30 @@
 					</p>
 				</div>
 			{:else}
+				<div class="mb-4 flex flex-wrap items-center gap-3">
+					{#if mancing.length > 1}
+						<label class="flex items-center gap-2 text-sm">
+							<span class="text-muted-foreground">Kompetisi</span>
+							<select
+								class="input"
+								value={competition?.id ?? ""}
+								onchange={(e) =>
+									(selectedId = e.currentTarget.value)}
+							>
+								{#each mancing as c (c.id)}
+									<option value={c.id}>{c.name}</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
+					{#if roundWarning}
+						<span
+							class="rounded-lg border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-xs text-amber-200"
+							role="status"
+							>{roundWarning}</span
+						>
+					{/if}
+				</div>
 				<MancingPanel
 					competitionId={competition.id}
 					competitionName={competition.name}

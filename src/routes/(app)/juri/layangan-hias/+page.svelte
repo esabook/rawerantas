@@ -12,11 +12,16 @@
 	let loading = $state(true);
 	let error = $state("");
 	let recordedBy = $state("");
+	let selectedId = $state<string | null>(null);
 
 	const hias = $derived(
-		competitions.filter((c) => c.scoringMode === "layangan_hias"),
+		competitions
+			.filter((c) => c.isActive)
+			.filter((c) => c.scoringMode === "layangan_hias"),
 	);
-	const competition = $derived(hias[0]);
+	const competition = $derived(
+		hias.find((c) => c.id === selectedId) ?? hias[0],
+	);
 
 	onMount(() => {
 		void sha256Hex(env.juriPin)
@@ -26,16 +31,20 @@
 			.catch(() => {
 				recordedBy = "";
 			});
-		void getCompetitions(false)
-			.then((rows) => {
-				competitions = rows;
-			})
-			.catch((e) => {
-				error = e instanceof Error ? e.message : "Gagal memuat kompetisi.";
-			})
-			.finally(() => {
-				loading = false;
-			});
+		const load = () =>
+			getCompetitions(false)
+				.then((rows) => {
+					competitions = rows;
+				})
+				.catch((e) => {
+					error = e instanceof Error ? e.message : "Gagal memuat kompetisi.";
+				})
+				.finally(() => {
+					loading = false;
+				});
+		void load();
+		const timer = setInterval(load, 30_000);
+		return () => clearInterval(timer);
 	});
 </script>
 
@@ -60,6 +69,23 @@
 					</p>
 				</div>
 			{:else}
+				<div class="mb-4 flex flex-wrap items-center gap-3">
+					{#if hias.length > 1}
+						<label class="flex items-center gap-2 text-sm">
+							<span class="text-muted-foreground">Kompetisi</span>
+							<select
+								class="input"
+								value={competition?.id ?? ""}
+								onchange={(e) =>
+									(selectedId = e.currentTarget.value)}
+							>
+								{#each hias as c (c.id)}
+									<option value={c.id}>{c.name}</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
+				</div>
 				<HiasPanel
 					competitionId={competition.id}
 					competitionName={competition.name}
