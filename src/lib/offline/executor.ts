@@ -32,16 +32,26 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 	const payload = entry.payload as Record<string, unknown>;
 
 	switch (entry.endpoint) {
-		case "/rest/participants/checkin":
-			return toResult(() =>
-				supabase
-					.from("participants")
-					.update({
-						status: "checked_in",
-						checked_in_at: new Date().toISOString(),
-					})
-					.eq("id", payload.participantId as string),
-			);
+		case "/rest/participants/checkin": {
+			// B1-5/A22: drain memakai RPC check_in — eligibility dicek ulang server
+			// (bukan update buta); penolakan bisnis → conflict (hentikan retry).
+			let rpcResponse: { data: unknown; error: unknown };
+			try {
+				rpcResponse = await supabase.rpc("check_in", {
+					p_participant_id: payload.participantId,
+					p_recorded_by: payload.recordedBy ?? null,
+				});
+			} catch {
+				return "error";
+			}
+			if (rpcResponse.error) {
+				return "error";
+			}
+			const result = rpcResponse.data as
+				| { ok?: boolean; reason?: string }
+				| undefined;
+			return result?.ok === true ? "ok" : "conflict";
+		}
 
 		case "/rest/scores/mancing":
 			return toResult(() =>

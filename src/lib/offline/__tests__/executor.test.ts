@@ -288,6 +288,51 @@ describe("executor offline — pembayaran via RPC (QW-6/F15/A20, B1-1)", () => {
 		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
 		expect(result).toBe("conflict");
 	});
+	describe("executor offline — checkin via RPC (B1-5/A22)", () => {
+		beforeEach(() => {
+			captured.rpcs.length = 0;
+			captured.rpcError = null;
+			captured.rpcResult = { ok: true };
+		});
+
+		const CHECKIN_PAYLOAD = {
+			participantId: "p-live-1",
+			recordedBy: "hash-panitia",
+		};
+
+		function checkinEntry(): QueueEntry {
+			return {
+				idempotencyKey: "checkin:p-live-1",
+				endpoint: "/rest/participants/checkin",
+				payload: CHECKIN_PAYLOAD,
+				timestamp: 5,
+				retries: 0,
+				status: "pending",
+			};
+		}
+
+		it("RPC check_in → ok, recorded_by diteruskan", async () => {
+			const result = await executeQueueEntry(checkinEntry());
+			expect(result).toBe("ok");
+			expect(captured.rpcs.at(-1)?.fn).toBe("check_in");
+			expect(captured.rpcs.at(-1)?.args).toMatchObject({
+				p_participant_id: "p-live-1",
+				p_recorded_by: "hash-panitia",
+			});
+		});
+
+		it("RPC tolak eligibility → conflict (berhenti retry)", async () => {
+			captured.rpcResult = { ok: false, reason: "payment_rejected" };
+			const result = await executeQueueEntry(checkinEntry());
+			expect(result).toBe("conflict");
+		});
+
+		it("RPC error → error (retry)", async () => {
+			captured.rpcError = new Error("db down");
+			const result = await executeQueueEntry(checkinEntry());
+			expect(result).toBe("error");
+		});
+	});
 	describe("executor offline — register via RPC (B1-4/F1/F2/F3/F12)", () => {
 		beforeEach(() => {
 			captured.rpcs.length = 0;

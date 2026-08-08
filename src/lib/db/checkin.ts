@@ -228,28 +228,59 @@ export async function checkInParticipant(
 	}
 	try {
 		const { supabase } = await import("./supabaseClient");
-		const { error } = await supabase
-			.from("participants")
-			.update({ status: "checked_in", checked_in_at: new Date().toISOString() })
-			.eq("id", participantId);
+		// B1-5: check-in via RPC — eligibility + audit di server (A21/A22).
+		const { data, error } = await supabase.rpc("check_in", {
+			p_participant_id: participantId,
+			p_recorded_by: recordedBy,
+		});
 		if (error) {
 			throw error;
 		}
+		const result = data as
+			| { ok?: boolean; already?: boolean; reason?: string }
+			| undefined;
+		if (!result?.ok) {
+			throw new Error(checkinRpcMessage(result?.reason));
+		}
 		return {
-			eligibility: "ok",
+			eligibility: result.already ? "already" : "ok",
 			summary: await getCheckinSummary(participantId),
 		};
 	} catch (e) {
 		if (!isOfflineError(e)) {
 			throw e;
 		}
+		// B1-5/F7: saat offline, catat optimistik lokal (UI konsisten) lalu
+		// enqueue; drain memakai RPC sehingga eligibility tetap dicek server.
+		await localPut(STORE, {
+			participantId,
+			checkedInAt: new Date(),
+			recordedBy,
+		});
 		await enqueue(`checkin:${participantId}`, "/rest/participants/checkin", {
 			participantId,
+			recordedBy,
 		});
 		return {
 			eligibility: "ok",
 			summary: await getCheckinSummary(participantId),
 		};
+	}
+}
+
+/** Pesan ramah utk reason penolakan RPC `check_in`. */
+function checkinRpcMessage(reason: string | undefined): string {
+	switch (reason) {
+		case "participant_not_found":
+			return "Peserta tidak ditemukan.";
+		case "disqualified":
+			return "Peserta didiskualifikasi.";
+		case "payment_rejected":
+			return "Pembayaran peserta ditolak admin.";
+		case "not_eligible":
+			return "Belum memenuhi syarat masuk (minimal DP dibayar).";
+		default:
+			return "Check-in ditolak server. Coba lagi.";
 	}
 }
 

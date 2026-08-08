@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import "fake-indexeddb/auto";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$env/static/public", () => ({
 	PUBLIC_BASE_URL: "https://rawe.test",
@@ -14,6 +15,7 @@ vi.mock("$env/static/public", () => ({
 }));
 
 const DISQ_ID = "disq-0000-0000-0000-000000000000";
+const LIVE_OK_ID = "live-0000-0000-0000-000000000001";
 
 vi.mock("$lib/db/queries", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("$lib/db/queries")>();
@@ -32,7 +34,33 @@ vi.mock("$lib/db/queries", async (importOriginal) => {
 					createdAt: new Date(),
 				};
 			}
+			if (id === LIVE_OK_ID) {
+				return {
+					id: LIVE_OK_ID,
+					competitionId: "c1",
+					ticketNumber: "RA-2026-LIVE",
+					lapakNumber: "1",
+					name: "Peserta Live",
+					phone: "6281000000001",
+					status: "fully_paid",
+					createdAt: new Date(),
+				};
+			}
 			return actual.getParticipantById(id);
+		},
+		// B1-5 live check-in: hindari jalur supabase di getCheckinSummary
+		// (hanya ketika tidak demo; mode demo tetap memakai data seed).
+		getPayments: async (participantId?: string) => {
+			const { get } = await import("svelte/store");
+			const { demoMode } = await import("$lib/demo/store");
+			return get(demoMode) ? await actual.getPayments(participantId) : [];
+		},
+		getCompetitions: async () => {
+			const { get } = await import("svelte/store");
+			const { demoMode } = await import("$lib/demo/store");
+			return get(demoMode)
+				? await actual.getCompetitions(false)
+				: ([] as Awaited<ReturnType<typeof actual.getCompetitions>>);
 		},
 	};
 });
@@ -50,6 +78,25 @@ import { resetDemoPayments, submitPayment } from "$lib/db/payment";
 import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
 import { setDemoMode } from "$lib/demo/store";
+import { clearQueue, peekBatch } from "$lib/offline/queue";
+
+/** Supabase tiruan utk jalur live check-in (B1-5). */
+const sb = vi.hoisted(() => ({
+	rpcResult: { ok: true } as Record<string, unknown>,
+	rpcError: null as Error | null,
+	rpcs: [] as Array<{ fn: string; args: Record<string, unknown> }>,
+}));
+
+vi.mock("$lib/db/supabaseClient", () => ({
+	supabase: {
+		removeAllChannels: () => {},
+		rpc: (fn: string, args: Record<string, unknown>) => {
+			sb.rpcs.push({ fn, args });
+			if (sb.rpcError) throw sb.rpcError;
+			return { data: sb.rpcResult, error: null };
+		},
+	},
+}));
 
 const dpPaid = demoParticipants().find((p) => p.status === "dp_paid");
 const registered = demoParticipants().find((p) => p.status === "registered");
@@ -192,5 +239,70 @@ describe("checkin domain", () => {
 		expect(found?.id).toBe(fullyPaid.id);
 		const missing = await findParticipantByTicket("RA-2026-999");
 		expect(missing).toBeNull();
+	});
+});
+
+describe("checkInParticipant live via RPC (B1-5)", () => {
+	beforeEach(async () => {
+		sb.rpcResult = { ok: true };
+		sb.rpcError = null;
+		sb.rpcs.length = 0;
+		await clearQueue();
+		await resetDemoCheckins();
+		await setDemoMode(false);
+	});
+
+	afterAll(async () => {
+		await clearQueue();
+		await setDemoMode(true);
+	});
+
+	it("RPC check_in dipanggil dgn participant_id + recorded_by", async () => {
+		const { eligibility } = await checkInParticipant(
+			LIVE_OK_ID,
+			"hash-panitia",
+		);
+		expect(eligibility).toBe("ok");
+		expect(sb.rpcs.at(-1)?.fn).toBe("check_in");
+		expect(sb.rpcs.at(-1)?.args).toEqual({
+			p_participant_id: LIVE_OK_ID,
+			p_recorded_by: "hash-panitia",
+		});
+	});
+
+	it("RPC already → eligibility already", async () => {
+		sb.rpcResult = { ok: true, already: true };
+		const { eligibility } = await checkInParticipant(LIVE_OK_ID, null);
+		expect(eligibility).toBe("already");
+	});
+
+	it("RPC menolak not_eligible → error alasan", async () => {
+		sb.rpcResult = { ok: false, reason: "not_eligible" };
+		await expect(checkInParticipant(LIVE_OK_ID, null)).rejects.toThrow(
+			"minimal DP",
+		);
+	});
+
+	it("offline → catat optimistik lokal + antrean (F7)", async () => {
+		sb.rpcError = new TypeError("Failed to fetch");
+		const { eligibility } = await checkInParticipant(
+			LIVE_OK_ID,
+			"hash-panitia",
+		);
+		expect(eligibility).toBe("ok");
+		// record lokal optimistik
+		const { localGetAll, localStores } = await import("$lib/db/localStore");
+		const checkins = await localGetAll<{ participantId: string }>(
+			localStores.checkins,
+		);
+		expect(checkins.some((c) => c.participantId === LIVE_OK_ID)).toBe(true);
+		// antrean
+		const entries = await peekBatch(10);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.endpoint).toBe("/rest/participants/checkin");
+		expect(entries[0]?.payload).toMatchObject({
+			participantId: LIVE_OK_ID,
+			recordedBy: "hash-panitia",
+		});
 	});
 });

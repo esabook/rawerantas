@@ -867,6 +867,80 @@ $$;
 grant execute on function register_participant(uuid, text, text, uuid)
 	to anon, authenticated;
 
+-- B1-5 (F7, A21, A22): check-in via RPC — eligibility dicek ulang di server
+-- (status, diskualifikasi, pembayaran ditolak, minimal DP), set checked_in +
+-- audit dalam satu transaksi; pelaku (p_recorded_by) disimpan di audit.
+create or replace function check_in(
+	p_participant_id uuid,
+	p_recorded_by text default null
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_participant participants%rowtype;
+	v_min_dp integer;
+	v_total integer;
+	v_rejected boolean;
+begin
+	select * into v_participant
+	from participants
+	where id = p_participant_id
+	for update;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'participant_not_found');
+	end if;
+	if v_participant.status = 'disqualified' then
+		return jsonb_build_object('ok', false, 'reason', 'disqualified');
+	end if;
+	if v_participant.status = 'checked_in' then
+		return jsonb_build_object('ok', true, 'already', true);
+	end if;
+
+	select exists (
+		select 1 from participant_payments
+		where participant_id = p_participant_id
+			and is_verified = false
+			and reject_reason is not null
+			and trim(reject_reason) <> ''
+	) into v_rejected;
+	if v_rejected then
+		return jsonb_build_object('ok', false, 'reason', 'payment_rejected');
+	end if;
+
+	select coalesce(min_dp, 0) into v_min_dp
+	from competitions
+	where id = v_participant.competition_id;
+	select coalesce(sum(amount), 0) into v_total
+	from participant_payments
+	where participant_id = p_participant_id
+		and is_verified = true
+		and (reject_reason is null or trim(reject_reason) = '');
+	if v_total < v_min_dp then
+		return jsonb_build_object('ok', false, 'reason', 'not_eligible');
+	end if;
+
+	update participants
+	set status = 'checked_in', checked_in_at = now()
+	where id = p_participant_id;
+
+	insert into audit_logs (action, entity_type, entity_id, actor_hash, payload, idempotency_key)
+	values (
+		'check_in',
+		'participants',
+		p_participant_id::text,
+		coalesce(p_recorded_by, 'guest'),
+		jsonb_build_object('participantId', p_participant_id),
+		gen_random_uuid()
+	);
+
+	return jsonb_build_object('ok', true);
+end;
+$$;
+
+grant execute on function check_in(uuid, text) to anon, authenticated;
+
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
 	with check (bucket_id = 'proof-images');
