@@ -20,10 +20,18 @@ const captured = vi.hoisted(() => ({
 	updates: [] as Array<{ table: string; row: Record<string, unknown> }>,
 	uploads: [] as string[],
 	uploadError: null as Error | null,
+	rpcs: [] as Array<{ fn: string; args: Record<string, unknown> }>,
+	rpcError: null as Error | null,
+	rpcResult: { ok: true, paymentId: "pay-uuid-1" } as Record<string, unknown>,
 }));
 
 vi.mock("$lib/db/supabaseClient", () => ({
 	supabase: {
+		rpc: (fn: string, args: Record<string, unknown>) => {
+			captured.rpcs.push({ fn, args });
+			if (captured.rpcError) throw captured.rpcError;
+			return { data: captured.rpcResult, error: null };
+		},
 		from: (table: string) => ({
 			insert: (row: Record<string, unknown>) => {
 				captured.inserts.push({ table, row });
@@ -209,42 +217,48 @@ const PAYMENT_PAYLOAD = {
 	amount: 25000,
 	mode: "dp",
 	isCash: false,
+	phone: "081234567890",
+	idempotencyKey: "idem-pay-1",
 	proof: new Uint8Array([1, 2, 3]).buffer,
 	proofMime: "image/jpeg",
 };
 
-describe("executor offline — pembayaran (QW-6/F15/A20)", () => {
+describe("executor offline — pembayaran via RPC (QW-6/F15/A20, B1-1)", () => {
 	beforeEach(() => {
-		captured.inserts.length = 0;
-		captured.updates.length = 0;
 		captured.uploads.length = 0;
 		captured.uploadError = null;
+		captured.rpcs.length = 0;
+		captured.rpcError = null;
+		captured.rpcResult = { ok: true, paymentId: "pay-uuid-1" };
 	});
 
-	it("gagal upload bukti → error (retry), tanpa insert pembayaran", async () => {
+	it("gagal upload bukti → error (retry), tanpa panggilan RPC", async () => {
 		captured.uploadError = new Error("storage gangguan");
 		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
 		expect(result).toBe("error");
 		expect(captured.uploads).toHaveLength(1);
-		expect(captured.inserts).toHaveLength(0);
+		expect(captured.rpcs).toHaveLength(0);
 	});
 
-	it("upload sukses → insert dgn proof_image_url + update status peserta", async () => {
+	it("upload sukses → RPC submit_payment membawa idempotency + proof (F9)", async () => {
 		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
 		expect(result).toBe("ok");
-		expect(captured.inserts).toHaveLength(1);
-		expect(captured.inserts[0]?.table).toBe("participant_payments");
-		expect(captured.inserts[0]?.row.proof_image_url).toContain(
+		expect(captured.rpcs).toHaveLength(1);
+		expect(captured.rpcs[0]?.fn).toBe("submit_payment");
+		expect(captured.rpcs[0]?.args).toMatchObject({
+			p_participant_id: "p-live-1",
+			p_method: "qris",
+			p_amount: 25000,
+			p_is_cash: false,
+			p_idempotency_key: "idem-pay-1",
+			p_phone: "081234567890",
+		});
+		expect(captured.rpcs[0]?.args.p_proof_url).toContain(
 			"https://cdn.test/proofs/p-live-1/",
 		);
-		expect(captured.updates).toHaveLength(1);
-		expect(captured.updates[0]).toEqual({
-			table: "participants",
-			row: { status: "dp_paid" },
-		});
 	});
 
-	it("pembayaran tunai → tanpa upload, insert verified tanpa bukti", async () => {
+	it("pembayaran tunai → tanpa upload, RPC dgn is_cash true", async () => {
 		const result = await executeQueueEntry(
 			paymentEntry({
 				...PAYMENT_PAYLOAD,
@@ -256,10 +270,22 @@ describe("executor offline — pembayaran (QW-6/F15/A20)", () => {
 		);
 		expect(result).toBe("ok");
 		expect(captured.uploads).toHaveLength(0);
-		expect(captured.inserts[0]?.row).toMatchObject({
-			proof_image_url: null,
-			is_verified: true,
+		expect(captured.rpcs[0]?.args).toMatchObject({
+			p_is_cash: true,
+			p_proof_url: null,
 		});
-		expect(captured.updates[0]?.row).toEqual({ status: "fully_paid" });
+	});
+
+	it("RPC gagal (server error) → error utk retry", async () => {
+		captured.rpcError = new Error("db down");
+		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
+		expect(result).toBe("error");
+		expect(captured.rpcs).toHaveLength(1);
+	});
+
+	it("RPC menolak (reason bisnis) → conflict, berhenti retry", async () => {
+		captured.rpcResult = { ok: false, reason: "disqualified" };
+		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
+		expect(result).toBe("conflict");
 	});
 });

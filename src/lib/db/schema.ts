@@ -99,6 +99,7 @@ export const participantPayments = pgTable("participant_payments", {
 	isVerified: boolean("is_verified").notNull().default(false),
 	verifiedBy: text("verified_by"),
 	rejectReason: text("reject_reason"),
+	idempotencyKey: uuid("idempotency_key").notNull().unique(),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),

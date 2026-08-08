@@ -141,8 +141,18 @@ alter table scores_layangan_hias add column if not exists total_weighted real
 		aesthetic * 0.4 + stability * 0.4 + creativity * 0.2
 	) stored;
 
+-- B1-1 (F14/F24/A19): idempotensi pembayaran — tambah kolom, backfill baris
+-- lama, lalu NOT NULL + index unik. Urutan wajib agar aman di tabel berisi data.
+alter table participant_payments add column if not exists idempotency_key uuid;
+update participant_payments
+set idempotency_key = gen_random_uuid()
+where idempotency_key is null;
+alter table participant_payments alter column idempotency_key set not null;
+
 create unique index if not exists participants_competition_phone_idx
 	on participants (competition_id, phone);
+create unique index if not exists participant_payments_idempotency_idx
+	on participant_payments (idempotency_key);
 create unique index if not exists scores_mancing_idempotency_idx
 	on scores_mancing (idempotency_key);
 create unique index if not exists scores_layangan_idempotency_idx
@@ -450,6 +460,127 @@ create policy "proof_images public read" on storage.objects
 	using (bucket_id = 'proof-images');
 
 drop policy if exists "proof_images anon insert" on storage.objects;
+
+-- ============================================================
+-- 5. RPC tulis (Batch 1) — tulis lewat fungsi, bukan akses tabel langsung
+-- ============================================================
+
+-- B1-1 (F14, F24, A19, F9): satu-satunya cara membuat pembayaran.
+-- - Ownership: bila p_phone diberikan, harus cocok participants.phone
+--   (p_phone NULL = check dilewati; diaktifkan bertahap saat caller mengirimnya).
+-- - Validasi nominal dipindah dari client (validateAmount): amount = fee
+--   dianggap pelunasan; selain itu wajib >= min_dp dan kelipatan 500.
+-- - ON CONFLICT (idempotency_key) DO NOTHING → retry/drain idempoten;
+--   baris existing dikembalikan (menggantikan draft-restore rapuh, F24).
+-- - Status peserta dihitung ulang dari total pembayaran TERVERIFIKASI
+--   (server-side, bukan optimistik — memperbaiki F5; transaksi tunggal
+--   insert+status menutup F9).
+create or replace function submit_payment(
+	p_participant_id uuid,
+	p_method text,
+	p_amount integer,
+	p_proof_url text,
+	p_is_cash boolean default false,
+	p_idempotency_key uuid default gen_random_uuid(),
+	p_phone text default null
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_participant participants%rowtype;
+	v_fee integer;
+	v_min_dp integer;
+	v_payment_id uuid;
+	v_verified_total integer;
+	v_new_status text;
+begin
+	select * into v_participant from participants where id = p_participant_id;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'participant_not_found');
+	end if;
+	if p_phone is not null and v_participant.phone is distinct from p_phone then
+		return jsonb_build_object('ok', false, 'reason', 'phone_mismatch');
+	end if;
+	if v_participant.status = 'disqualified' then
+		return jsonb_build_object('ok', false, 'reason', 'disqualified');
+	end if;
+
+	select coalesce(fee, 0), coalesce(min_dp, 0)
+	into v_fee, v_min_dp
+	from competitions
+	where id = v_participant.competition_id;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'competition_not_found');
+	end if;
+
+	if p_amount is null or p_amount <= 0 then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_amount');
+	end if;
+	if p_amount <> v_fee then
+		if p_amount < v_min_dp then
+			return jsonb_build_object('ok', false, 'reason', 'below_min_dp');
+		end if;
+		if p_amount % 500 <> 0 then
+			return jsonb_build_object('ok', false, 'reason', 'bad_increment');
+		end if;
+	end if;
+
+	insert into participant_payments (
+		participant_id,
+		amount,
+		payment_method,
+		proof_image_url,
+		is_verified,
+		idempotency_key
+	) values (
+		p_participant_id,
+		p_amount,
+		p_method,
+		p_proof_url,
+		coalesce(p_is_cash, false),
+		p_idempotency_key
+	)
+	on conflict (idempotency_key) do nothing
+	returning id into v_payment_id;
+
+	if v_payment_id is null then
+		-- Duplikat idempotency: kembalikan baris yang sudah ada.
+		select id into v_payment_id
+		from participant_payments
+		where idempotency_key = p_idempotency_key;
+		return jsonb_build_object(
+			'ok', true,
+			'paymentId', v_payment_id,
+			'duplicate', true
+		);
+	end if;
+
+	-- Recalc status dari total terverifikasi; baris baru non-tunai (belum
+	-- verified) tidak mengubah status; tunai (verified saat insert) bisa naik.
+	if v_participant.status <> 'checked_in' then
+		select coalesce(sum(amount), 0) into v_verified_total
+		from participant_payments
+		where participant_id = p_participant_id
+			and is_verified = true
+			and (reject_reason is null or trim(reject_reason) = '');
+		v_new_status := case
+			when v_verified_total >= v_fee then 'fully_paid'
+			when v_verified_total >= v_min_dp then 'dp_paid'
+			else 'registered'
+		end;
+		update participants set status = v_new_status
+		where id = p_participant_id;
+	end if;
+
+	return jsonb_build_object('ok', true, 'paymentId', v_payment_id);
+end;
+$$;
+
+grant execute on function submit_payment(uuid, text, integer, text, boolean, uuid, text)
+	to anon, authenticated;
+
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
 	with check (bucket_id = 'proof-images');

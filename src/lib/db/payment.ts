@@ -14,6 +14,12 @@ export interface PaymentInput {
 	amount: number;
 	proofBlob: Blob | null;
 	isCash: boolean;
+	/**
+	 * Nomor WA pengirim — ownership di RPC `submit_payment` (B1-1).
+	 * Opsional sampai seluruh caller mengirimkannya; RPC melewatkan check
+	 * bila null.
+	 */
+	phone?: string;
 }
 
 export interface PaymentResult {
@@ -96,6 +102,10 @@ async function persistPayment(
 	mode: "dp" | "full",
 	amount: number,
 ): Promise<PaymentResult> {
+	// B1-1 (F14/F24/A19): satu UUID idempotensi per percobaan submit —
+	// dipakai sebagai p_idempotency_key RPC DAN kunci antrean, sehingga
+	// drain offline idempoten end-to-end.
+	const idempotencyKey = crypto.randomUUID();
 	if (get(demoMode)) {
 		const participant: Participant = {
 			id: input.participantId,
@@ -117,6 +127,7 @@ async function persistPayment(
 				proofImageUrl: input.isCash ? null : "draft-proof",
 				isVerified: input.isCash,
 				verifiedBy: null,
+				idempotencyKey,
 				createdAt: new Date(),
 			},
 			participant,
@@ -149,44 +160,67 @@ async function persistPayment(
 			const { data } = sb.storage.from(PROOF_IMAGES_BUCKET).getPublicUrl(path);
 			proofUrl = data.publicUrl;
 		}
-		const { data, error } = await sb
-			.from("participant_payments")
-			.insert({
-				participant_id: input.participantId,
-				amount,
-				payment_method: input.method,
-				proof_image_url: proofUrl,
-				is_verified: input.isCash,
-			})
-			.select("id")
-			.single();
+		// B1-1: tulis via RPC `submit_payment` — validasi nominal & dedup di
+		// server, status dihitung ulang dari total terverifikasi (F5: tanpa
+		// status optimistik; F9: insert+status satu transaksi server-side).
+		const { data, error } = await sb.rpc("submit_payment", {
+			p_participant_id: input.participantId,
+			p_method: input.method,
+			p_amount: amount,
+			p_proof_url: proofUrl,
+			p_is_cash: input.isCash,
+			p_idempotency_key: idempotencyKey,
+			p_phone: input.phone ?? null,
+		});
 		if (error) {
 			throw error;
 		}
-		await sb
-			.from("participants")
-			.update({ status: mode === "full" ? "fully_paid" : "dp_paid" })
-			.eq("id", input.participantId);
-		return { paymentId: (data as { id: string }).id, queued: false };
+		const result = data as
+			| { ok: boolean; paymentId?: string; reason?: string }
+			| undefined;
+		if (!result?.ok) {
+			throw new Error(submitPaymentReasonMessage(result?.reason));
+		}
+		return { paymentId: result.paymentId ?? null, queued: false };
 	} catch (e) {
 		if (!isOfflineError(e)) {
 			throw e;
 		}
-		await enqueue(
-			`payment:${input.participantId}:${mode}:${Date.now()}`,
-			"/rest/payments",
-			{
-				participantId: input.participantId,
-				competitionId: input.competitionId,
-				method: input.method,
-				amount,
-				mode,
-				isCash: input.isCash,
-				proof: input.proofBlob ? await input.proofBlob.arrayBuffer() : null,
-				proofMime: input.proofBlob?.type ?? null,
-			},
-		);
+		await enqueue(idempotencyKey, "/rest/payments", {
+			participantId: input.participantId,
+			competitionId: input.competitionId,
+			method: input.method,
+			amount,
+			mode,
+			isCash: input.isCash,
+			phone: input.phone ?? null,
+			idempotencyKey,
+			proof: input.proofBlob ? await input.proofBlob.arrayBuffer() : null,
+			proofMime: input.proofBlob?.type ?? null,
+		});
 		return { paymentId: null, queued: true };
+	}
+}
+
+/** Pesan ramah utk reason penolakan RPC `submit_payment`. */
+function submitPaymentReasonMessage(reason: string | undefined): string {
+	switch (reason) {
+		case "participant_not_found":
+			return "Peserta tidak ditemukan.";
+		case "phone_mismatch":
+			return "Nomor WhatsApp tidak cocok dengan data peserta.";
+		case "disqualified":
+			return "Peserta didiskualifikasi.";
+		case "competition_not_found":
+			return "Kompetisi tidak ditemukan.";
+		case "invalid_amount":
+			return "Nominal pembayaran tidak valid.";
+		case "below_min_dp":
+			return "Nominal di bawah DP minimal.";
+		case "bad_increment":
+			return `Nominal DP harus kelipatan Rp ${PAYMENT_AMOUNT_STEP.toLocaleString("id-ID")}.`;
+		default:
+			return "Pembayaran ditolak server. Periksa kembali data lalu coba lagi.";
 	}
 }
 
@@ -233,6 +267,7 @@ export async function submitCashPayment(
 			amount: remaining,
 			proofBlob: null,
 			isCash: true,
+			phone: participant.phone,
 		},
 		"full",
 		remaining,

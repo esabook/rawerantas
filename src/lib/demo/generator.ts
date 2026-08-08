@@ -166,6 +166,7 @@ export const mockPayments: MockPayment[] = mockParticipants
 		verifiedBy:
 			p.status === "fully_paid" || p.status === "checked_in" ? PIN_HASH : null,
 		rejectReason: null,
+		idempotencyKey: uuid(3000 + i),
 		createdAt: at(-int(1_000, 40_000)),
 	}));
 

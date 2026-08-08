@@ -158,27 +158,30 @@ async function executePayment(
 			.getPublicUrl(path);
 		proofUrl = data.publicUrl;
 	}
-	const { error, data } = await supabase
-		.from("participant_payments")
-		.insert({
-			participant_id: payload.participantId,
-			amount: payload.amount,
-			payment_method: payload.method,
-			proof_image_url: proofUrl,
-			is_verified: payload.isCash,
-		})
-		.select("id")
-		.single();
-	if (error) {
-		return isUniqueViolation(error) ? "conflict" : "error";
+	// B1-1 (F14/F24/A19/F9): tulis via RPC `submit_payment` — dedup
+	// idempotency_key, validasi nominal, dan recalc status terjadi atomik
+	// di server (F9: tak ada lagi update status yang tak diperiksa).
+	let rpcResponse: { data: unknown; error: unknown };
+	try {
+		rpcResponse = await supabase.rpc("submit_payment", {
+			p_participant_id: payload.participantId,
+			p_method: payload.method,
+			p_amount: payload.amount,
+			p_proof_url: proofUrl,
+			p_is_cash: payload.isCash,
+			p_idempotency_key: payload.idempotencyKey ?? null,
+			p_phone: payload.phone ?? null,
+		});
+	} catch {
+		return "error";
 	}
-	if (data) {
-		await supabase
-			.from("participants")
-			.update({ status: payload.mode === "full" ? "fully_paid" : "dp_paid" })
-			.eq("id", payload.participantId as string);
+	if (rpcResponse.error) {
+		return "error";
 	}
-	return "ok";
+	const result = rpcResponse.data as { ok?: boolean } | undefined;
+	// Penolakan bisnis (phone mismatch, diskualifikasi, nominal) deterministik
+	// — hentikan retry sebagai conflict, bukan mengulang sampai dead.
+	return result?.ok ? "ok" : "conflict";
 }
 
 async function executeRegister(

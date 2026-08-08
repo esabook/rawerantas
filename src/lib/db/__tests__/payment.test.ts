@@ -24,31 +24,24 @@ import { demoCompetitions } from "$lib/demo/generator";
 import { demoMode, setDemoMode } from "$lib/demo/store";
 import { clearQueue, peekBatch } from "$lib/offline/queue";
 
-/** Supabase tiruan utk jalur live QW-6/F15/A20 — upload storage bisa
- * disetel gagal; insert/update ditangkap utk asersi. */
+/** Supabase tiruan utk jalur live (QW-6/B1-1) — upload storage & RPC bisa
+ * disetel gagal; panggilan RPC/upload ditangkap utk asersi. */
 const sb = vi.hoisted(() => ({
 	uploadError: null as Error | null,
-	inserts: [] as Array<{ table: string; row: Record<string, unknown> }>,
+	rpcError: null as Error | null,
+	rpcResult: { ok: true, paymentId: "pay-uuid-1" } as Record<string, unknown>,
+	rpcs: [] as Array<{ fn: string; args: Record<string, unknown> }>,
 	uploads: [] as string[],
 }));
 
 vi.mock("$lib/db/supabaseClient", () => ({
 	supabase: {
 		removeAllChannels: () => {},
-		from: (table: string) => ({
-			insert: (row: Record<string, unknown>) => {
-				sb.inserts.push({ table, row });
-				return {
-					error: null,
-					select: () => ({
-						single: async () => ({ data: { id: "pay-uuid-1" }, error: null }),
-					}),
-				};
-			},
-			update: () => ({
-				eq: () => ({ data: null, error: null }),
-			}),
-		}),
+		rpc: (fn: string, args: Record<string, unknown>) => {
+			sb.rpcs.push({ fn, args });
+			if (sb.rpcError) throw sb.rpcError;
+			return { data: sb.rpcResult, error: null };
+		},
 		storage: {
 			from: () => ({
 				upload: (path: string) => {
@@ -208,72 +201,114 @@ describe("submitPayment (demo)", () => {
 			isVerified: true,
 		});
 	});
+});
 
-	describe("submitPayment live — bukti (QW-6/F15/A20)", () => {
-		const INPUT = (proofBlob: Blob | null) => ({
-			participantId: "p-live-1",
-			competitionId,
-			method: "qris",
-			amount: 30_000,
-			proofBlob,
-			isCash: false,
-		});
+describe("submitPayment live — RPC submit_payment (QW-6/F15/A20, B1-1)", () => {
+	const INPUT = (proofBlob: Blob | null) => ({
+		participantId: "p-live-1",
+		competitionId,
+		method: "qris",
+		amount: 30_000,
+		proofBlob,
+		isCash: false,
+		phone: "081234567890",
+	});
 
-		beforeEach(async () => {
-			sb.uploadError = null;
-			sb.inserts.length = 0;
-			sb.uploads.length = 0;
-			await clearQueue();
-			await setDemoMode(false);
-		});
+	beforeEach(async () => {
+		sb.uploadError = null;
+		sb.rpcError = null;
+		sb.rpcResult = { ok: true, paymentId: "pay-uuid-1" };
+		sb.rpcs.length = 0;
+		sb.uploads.length = 0;
+		await clearQueue();
+		await setDemoMode(false);
+	});
 
-		afterAll(async () => {
-			await clearQueue();
-			await setDemoMode(true);
-		});
+	afterAll(async () => {
+		await clearQueue();
+		await setDemoMode(true);
+	});
 
-		it("gagal upload bukti (error storage) → throw, tanpa insert pembayaran", async () => {
-			sb.uploadError = new Error("Bucket storage penuh");
-			await expect(
-				submitPayment(
-					INPUT(new Blob(["x"], { type: "image/jpeg" })),
-					"dp",
-					competition,
-				),
-			).rejects.toThrow();
-			expect(sb.uploads).toHaveLength(1);
-			expect(sb.inserts).toHaveLength(0);
-		});
-
-		it("gagal upload karena offline → masuk antrean dgn bukti, tanpa insert", async () => {
-			sb.uploadError = new TypeError("Failed to fetch");
-			const res = await submitPayment(
+	it("gagal upload bukti (error storage) → throw, tanpa panggilan RPC", async () => {
+		sb.uploadError = new Error("Bucket storage penuh");
+		await expect(
+			submitPayment(
 				INPUT(new Blob(["x"], { type: "image/jpeg" })),
 				"dp",
 				competition,
-			);
-			expect(res.queued).toBe(true);
-			expect(sb.inserts).toHaveLength(0);
-			const entries = await peekBatch(10);
-			expect(entries).toHaveLength(1);
-			expect(entries[0]?.endpoint).toBe("/rest/payments");
-			const queuedPayload = entries[0]?.payload as
-				| Record<string, unknown>
-				| undefined;
-			expect(queuedPayload?.proof).toBeInstanceOf(ArrayBuffer);
-		});
+			),
+		).rejects.toThrow();
+		expect(sb.uploads).toHaveLength(1);
+		expect(sb.rpcs).toHaveLength(0);
+	});
 
-		it("upload sukses → insert dgn proof_image_url terisi", async () => {
-			const res = await submitPayment(
+	it("gagal upload karena offline → masuk antrean dgn bukti, tanpa RPC", async () => {
+		sb.uploadError = new TypeError("Failed to fetch");
+		const res = await submitPayment(
+			INPUT(new Blob(["x"], { type: "image/jpeg" })),
+			"dp",
+			competition,
+		);
+		expect(res.queued).toBe(true);
+		expect(sb.rpcs).toHaveLength(0);
+		const entries = await peekBatch(10);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.endpoint).toBe("/rest/payments");
+		const queuedPayload = entries[0]?.payload as
+			| Record<string, unknown>
+			| undefined;
+		expect(queuedPayload?.proof).toBeInstanceOf(ArrayBuffer);
+	});
+
+	it("upload sukses → RPC submit_payment membawa proof_url, phone & idempotency", async () => {
+		const res = await submitPayment(
+			INPUT(new Blob(["x"], { type: "image/jpeg" })),
+			"dp",
+			competition,
+		);
+		expect(res).toEqual({ paymentId: "pay-uuid-1", queued: false });
+		expect(sb.uploads).toHaveLength(1);
+		expect(sb.rpcs).toHaveLength(1);
+		expect(sb.rpcs[0]?.fn).toBe("submit_payment");
+		expect(sb.rpcs[0]?.args).toMatchObject({
+			p_participant_id: "p-live-1",
+			p_method: "qris",
+			p_amount: 30_000,
+			p_is_cash: false,
+			p_phone: "081234567890",
+		});
+		expect(sb.rpcs[0]?.args.p_proof_url).toContain(
+			"https://cdn.test/proofs/p-live-1/",
+		);
+	});
+
+	it("RPC menolak (reason bisnis) → pesan ramah, tanpa antrean", async () => {
+		sb.rpcResult = { ok: false, reason: "disqualified" };
+		await expect(
+			submitPayment(
 				INPUT(new Blob(["x"], { type: "image/jpeg" })),
 				"dp",
 				competition,
-			);
-			expect(res).toEqual({ paymentId: "pay-uuid-1", queued: false });
-			expect(sb.uploads).toHaveLength(1);
-			expect(sb.inserts[0]?.row.proof_image_url).toContain(
-				"https://cdn.test/proofs/p-live-1/",
-			);
-		});
+			),
+		).rejects.toThrow("didiskualifikasi");
+		expect(await peekBatch(10)).toHaveLength(0);
+	});
+
+	it("gagal jaringan saat RPC → antrean; kunci antrean == idempotency_key RPC (F24)", async () => {
+		sb.rpcError = new TypeError("Failed to fetch");
+		const res = await submitPayment(
+			INPUT(new Blob(["x"], { type: "image/jpeg" })),
+			"dp",
+			competition,
+		);
+		expect(res.queued).toBe(true);
+		expect(sb.rpcs).toHaveLength(1);
+		const entries = await peekBatch(10);
+		expect(entries).toHaveLength(1);
+		const queuedPayload = entries[0]?.payload as
+			| Record<string, unknown>
+			| undefined;
+		expect(entries[0]?.idempotencyKey).toBe(queuedPayload?.idempotencyKey);
+		expect(entries[0]?.idempotencyKey).toBe(sb.rpcs[0]?.args.p_idempotency_key);
 	});
 });
