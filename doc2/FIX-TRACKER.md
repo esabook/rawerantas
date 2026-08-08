@@ -160,12 +160,17 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     item lanjutan). UI: tombol "Kirim ulang pembayaran" di kartu profil + modal mode resubmit; teks F17 jadi nyata.
   - VERIFY: test payment + RegistrantProfile
   - Commit: `4ced1b7`
-- [ ] **B1-3** — RPC `verify_payment`/`reject_payment` + guard state + recalc status — Temuan: F5, A2, A33, A34
+- [x] **B1-3** — RPC `verify_payment`/`reject_payment` + guard state + recalc status — Temuan: F5, A2, A33, A34
   - FILES: `supabase/rls.sql`, `src/lib/db/admin.ts`, test admin
   - Plan: transisi hanya pending→verified/rejected (rejected→verified eksplisit); recalc `participants.status`
     dari total verified dalam RPC; audit dalam transaksi RPC (menutup A34 — bila selesai, B2-7 jadi SUPERSEDED).
+  - Bukti: admin.test.ts 16 PASS (6 baru) · suite 253/253 · `bun run check` 0 · lint 0
+  - Keputusan: RPC verify_payment/reject_payment SECURITY DEFINER (for update; guard already_verified; reject butuh
+    reason; guard bukti non-tunai; _recalc_participant_status; audit+recalc satu transaksi menutup A34). Client live
+    pindah ke RPC; demo tambah guard already_verified. A34 masih terbuka utk saveCompetition/savePaymentConfig/
+    advanceRound (di luar FILES B1-3) — catat utk /rawe2. B2-7 kini kandidat SUPERSEDED (audit di RPC).
   - VERIFY: `bunx vitest run src/lib/db/__tests__/admin.test.ts`
-  - Commit: —
+  - Commit: `8f94dcd`
 - [ ] **B1-4** — RPC `register_participant`: kuota atomik + tiket sequence + dedupe + lapak — Temuan: F1, F2, F3, F12, A16, A7, A1, A39 (sebagian)
   - FILES: `supabase/rls.sql` (RPC + unique `(competition_id, phone)` + sequence tiket + assign lapak),
     `src/lib/db/schema.ts`, `src/lib/db/register.ts`, `src/lib/offline/executor.ts`, `src/lib/db/participantImport.ts`, test

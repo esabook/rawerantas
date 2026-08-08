@@ -391,4 +391,17 @@ Format entri:
 - Next: B1-3 (verify_payment/reject_payment RPC + recalc status + guard
   state), B1-4 (register_participant), B1-5 (check_in), B1-7 (undo skor RPC),
   lalu B1-6 cabut policy publik.
+## 2026-08-09 (dini hari 2) — B1-3 selesai via /rawe3
+
+- **B1-3** (F5, A2, A33, A34) — commit `8f94dcd`: RPC `verify_payment` &
+  `reject_payment` SECURITY DEFINER di rls.sql + helper
+  `_recalc_participant_status` (status di-derive dari total is_verified; tak
+  menimpa disqualified/checked_in). Guard state (for update; hanya
+  pending/rejected diubah; reject butuh reason; guard bukti non-tunai),
+  audit + recalc dalam SATU transaksi (menutup A34 utk verify/reject).
+  admin.ts live pindah ke RPC; demo tambah guard already_verified.
+  Test admin 16 (6 baru). Gate: suite 253/253, check 0, lint 0.
+- Catatan: A34 masih terbuka utk saveCompetition/savePaymentConfig/advanceRound
+  (di luar FILES B1-3) → kandidat /rawe2. B2-7 (audit best-effort) kini
+  kandidat SUPERSEDED karena audit verify/reject sudah di RPC.
   referensi file:baris baru di-spot-check terhadap source.
