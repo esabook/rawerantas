@@ -225,8 +225,14 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
 
 ## Batch 2 — Pembayaran & status (P1)
 
-- [ ] **B2-1** — Lanjut lunas menagih sisa — Temuan: F6, F18 — FILES: `payment.ts`, `RegistrantProfile.svelte`, test
+- [x] **B2-1** — Lanjut lunas menagih sisa — Temuan: F6, F18 — FILES: `payment.ts`, `RegistrantProfile.svelte`, test
   - Plan: default & validasi nominal = `max(0, fee - totalVerified)`; tampilkan rincian sisa.
+  - Bukti: suite 271/271 · payment.test.ts 19 PASS (validateAmount full diupdate) · check 0 · lint 0
+  - Keputusan: validateAmount mode full kini memakai nominal yang dikirim (bukan memaksa fee); RegistrantProfile
+    remainingFor = fee - total terverifikasi, default amount mode full = remaining, tampilkan "Sisa tagihan",
+    blokir overpayment. Sisa dihitung dari data lokal pembayaran (verified); hitung di server (RPC) = catat
+    utk penyempurnaan bila perlu.
+  - Commit: `01554aa`
 - [ ] **B2-2** — Label `checked_in` menampilkan sisa bayar — Temuan: F19 — FILES: `RegistrantProfile.svelte`, `TicketCard.svelte`, test
 - [ ] **B2-3** — Sesi guest tidak dihapus saat gagal jaringan — Temuan: F21 — FILES: `daftar/+page.svelte`
   - Plan: bedakan network error (pertahankan sesi + retry) vs hasil kosong (logout).
