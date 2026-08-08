@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$env/static/public", () => ({
 	PUBLIC_BASE_URL: "https://rawe.test",
@@ -11,6 +11,36 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ADMIN_PIN: "123456",
 	PUBLIC_PANITIA_PIN: "123456",
 	PUBLIC_JURI_PIN: "123456",
+}));
+
+/** Supabase tiruan utk jalur live verify/reject (B1-3). */
+const sb = vi.hoisted(() => ({
+	rpcResult: { ok: true } as Record<string, unknown>,
+	rpcError: null as Error | null,
+	rpcs: [] as Array<{ fn: string; args: Record<string, unknown> }>,
+	proofRow: {
+		payment_method: "qris",
+		proof_image_url: "https://cdn.test/p.jpg",
+	} as Record<string, unknown> | null,
+}));
+
+vi.mock("$lib/db/supabaseClient", () => ({
+	supabase: {
+		removeAllChannels: () => {},
+		rpc: (fn: string, args: Record<string, unknown>) => {
+			sb.rpcs.push({ fn, args });
+			if (sb.rpcError) throw sb.rpcError;
+			return { data: sb.rpcResult, error: null };
+		},
+		// verifyPayment live melakukan pre-fetch bukti sebelum RPC.
+		from: () => ({
+			select: () => ({
+				eq: () => ({
+					maybeSingle: async () => ({ data: sb.proofRow, error: null }),
+				}),
+			}),
+		}),
+	},
 }));
 
 import {
@@ -192,6 +222,54 @@ describe("admin domain", () => {
 		expect(payments.find((p) => p.id === paymentId)?.isVerified).toBe(true);
 	});
 
+	it("verify baris sudah terverifikasi → ditolak (B1-3/A33)", async () => {
+		const competition = demoCompetitions()[0];
+		const res = await registerParticipant({
+			competitionId: competition.id,
+			name: "Vera Sudah Verified",
+			phone: "081234500020",
+		});
+		const paymentId = crypto.randomUUID();
+		await localPut(localStores.payments, {
+			id: paymentId,
+			participantId: res.participantId,
+			amount: 25000,
+			paymentMethod: "qris",
+			proofImageUrl: "draft-proof",
+			isVerified: true,
+			verifiedBy: "hash",
+			rejectReason: null,
+			createdAt: new Date(),
+		});
+		await expect(
+			verifyPayment(paymentId, await adminActorHash()),
+		).rejects.toThrow("sudah terverifikasi");
+	});
+
+	it("reject baris sudah terverifikasi → ditolak (B1-3/A33)", async () => {
+		const competition = demoCompetitions()[0];
+		const res = await registerParticipant({
+			competitionId: competition.id,
+			name: "Yudi Sudah Verified",
+			phone: "081234500021",
+		});
+		const paymentId = crypto.randomUUID();
+		await localPut(localStores.payments, {
+			id: paymentId,
+			participantId: res.participantId,
+			amount: 25000,
+			paymentMethod: "qris",
+			proofImageUrl: "draft-proof",
+			isVerified: true,
+			verifiedBy: "hash",
+			rejectReason: null,
+			createdAt: new Date(),
+		});
+		await expect(
+			rejectPayment(paymentId, await adminActorHash(), "x"),
+		).rejects.toThrow("sudah terverifikasi");
+	});
+
 	it("reject payment → reason + audit row", async () => {
 		const competition = demoCompetitions()[0];
 		const res = await registerParticipant({
@@ -273,5 +351,58 @@ describe("admin domain", () => {
 		await resetDemoAdminState();
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === mancing.id)?.fee).toBe(mancing.fee);
+	});
+});
+
+describe("verify/reject live via RPC (B1-3)", () => {
+	beforeEach(async () => {
+		sb.rpcResult = { ok: true };
+		sb.rpcError = null;
+		sb.rpcs.length = 0;
+		sb.proofRow = {
+			payment_method: "qris",
+			proof_image_url: "https://cdn.test/p.jpg",
+		};
+		await setDemoMode(false);
+	});
+
+	afterAll(async () => {
+		await setDemoMode(true);
+	});
+
+	it("verify → RPC verify_payment dipanggil (guard & audit di server)", async () => {
+		const hash = await adminActorHash();
+		const { status } = await verifyPayment("pay-1", hash);
+		expect(status).toBe("verified");
+		expect(sb.rpcs.at(-1)?.fn).toBe("verify_payment");
+		expect(sb.rpcs.at(-1)?.args).toMatchObject({
+			p_payment_id: "pay-1",
+			p_actor_hash: hash,
+		});
+	});
+
+	it("verify RPC tolak no_proof → pesan ramah", async () => {
+		sb.rpcResult = { ok: false, reason: "no_proof" };
+		await expect(
+			verifyPayment("pay-1", await adminActorHash()),
+		).rejects.toThrow("bukti pembayaran tidak ada");
+	});
+
+	it("reject → RPC reject_payment dipanggil dgn reason", async () => {
+		const hash = await adminActorHash();
+		const { status } = await rejectPayment("pay-1", hash, "bukti buram");
+		expect(status).toBe("rejected");
+		expect(sb.rpcs.at(-1)?.args).toMatchObject({
+			p_payment_id: "pay-1",
+			p_actor_hash: hash,
+			p_reason: "bukti buram",
+		});
+	});
+
+	it("reject RPC tolak already_verified → pesan ramah", async () => {
+		sb.rpcResult = { ok: false, reason: "already_verified" };
+		await expect(
+			rejectPayment("pay-1", await adminActorHash(), "x"),
+		).rejects.toThrow("sudah terverifikasi");
 	});
 });

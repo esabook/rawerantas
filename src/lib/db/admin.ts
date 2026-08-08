@@ -446,6 +446,10 @@ export async function verifyPayment(
 		if (!payment) {
 			throw new Error("Pembayaran tidak ditemukan.");
 		}
+		// B1-3/A33: hanya pending/rejected yang boleh diverifikasi.
+		if (payment.isVerified) {
+			throw new Error("Pembayaran sudah terverifikasi.");
+		}
 		assertProofForVerify(payment.paymentMethod, payment.proofImageUrl);
 		const updated = {
 			...payment,
@@ -481,17 +485,34 @@ export async function verifyPayment(
 		proof_image_url: string | null;
 	};
 	assertProofForVerify(liveRow.payment_method, liveRow.proof_image_url);
-	const { error } = await supabase
-		.from("participant_payments")
-		.update({ is_verified: true, verified_by: actorHash, reject_reason: null })
-		.eq("id", paymentId);
+	// B1-3: verifikasi via RPC — guard state, recalc status, & audit dalam satu
+	// transaksi server (F5/A2/A33/A34).
+	const { data, error } = await supabase.rpc("verify_payment", {
+		p_payment_id: paymentId,
+		p_actor_hash: actorHash,
+	});
 	if (error) {
 		throw new Error(`verifyPayment: ${error.message}`);
 	}
-	await audit("verify_payment", "participant_payments", paymentId, actorHash, {
-		actorHash,
-	});
+	const result = data as { ok?: boolean; reason?: string } | undefined;
+	if (!result?.ok) {
+		throw new Error(verifyRpcMessage(result?.reason));
+	}
 	return { ok: true, status: "verified" };
+}
+
+/** Pesan ramah utk reason penolakan RPC `verify_payment`. */
+function verifyRpcMessage(reason: string | undefined): string {
+	switch (reason) {
+		case "payment_not_found":
+			return "Pembayaran tidak ditemukan.";
+		case "already_verified":
+			return "Pembayaran sudah terverifikasi.";
+		case "no_proof":
+			return "Verifikasi ditolak: bukti pembayaran tidak ada.";
+		default:
+			return "Verifikasi ditolak server. Coba lagi.";
+	}
 }
 
 /** Tolak pembayaran dengan alasan (demo + live). */
@@ -505,6 +526,12 @@ export async function rejectPayment(
 		const payment = payments.find((p) => p.id === paymentId);
 		if (!payment) {
 			throw new Error("Pembayaran tidak ditemukan.");
+		}
+		// B1-3/A33: baris terverifikasi tidak boleh ditolak.
+		if (payment.isVerified) {
+			throw new Error(
+				"Pembayaran sudah terverifikasi dan tidak dapat ditolak.",
+			);
 		}
 		await localPut(PAYMENT_STORE, {
 			...payment,
@@ -523,15 +550,32 @@ export async function rejectPayment(
 		return { ok: true, status: "rejected" };
 	}
 	const { supabase } = await import("./supabaseClient");
-	const { error } = await supabase
-		.from("participant_payments")
-		.update({ is_verified: false, verified_by: null, reject_reason: reason })
-		.eq("id", paymentId);
+	// B1-3: tolak via RPC — guard state, recalc status, & audit satu transaksi.
+	const { data, error } = await supabase.rpc("reject_payment", {
+		p_payment_id: paymentId,
+		p_actor_hash: actorHash,
+		p_reason: reason,
+	});
 	if (error) {
 		throw new Error(`rejectPayment: ${error.message}`);
 	}
-	await audit("reject_payment", "participant_payments", paymentId, actorHash, {
-		reason,
-	});
+	const result = data as { ok?: boolean; reason?: string } | undefined;
+	if (!result?.ok) {
+		throw new Error(rejectRpcMessage(result?.reason));
+	}
 	return { ok: true, status: "rejected" };
+}
+
+/** Pesan ramah utk reason penolakan RPC `reject_payment`. */
+function rejectRpcMessage(reason: string | undefined): string {
+	switch (reason) {
+		case "payment_not_found":
+			return "Pembayaran tidak ditemukan.";
+		case "already_verified":
+			return "Pembayaran sudah terverifikasi dan tidak dapat ditolak.";
+		case "invalid_reason":
+			return "Alasan penolakan wajib diisi.";
+		default:
+			return "Penolakan ditolak server. Coba lagi.";
+	}
 }

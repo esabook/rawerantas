@@ -641,6 +641,147 @@ $$;
 grant execute on function resubmit_payment(uuid, integer, text, text)
 	to anon, authenticated;
 
+-- Helper internal: hitung ulang participants.status dari total pembayaran
+-- TERVERIFIKASI (F5/A2). Tidak menimpa status disqualified/checked_in.
+create or replace function _recalc_participant_status(p_participant uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_fee integer;
+	v_min_dp integer;
+	v_total integer;
+	v_status text;
+begin
+	select coalesce(c.fee, 0), coalesce(c.min_dp, 0)
+	into v_fee, v_min_dp
+	from participants pr
+	join competitions c on c.id = pr.competition_id
+	where pr.id = p_participant;
+	if not found then
+		return;
+	end if;
+	select coalesce(sum(amount), 0) into v_total
+	from participant_payments
+	where participant_id = p_participant
+		and is_verified = true
+		and (reject_reason is null or trim(reject_reason) = '');
+	v_status := case
+		when v_total >= v_fee then 'fully_paid'
+		when v_total >= v_min_dp then 'dp_paid'
+		else 'registered'
+	end;
+	update participants set status = v_status
+	where id = p_participant
+		and status not in ('disqualified', 'checked_in');
+end;
+$$;
+
+-- B1-3 (F5, A2, A33, A34): verifikasi admin jadi RPC. Guard state (hanya
+-- pending/ditolak boleh diverifikasi; tidak bisa verifikasi ulang baris
+-- verified), guard bukti non-tunai, recalc status peserta, dan audit ditulis
+-- dalam SATU transaksi (menutup A34 — tak ada error pasca-mutasi).
+create or replace function verify_payment(
+	p_payment_id uuid,
+	p_actor_hash text
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_payment participant_payments%rowtype;
+begin
+	select * into v_payment
+	from participant_payments
+	where id = p_payment_id
+	for update;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'payment_not_found');
+	end if;
+	if v_payment.is_verified then
+		return jsonb_build_object('ok', false, 'reason', 'already_verified');
+	end if;
+	if v_payment.payment_method <> 'cash'
+		and (v_payment.proof_image_url is null or trim(v_payment.proof_image_url) = '') then
+		return jsonb_build_object('ok', false, 'reason', 'no_proof');
+	end if;
+
+	update participant_payments
+	set is_verified = true,
+		verified_by = p_actor_hash,
+		reject_reason = null
+	where id = p_payment_id;
+
+	perform _recalc_participant_status(v_payment.participant_id);
+
+	insert into audit_logs (action, entity_type, entity_id, actor_hash, payload, idempotency_key)
+	values (
+		'verify_payment',
+		'participant_payments',
+		p_payment_id::text,
+		p_actor_hash,
+		jsonb_build_object('participantId', v_payment.participant_id, 'amount', v_payment.amount),
+		gen_random_uuid()
+	);
+
+	return jsonb_build_object('ok', true);
+end;
+$$;
+
+create or replace function reject_payment(
+	p_payment_id uuid,
+	p_actor_hash text,
+	p_reason text
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_payment participant_payments%rowtype;
+begin
+	if p_reason is null or trim(p_reason) = '' then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_reason');
+	end if;
+	select * into v_payment
+	from participant_payments
+	where id = p_payment_id
+	for update;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'payment_not_found');
+	end if;
+	if v_payment.is_verified then
+		return jsonb_build_object('ok', false, 'reason', 'already_verified');
+	end if;
+
+	update participant_payments
+	set is_verified = false,
+		verified_by = null,
+		reject_reason = p_reason
+	where id = p_payment_id;
+
+	perform _recalc_participant_status(v_payment.participant_id);
+
+	insert into audit_logs (action, entity_type, entity_id, actor_hash, payload, idempotency_key)
+	values (
+		'reject_payment',
+		'participant_payments',
+		p_payment_id::text,
+		p_actor_hash,
+		jsonb_build_object('participantId', v_payment.participant_id, 'reason', p_reason),
+		gen_random_uuid()
+	);
+
+	return jsonb_build_object('ok', true);
+end;
+$$;
+
+grant execute on function verify_payment(uuid, text) to anon, authenticated;
+grant execute on function reject_payment(uuid, text, text) to anon, authenticated;
+
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
 	with check (bucket_id = 'proof-images');
