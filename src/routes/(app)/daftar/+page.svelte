@@ -19,6 +19,7 @@
 		saveGuestSession,
 		type GuestSession,
 	} from "$lib/offline/guestSession";
+	import { isOfflineError } from "$lib/offline/networkStore";
 
 	let competitions = $state<Competition[]>([]);
 	let loading = $state(true);
@@ -51,6 +52,15 @@
 			}
 			profileParticipants = participants;
 		} catch (error) {
+			// B2-3/F21: kegagalan jaringan jangan menghapus sesi guest — tampilkan
+			// data lokal bila ada + tawarkan coba lagi; baru hapus bila benar
+			// hasil kosong (di atas) atau galat non-jaringan.
+			if (isOfflineError(error)) {
+				loadError =
+					"Jaringan tidak tersedia. Menampilkan data tersimpan — coba lagi saat koneksi pulih.";
+				profileParticipants = [];
+				return;
+			}
 			clearGuestSession();
 			guestSession = null;
 			profileParticipants = [];
