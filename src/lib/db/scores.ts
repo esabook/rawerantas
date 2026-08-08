@@ -129,6 +129,7 @@ async function saveLocal(record: MancingScoreRecord): Promise<void> {
 export async function removeScore(
 	id: string,
 	wasQueued: boolean,
+	actorHash?: string,
 ): Promise<void> {
 	if (get(demoMode)) {
 		await localDelete(STORE, id);
@@ -142,14 +143,16 @@ export async function removeScore(
 		}
 		// Entri antrean sudah ter-drain: `id` adalah idempotency_key DB
 		// (kunci antrean == UUID idempotensi sejak QW-2/A25) — hapus lewat
-		// kolom itu; `.eq("id", kunci)` lama tak pernah cocok (ghost score).
+		// kolom itu via RPC delete_score (B1-7).
 		await enqueue(`score-delete:${id}`, "/rest/scores/mancing/delete", {
 			idempotencyKey: id,
+			actorHash,
 		});
 		return;
 	}
 	await enqueue(`score-delete:${id}`, "/rest/scores/mancing/delete", {
 		scoreId: id,
+		actorHash,
 	});
 }
 

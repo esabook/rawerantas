@@ -23,6 +23,35 @@ async function toResult(
 type SupabaseClient = typeof import("$lib/db/supabaseClient")["supabase"];
 
 /**
+ * B1-7/A18: undo skor via RPC `delete_score` (ber-audit) alih-alih DELETE
+ * publik. Payload tombstone bisa membawa `idempotencyKey` (undo jalur antrean
+ * pasca-drain) atau `scoreId` (UUID baris). Error → retry; penolakan bisnis →
+ * conflict.
+ */
+async function deleteScoreRpc(
+	supabase: SupabaseClient,
+	payload: Record<string, unknown>,
+	table: "scores_mancing" | "scores_layangan",
+): Promise<SyncResult> {
+	let rpcResponse: { data: unknown; error: unknown };
+	try {
+		rpcResponse = await supabase.rpc("delete_score", {
+			p_table: table,
+			p_score_id: payload.scoreId ?? null,
+			p_idempotency_key: payload.idempotencyKey ?? null,
+			p_actor_hash: payload.actorHash ?? null,
+		});
+	} catch {
+		return "error";
+	}
+	if (rpcResponse.error) {
+		return "error";
+	}
+	const result = rpcResponse.data as { ok?: boolean } | undefined;
+	return result?.ok === true ? "ok" : "conflict";
+}
+
+/**
  * Jalankan satu op antrean offline lewat Supabase — cermin dari live-path
  * masing-masing modul db/*.ts (scores.ts, layangan.ts, hias.ts, checkin.ts,
  * payment.ts, register.ts). Dipakai oleh runSyncOnce() saat drain antrean.
@@ -66,14 +95,9 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 			);
 
 		case "/rest/scores/mancing/delete": {
-			// QW-2/A25: undo pasca-drain tiba sebagai idempotencyKey, bukan
-			// UUID baris — pilih kolom sesuai identitas di payload.
-			const column =
-				payload.idempotencyKey !== undefined ? "idempotency_key" : "id";
-			const value = (payload.idempotencyKey ?? payload.scoreId) as string;
-			return toResult(() =>
-				supabase.from("scores_mancing").delete().eq(column, value),
-			);
+			// B1-7/A18: undo via RPC delete_score (ber-audit) alih-alih DELETE
+			// publik. Dukung delete via idempotency_key maupun UUID baris.
+			return deleteScoreRpc(supabase, payload, "scores_mancing");
 		}
 
 		case "/rest/scores/layangan":
@@ -90,13 +114,8 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 			);
 
 		case "/rest/scores/layangan/delete": {
-			// QW-2/A25: sama seperti mancing — dukung delete via idempotency_key.
-			const column =
-				payload.idempotencyKey !== undefined ? "idempotency_key" : "id";
-			const value = (payload.idempotencyKey ?? payload.scoreId) as string;
-			return toResult(() =>
-				supabase.from("scores_layangan").delete().eq(column, value),
-			);
+			// B1-7/A18: undo layangan via RPC delete_score (ber-audit).
+			return deleteScoreRpc(supabase, payload, "scores_layangan");
 		}
 
 		case "/rest/scores/layangan-hias":

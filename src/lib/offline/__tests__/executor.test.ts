@@ -140,62 +140,68 @@ function deleteEntry(
 	};
 }
 
-describe("executor offline — delete skor (QW-2/A25)", () => {
+describe("executor offline — delete skor via RPC (B1-7/A18)", () => {
 	beforeEach(() => {
-		captured.inserts.length = 0;
-		captured.deletes.length = 0;
+		captured.rpcs.length = 0;
+		captured.rpcError = null;
+		captured.rpcResult = { ok: true };
 	});
 
-	it("tombstone dgn idempotencyKey → delete via kolom idempotency_key (mancing)", async () => {
+	it("tombstone dgn idempotencyKey → RPC delete_score (mancing)", async () => {
 		const result = await executeQueueEntry(
 			deleteEntry("/rest/scores/mancing/delete", {
 				idempotencyKey: "uuid-idem-1",
 			}),
 		);
 		expect(result).toBe("ok");
-		expect(captured.deletes).toEqual([
-			{
-				table: "scores_mancing",
-				column: "idempotency_key",
-				value: "uuid-idem-1",
-			},
-		]);
+		expect(captured.rpcs.at(-1)?.fn).toBe("delete_score");
+		expect(captured.rpcs.at(-1)?.args).toMatchObject({
+			p_table: "scores_mancing",
+			p_idempotency_key: "uuid-idem-1",
+		});
 	});
 
-	it("tombstone dgn scoreId → delete via kolom id (mancing)", async () => {
+	it("tombstone dgn scoreId → RPC delete_score (mancing)", async () => {
 		const result = await executeQueueEntry(
 			deleteEntry("/rest/scores/mancing/delete", { scoreId: "db-uuid-9" }),
 		);
 		expect(result).toBe("ok");
-		expect(captured.deletes).toEqual([
-			{ table: "scores_mancing", column: "id", value: "db-uuid-9" },
-		]);
+		expect(captured.rpcs.at(-1)?.args).toMatchObject({
+			p_table: "scores_mancing",
+			p_score_id: "db-uuid-9",
+		});
 	});
 
-	it("tombstone dgn idempotencyKey → delete via kolom idempotency_key (layangan)", async () => {
+	it("tombstone dgn idempotencyKey → RPC delete_score (layangan)", async () => {
 		const result = await executeQueueEntry(
 			deleteEntry("/rest/scores/layangan/delete", {
 				idempotencyKey: "uuid-idem-2",
 			}),
 		);
 		expect(result).toBe("ok");
-		expect(captured.deletes).toEqual([
-			{
-				table: "scores_layangan",
-				column: "idempotency_key",
-				value: "uuid-idem-2",
-			},
-		]);
+		expect(captured.rpcs.at(-1)?.args).toMatchObject({
+			p_table: "scores_layangan",
+			p_idempotency_key: "uuid-idem-2",
+		});
 	});
 
-	it("tombstone dgn scoreId → delete via kolom id (layangan)", async () => {
+	it("tombstone dgn scoreId → RPC delete_score (layangan)", async () => {
 		const result = await executeQueueEntry(
 			deleteEntry("/rest/scores/layangan/delete", { scoreId: "db-uuid-8" }),
 		);
 		expect(result).toBe("ok");
-		expect(captured.deletes).toEqual([
-			{ table: "scores_layangan", column: "id", value: "db-uuid-8" },
-		]);
+		expect(captured.rpcs.at(-1)?.args).toMatchObject({
+			p_table: "scores_layangan",
+			p_score_id: "db-uuid-8",
+		});
+	});
+
+	it("RPC tolak (invalid_table) → conflict", async () => {
+		captured.rpcResult = { ok: false, reason: "invalid_table" };
+		const result = await executeQueueEntry(
+			deleteEntry("/rest/scores/mancing/delete", { scoreId: "db-uuid-9" }),
+		);
+		expect(result).toBe("conflict");
 	});
 });
 

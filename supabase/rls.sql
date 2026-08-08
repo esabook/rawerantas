@@ -941,6 +941,60 @@ $$;
 
 grant execute on function check_in(uuid, text) to anon, authenticated;
 
+-- B1-7 (A18 lanjutan, pasangan A25): undo skor via RPC ber-audit — pengganti
+-- DELETE publik. Hapus via id (UUID baris) atau idempotency_key (undo jalur
+-- antrean pasca-drain); tabel di-whitelist; tulis audit_logs.
+create or replace function delete_score(
+	p_table text,
+	p_score_id uuid default null,
+	p_idempotency_key uuid default null,
+	p_actor_hash text default null
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_deleted integer;
+begin
+	if p_table not in ('scores_mancing', 'scores_layangan') then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_table');
+	end if;
+	if p_score_id is null and p_idempotency_key is null then
+		return jsonb_build_object('ok', false, 'reason', 'no_key');
+	end if;
+
+	if p_table = 'scores_mancing' then
+		if p_score_id is not null then
+			delete from scores_mancing where id = p_score_id;
+		else
+			delete from scores_mancing where idempotency_key = p_idempotency_key;
+		end if;
+	else
+		if p_score_id is not null then
+			delete from scores_layangan where id = p_score_id;
+		else
+			delete from scores_layangan where idempotency_key = p_idempotency_key;
+		end if;
+	end if;
+	get diagnostics v_deleted = row_count;
+
+	insert into audit_logs (action, entity_type, entity_id, actor_hash, payload, idempotency_key)
+	values (
+		'delete_score',
+		p_table,
+		coalesce(p_score_id::text, p_idempotency_key::text),
+		coalesce(p_actor_hash, 'guest'),
+		jsonb_build_object('deleted', v_deleted),
+		gen_random_uuid()
+	);
+
+	return jsonb_build_object('ok', true, 'deleted', v_deleted);
+end;
+$$;
+
+grant execute on function delete_score(text, uuid, uuid, text) to anon, authenticated;
+
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
 	with check (bucket_id = 'proof-images');
