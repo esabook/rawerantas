@@ -233,17 +233,47 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     blokir overpayment. Sisa dihitung dari data lokal pembayaran (verified); hitung di server (RPC) = catat
     utk penyempurnaan bila perlu.
   - Commit: `01554aa`
-- [ ] **B2-2** — Label `checked_in` menampilkan sisa bayar — Temuan: F19 — FILES: `RegistrantProfile.svelte`, `TicketCard.svelte`, test
-- [ ] **B2-3** — Sesi guest tidak dihapus saat gagal jaringan — Temuan: F21 — FILES: `daftar/+page.svelte`
+- [x] **B2-2** — Label `checked_in` menampilkan sisa bayar — Temuan: F19 — FILES: `RegistrantProfile.svelte`, `TicketCard.svelte`, test
+  - Plan: derive label dari `totalVerified vs fee`; untuk `checked_in` dengan sisa tampilkan "Sudah masuk — sisa Rp X".
+  - Bukti: suite 271/271 · check 0 (UI svelte, tak di-lint biome)
+  - Keputusan: paymentStateFor/badge RegistrantProfile + TicketCard (prop remaining) menampilkan sisa untuk checked_in;
+    fully_paid tetap "Lunas"/"Siap bertanding". Pass remaining dari RegistrantProfile.
+  - Commit: `ce82735`
+- [x] **B2-3** — Sesi guest tidak dihapus saat gagal jaringan — Temuan: F21 — FILES: `daftar/+page.svelte`
   - Plan: bedakan network error (pertahankan sesi + retry) vs hasil kosong (logout).
-- [ ] **B2-4** — State lokal optimistik check-in & bayar tunai offline — Temuan: F7, F16
+  - Bukti: suite 271/271 · check 0
+  - Keputusan: loadProfile memakai isOfflineError — jaringan gagal => pertahankan sesi + pesan coba lagi;
+    hanya hapus sesi utk hasil kosong / galat non-jaringan. Menampilkan data lokal penuh = catat utk penyempurnaan.
+  - Commit: `2edd548`
+  - Plan: bedakan network error (pertahankan sesi + retry) vs hasil kosong (logout).
+- [x] **B2-4** — State lokal optimistik check-in & bayar tunai offline — Temuan: F7, F16
   - FILES: `checkin.ts`, `payment.ts`, `ParticipantDetailCard.svelte`, `AdminPanel.svelte`, test
   - Plan: record IDB lokal untuk op queued; `remaining`/status menghitung op lokal; badge "menunggu sinkron".
-- [ ] **B2-5** — Settle: peringatkan pending + alur pasca-check-in — Temuan: A8, A31
+  - Bukti: suite 271/271 · check 0 · lint 0
+  - Keputusan: checkInParticipant return queued saat offline; ParticipantDetailCard syncPending badge;
+    payCash offline tidak tampilkan error misleading (skip load() saat queued). Perhitungan remaining utk op
+    queued di getCheckinSummary = CARRYOVER (perlu integrasi queue IDB; catat utk penyempurnaan).
+  - Commit: `ebdfb94`
+- [x] **B2-5** — Settle: peringatkan pending + alur pasca-check-in — Temuan: A8, A31
   - FILES: `AdminPanel.svelte`, `payment.ts`, `ParticipantDetailCard.svelte`, test
   - Plan: warning pending di modal admin; izinkan pelunasan `checked_in` (atau alur "tagih sisa"); guard kuota onsite → keputusan.
-- [ ] **B2-6** — `undoCheckIn` menghitung ulang status — Temuan: F11, A9 — FILES: `admin.ts`, test admin
-- [ ] **B2-7** — Audit best-effort — Temuan: A34 — FILES: `admin.ts` (bisa SUPERSEDED bila B1-3 lebih dulu)
+  - Bukti: suite 273/273 · payment.test.ts 21 PASS (+2) · check 0 · lint 0
+  - Keputusan: submitCashPayment izinkan checked_in (A31, alur tagih sisa gerbang); guard pending yang menutupi
+    sisa => tolak (A8, anti double-charge); AdminPanel peringatan pending di modal settle; ParticipantDetailCard
+    tombol bayar tampil utk checked_in. Guard kuota onsite = keputusan produk, tidak dikerjakan (catat utk /rawe2).
+  - Commit: `4fc0a44`
+- [x] **B2-6** — `undoCheckIn` menghitung ulang status — Temuan: F11, A9 — FILES: `admin.ts`, test admin
+  - Plan: hitung ulang status dari total `is_verified` saat undo, bukan hardcode `dp_paid`.
+  - Bukti: suite 274/274 · admin.test.ts 19 PASS (+1) · check 0 · lint 0
+  - Keputusan: undoCheckIn live menghitung ulang status (fee vs minDp) dari total terverifikasi; test undo peserta
+    lunas tetap fully_paid.
+  - Commit: `d6d2e81`
+- [x] **B2-7** — Audit best-effort — Temuan: A34 — FILES: `admin.ts` (bisa SUPERSEDED bila B1-3 lebih dulu)
+  - Plan: audit best-effort (jangan batalkan mutasi sukses) — B1-3 sudah menutup verify/reject via RPC transaksi.
+  - Bukti: suite 274/274 · check 0 · lint 0
+  - Keputusan: audit() live jadi best-effort (console.warn, tidak throw) utk sisa caller
+    (saveCompetition/savePaymentConfig/advanceRound); verify/reject sudah audit di transaksi RPC (B1-3).
+  - Commit: —
 
 ## Batch 3 — Juri & papan skor (P1)
 

@@ -216,8 +216,12 @@ async function audit(
 		payload,
 		idempotency_key: record.idempotencyKey,
 	});
+	// B2-7/A34: audit best-effort di jalur live — kegagalan audit TIDAK boleh
+	// membatalkan mutasi utama yang sudah sukses (hindari error palsu + retry
+	// ganda). Kegagalan dicatat ke konsol; audit penting (verify/reject) sudah
+	// ditulis dalam transaksi RPC (B1-3).
 	if (error) {
-		throw new Error(`audit: ${error.message}`);
+		console.warn(`[audit] ${action} gagal dicatat: ${error.message}`);
 	}
 }
 
