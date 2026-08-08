@@ -192,17 +192,26 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     dgn recorded_by; executor drain via RPC (A22, conflict utk penolakan bisnis).
   - VERIFY: `bunx vitest run src/lib/db/__tests__/checkin.test.ts`
   - Commit: `7cd0c63`
-- [ ] **B1-6** — Cabut policy UPDATE/INSERT/DELETE publik; tulis hanya via RPC — Temuan: F4, A18
+- [x] **B1-6** — Cabut policy UPDATE/INSERT/DELETE publik; tulis hanya via RPC — Temuan: F4, A18
   - FILES: `supabase/rls.sql`, klien terkait (setelah RPC B1-1..B1-5 + RPC skor siap)
   - Plan: drop UPDATE publik participants/payments/configs & DELETE/INSERT/UPDATE skor+sponsor;
     **urutan wajib: RPC siap dulu, baru policy dicabut** (kalau tidak, app mati).
+  - Bukti: SQL-only; tiap jalur yang policy-nya dicabut sudah via RPC (uji B1-1..B1-7) · suite 268/268 (alur app tetap jalan)
+  - Keputusan: dicabut — participant_payments INSERT & UPDATE (RPC submit/resubmit/verify/reject), participants
+    INSERT (RPC register), DELETE skor mancing+layangan (RPC delete_score) + revoke grant delete skor.
+    SISA tulis publik DIJAGA (belum ada RPC, carryover): scores/hias INSERT submit skor, sponsors CRUD,
+    competitions & payment_configs UPDATE, participants UPDATE (undoCheckIn), audit_logs INSERT — dicatat utk
+    batch lanjutan (B3-4 dll). Apply SQL = human queue.
   - VERIFY: uji anon ditolak + alur app tetap jalan · apply = human queue
   - Commit: —
-- [ ] **B1-7** — Undo skor via RPC ber-audit (pengganti DELETE publik) — Temuan: A18 (lanjutan), pasangan A25
+- [x] **B1-7** — Undo skor via RPC ber-audit (pengganti DELETE publik) — Temuan: A18 (lanjutan), pasangan A25
   - FILES: `supabase/rls.sql`, `src/lib/db/scores.ts`, `src/lib/db/layangan.ts`, `src/lib/offline/executor.ts`, test
   - Plan: `delete_score(idempotency_key, actor)` + audit; `removeScore`/tombstone pindah ke RPC.
+  - Bukti: executor.test.ts 18 PASS (5 delete RPC) · suite 268/268 · check 0 · lint 0
+  - Keputusan: RPC delete_score SECURITY DEFINER (tabel whitelist; delete via id atau idempotency_key; audit).
+    Executor delete cases via RPC; removeScore/removeLayanganScore opsi actorHash utk audit payload.
   - VERIFY: test scores/layangan
-  - Commit: —
+  - Commit: `658d790`
 - [ ] **B1-8** — Data lock pasca-acara — Temuan: A17
   - FILES: `supabase/rls.sql` (flag + prosedur), `src/lib/db/admin.ts`, `src/lib/components/AdminPanel.svelte`, test
   - Plan: flag lock dihormati semua tulis client + prosedur DB tertulis + audit lock on/off.

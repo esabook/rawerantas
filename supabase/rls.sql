@@ -997,4 +997,26 @@ grant execute on function delete_score(text, uuid, uuid, text) to anon, authenti
 
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
+-- ============================================================
+-- 6. Cabut tulis publik yang kini lewat RPC (B1-6) — F4, A18
+--    Urutan: RPC B1-1..B1-5 & B1-7 sudah siap → baru dicabut di sini.
+--    Sisa tulis publik yang TIDAK dicabut (belum ada RPC-nya, dicatat
+--    carryover): scores/hias INSERT (submit skor), sponsors CRUD,
+--    competitions & payment_configs UPDATE, participants UPDATE (undoCheckIn),
+--    audit_logs INSERT — semua dijalankan klien; RPC-nya menyusul di batch
+--    berikut (B3-4 hias, B4-* sponsor, dll).
+-- ============================================================
+
+-- Pembayaran: INSERT & UPDATE kini via RPC submit_/resubmit_/verify_/reject_payment.
+drop policy if exists "participant_payments public insert" on participant_payments;
+drop policy if exists "payments admin verify columns" on participant_payments;
+
+-- Registrasi: INSERT peserta via RPC register_participant.
+drop policy if exists "participants public insert" on participants;
+
+-- Skor undo: DELETE via RPC delete_score (ber-audit).
+drop policy if exists "scores_mancing undo delete" on scores_mancing;
+drop policy if exists "scores_layangan undo delete" on scores_layangan;
+revoke delete on scores_mancing, scores_layangan
+	from anon, authenticated;
 	with check (bucket_id = 'proof-images');
