@@ -3,7 +3,7 @@ import { demoMode } from "$lib/demo/store";
 import { isOfflineError } from "$lib/offline/networkStore";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
-import type { Participant } from "./queries";
+import type { Participant, ParticipantPayment } from "./queries";
 import { getParticipantById, getPayments } from "./queries";
 import { PROOF_IMAGES_BUCKET } from "./storage";
 
@@ -221,6 +221,108 @@ function submitPaymentReasonMessage(reason: string | undefined): string {
 			return `Nominal DP harus kelipatan Rp ${PAYMENT_AMOUNT_STEP.toLocaleString("id-ID")}.`;
 		default:
 			return "Pembayaran ditolak server. Periksa kembali data lalu coba lagi.";
+	}
+}
+
+export interface ResubmitPaymentInput {
+	paymentId: string;
+	participantId: string;
+	competitionId: string;
+	amount: number;
+	proofBlob: Blob | null;
+	isCash: boolean;
+	phone?: string;
+}
+
+/**
+ * B1-2 (F8/F17): perbaiki / kirim ulang pembayaran yang ditolak atau masih
+ * pending. Demo: update baris lokal (reset reject). Live: via RPC
+ * `resubmit_payment` (kepemilikan & guard verified di server). Offline:
+ * dilempar ke error — jalur executor untuk op resubmit tercatat sbg celah
+ * (di luar FILES B1-2; antrean resubmit menyusul).
+ */
+export async function resubmitPayment(
+	input: ResubmitPaymentInput,
+	_competition: { fee: number; minDp: number } | undefined,
+): Promise<PaymentResult> {
+	if (get(demoMode)) {
+		const payments = await localGetAll<ParticipantPayment>(STORE);
+		const payment = payments.find((p) => p.id === input.paymentId);
+		if (!payment) {
+			throw new Error("Pembayaran tidak ditemukan.");
+		}
+		if (payment.isVerified) {
+			throw new Error("Pembayaran sudah terverifikasi.");
+		}
+		await localPut(STORE, {
+			...payment,
+			amount: input.amount,
+			proofImageUrl: input.isCash ? null : "draft-proof",
+			isVerified: input.isCash,
+			verifiedBy: null,
+			rejectReason: null,
+		});
+		return { paymentId: input.paymentId, queued: false };
+	}
+	let proofUrl: string | null = null;
+	try {
+		const { supabase: sb } = await import("./supabaseClient");
+		if (input.proofBlob && !input.isCash) {
+			const mime =
+				input.proofBlob.type === "image/webp"
+					? "image/webp"
+					: input.proofBlob.type === "image/png"
+						? "image/png"
+						: "image/jpeg";
+			const ext =
+				mime === "image/webp" ? "webp" : mime === "image/png" ? "png" : "jpg";
+			const path = `proofs/${input.participantId}/${Date.now()}.${ext}`;
+			const { error: uploadError } = await sb.storage
+				.from(PROOF_IMAGES_BUCKET)
+				.upload(path, input.proofBlob, { contentType: mime });
+			if (uploadError) {
+				throw uploadError;
+			}
+			const { data } = sb.storage.from(PROOF_IMAGES_BUCKET).getPublicUrl(path);
+			proofUrl = data.publicUrl;
+		}
+		const { data, error } = await sb.rpc("resubmit_payment", {
+			p_payment_id: input.paymentId,
+			p_amount: input.amount,
+			p_proof_url: proofUrl,
+			p_phone: input.phone ?? null,
+		});
+		if (error) {
+			throw error;
+		}
+		const result = data as { ok?: boolean; reason?: string } | undefined;
+		if (!result?.ok) {
+			throw new Error(resubmitReasonMessage(result?.reason));
+		}
+		return { paymentId: input.paymentId, queued: false };
+	} catch (e) {
+		if (!isOfflineError(e)) {
+			throw e;
+		}
+		throw new Error(
+			"Sedang offline — kirim ulang pembayaran saat koneksi pulih.",
+		);
+	}
+}
+
+/** Pesan ramah utk reason penolakan RPC `resubmit_payment`. */
+function resubmitReasonMessage(reason: string | undefined): string {
+	switch (reason) {
+		case "payment_not_found":
+			return "Pembayaran tidak ditemukan.";
+		case "already_verified":
+			return "Pembayaran sudah terverifikasi dan tidak dapat diubah.";
+		case "phone_mismatch":
+			return "Nomor WhatsApp tidak cocok dengan data peserta.";
+		case "invalid_amount":
+			return "Nominal pembayaran tidak valid.";
+		default:
+			return "Permintaan kirim ulang ditolak server. Hubungi panitia bila tetap gagal.";
 	}
 }
 

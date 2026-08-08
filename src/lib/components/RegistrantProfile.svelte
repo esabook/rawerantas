@@ -24,6 +24,7 @@
 	import {
 		AmountBelowMinDpError,
 		PAYMENT_AMOUNT_STEP,
+		resubmitPayment,
 		submitPayment,
 	} from "$lib/db/payment";
 	import ImageUploader from "./ImageUploader.svelte";
@@ -47,6 +48,9 @@
 	let paymentError = $state("");
 	let selectedTicket = $state<Participant | null>(null);
 	let paymentParticipant = $state<Participant | null>(null);
+	// B1-2 (F8/F17): bila terisi, modal pembayaran berjalan mode "kirim ulang"
+	// untuk baris pembayaran yang ditolak/pending.
+	let resubmitTarget = $state<ParticipantPayment | null>(null);
 	let paymentConfigs = $state<PaymentConfig[]>([]);
 	let paymentMode = $state<"dp" | "full">("dp");
 	let paymentMethod = $state("");
@@ -160,10 +164,11 @@
 		);
 		if (rejected) {
 			paymentNotice =
-				"Pembayaran ini ditolak panitia dan tidak dapat dikirim ulang.";
+				"Pembayaran ini ditolak panitia. Gunakan tombol \"Kirim ulang pembayaran\" untuk memperbaiki bukti.";
 			return;
 		}
 		paymentParticipant = participant;
+		resubmitTarget = null;
 		paymentMode = participant.status === "dp_paid" ? "full" : "dp";
 		paymentMethod = "";
 		paymentProof = null;
@@ -177,6 +182,22 @@
 		);
 		if (paymentConfigs.length === 0) {
 			await loadPaymentConfigs();
+		}
+	};
+
+	/** B1-2 (F8/F17): buka modal utk perbaiki/kirim ulang baris yang ditolak. */
+	const openResubmit = (participant: Participant, payment: ParticipantPayment) => {
+		paymentParticipant = participant;
+		resubmitTarget = payment;
+		const competition = competitionFor(participant);
+		paymentMode = payment.amount >= (competition?.fee ?? 0) ? "full" : "dp";
+		paymentMethod = payment.paymentMethod;
+		paymentProof = null;
+		paymentAmount = String(payment.amount);
+		paymentSubmitError = "";
+		paymentNotice = "";
+		if (paymentConfigs.length === 0) {
+			void loadPaymentConfigs();
 		}
 	};
 
@@ -216,6 +237,38 @@
 
 	const submitContinuationPayment = async () => {
 		if (!paymentParticipant || !paymentFormValid) return;
+		if (resubmitTarget) {
+			paymentSubmitting = true;
+			paymentSubmitError = "";
+			try {
+				const result = await resubmitPayment(
+					{
+						paymentId: resubmitTarget.id,
+						participantId: paymentParticipant.id,
+						competitionId: paymentParticipant.competitionId,
+						amount: paymentAmountNumber,
+						proofBlob: paymentProof,
+						isCash: paymentIsCash,
+						phone: paymentParticipant.phone,
+					},
+					paymentCompetition,
+				);
+				await loadPayments();
+				paymentParticipant = null;
+				resubmitTarget = null;
+				paymentNotice = result.queued
+					? "Perbaikan masuk antrean dan akan dikirim otomatis saat koneksi pulih."
+					: "Pembayaran dikirim ulang dan menunggu verifikasi panitia.";
+			} catch (error) {
+				paymentSubmitError =
+					error instanceof AmountBelowMinDpError || error instanceof Error
+						? error.message
+						: "Gagal mengirim ulang pembayaran.";
+			} finally {
+				paymentSubmitting = false;
+			}
+			return;
+		}
 		const rejected = (paymentMap.get(paymentParticipant.id) ?? []).some(
 			(payment) =>
 				!payment.isVerified && Boolean(payment.rejectReason?.trim()),
@@ -598,7 +651,8 @@
 								class="mt-3 text-xs leading-relaxed text-rose-200"
 							>
 								Pembayaran ditolak panitia. Periksa alasan di
-								atas lalu kirim ulang pembayaran.
+								atas lalu kirim ulang lewat tombol
+								"Kirim ulang pembayaran".
 							</p>
 						{/if}
 					</div>
@@ -619,6 +673,17 @@
 								{participant.status === "dp_paid"
 									? "Lanjut lunas"
 									: "Lanjut bayar"}
+							</button>
+						{/if}
+						{#if rejectedPayments.length > 0}
+							<button
+								type="button"
+								class="btn btn-gold flex-1"
+								onclick={() =>
+									void openResubmit(participant, rejectedPayments[0])}
+							>
+								<RefreshCw class="h-4 w-4" aria-hidden="true" />
+								Kirim ulang pembayaran
 							</button>
 						{/if}
 						{#if rejectedPayments.length === 0}
@@ -728,7 +793,7 @@
 						id="continue-payment-title"
 						class="mt-1 text-xl font-bold text-white"
 					>
-						Lanjut bayar
+						{resubmitTarget ? "Kirim ulang pembayaran" : "Lanjut bayar"}
 					</h2>
 					<p class="mt-1 text-xs text-slate-400">
 						{paymentCompetition?.name ?? "Lomba"} · {paymentParticipant.name}
@@ -876,7 +941,7 @@
 						Menyimpan…
 					{:else}
 						<CreditCard class="h-4 w-4" aria-hidden="true" />
-						Kirim pembayaran
+						{resubmitTarget ? "Kirim ulang" : "Kirim pembayaran"}
 					{/if}
 				</button>
 			</form>

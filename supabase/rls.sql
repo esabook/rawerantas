@@ -581,6 +581,66 @@ $$;
 grant execute on function submit_payment(uuid, text, integer, text, boolean, uuid, text)
 	to anon, authenticated;
 
+-- B1-2 (F8, F17): jalur perbaiki/kirim ulang pembayaran yang ditolak atau
+-- masih pending. Kepemilikan via p_phone (bila diberikan); hanya baris yang
+-- BELUM terverifikasi yang boleh diubah; reset reject + perbarui nominal/bukti;
+-- tulis audit_logs. Riwayat penolakan tetap terbaca lewat audit, baris tidak
+-- bertumpuk.
+create or replace function resubmit_payment(
+	p_payment_id uuid,
+	p_amount integer,
+	p_proof_url text,
+	p_phone text default null
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+	v_payment participant_payments%rowtype;
+	v_participant participants%rowtype;
+begin
+	select * into v_payment from participant_payments where id = p_payment_id;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'payment_not_found');
+	end if;
+	if v_payment.is_verified then
+		return jsonb_build_object('ok', false, 'reason', 'already_verified');
+	end if;
+	if p_amount is null or p_amount <= 0 then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_amount');
+	end if;
+
+	select * into v_participant from participants where id = v_payment.participant_id;
+	if p_phone is not null and v_participant.phone is distinct from p_phone then
+		return jsonb_build_object('ok', false, 'reason', 'phone_mismatch');
+	end if;
+
+	update participant_payments
+	set amount = p_amount,
+		proof_image_url = p_proof_url,
+		is_verified = false,
+		verified_by = null,
+		reject_reason = null
+	where id = p_payment_id;
+
+	insert into audit_logs (action, entity_type, entity_id, actor_hash, payload, idempotency_key)
+	values (
+		'resubmit_payment',
+		'participant_payments',
+		p_payment_id::text,
+		'guest',
+		jsonb_build_object('amount', p_amount),
+		gen_random_uuid()
+	);
+
+	return jsonb_build_object('ok', true);
+end;
+$$;
+
+grant execute on function resubmit_payment(uuid, integer, text, text)
+	to anon, authenticated;
+
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
 	with check (bucket_id = 'proof-images');

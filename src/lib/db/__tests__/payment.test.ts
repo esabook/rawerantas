@@ -9,11 +9,12 @@ import {
 	vi,
 } from "vitest";
 import { verifyPayment } from "$lib/db/admin";
-import { localGetAll, localStores } from "$lib/db/localStore";
+import { localGetAll, localPut, localStores } from "$lib/db/localStore";
 import {
 	AmountBelowMinDpError,
 	InvalidDpIncrementError,
 	resetDemoPayments,
+	resubmitPayment,
 	submitCashPayment,
 	submitPayment,
 	validateAmount,
@@ -310,5 +311,151 @@ describe("submitPayment live — RPC submit_payment (QW-6/F15/A20, B1-1)", () =>
 			| undefined;
 		expect(entries[0]?.idempotencyKey).toBe(queuedPayload?.idempotencyKey);
 		expect(entries[0]?.idempotencyKey).toBe(sb.rpcs[0]?.args.p_idempotency_key);
+	});
+});
+
+describe("resubmitPayment (B1-2/F8/F17)", () => {
+	beforeEach(async () => {
+		sb.uploadError = null;
+		sb.rpcError = null;
+		sb.rpcResult = { ok: true, paymentId: "pay-uuid-1" };
+		sb.rpcs.length = 0;
+		sb.uploads.length = 0;
+	});
+
+	it("demo: resubmit baris ditolak → reject dibersihkan + nominal diperbarui", async () => {
+		await setDemoMode(true);
+		await resetDemoRegistrations();
+		await resetDemoPayments();
+		const res = await registerParticipant({
+			competitionId,
+			name: "Rini Resubmit",
+			phone: "081234500010",
+		});
+		const paymentId = crypto.randomUUID();
+		await localPut(localStores.payments, {
+			id: paymentId,
+			participantId: res.participantId,
+			amount: 25000,
+			paymentMethod: "qris",
+			proofImageUrl: "draft-proof",
+			isVerified: false,
+			verifiedBy: null,
+			rejectReason: "bukti buram",
+			createdAt: new Date(),
+		});
+		const out = await resubmitPayment(
+			{
+				paymentId,
+				participantId: res.participantId,
+				competitionId,
+				amount: 30000,
+				proofBlob: null,
+				isCash: false,
+			},
+			competition,
+		);
+		expect(out.paymentId).toBe(paymentId);
+		const payments = await getPayments(res.participantId);
+		const updated = payments.find((p) => p.id === paymentId);
+		expect(updated?.rejectReason).toBeNull();
+		expect(updated?.amount).toBe(30000);
+	});
+
+	it("demo: resubmit baris terverifikasi → ditolak", async () => {
+		await setDemoMode(true);
+		await resetDemoRegistrations();
+		await resetDemoPayments();
+		const res = await registerParticipant({
+			competitionId,
+			name: "Sari Sudah Verified",
+			phone: "081234500011",
+		});
+		const paymentId = crypto.randomUUID();
+		await localPut(localStores.payments, {
+			id: paymentId,
+			participantId: res.participantId,
+			amount: 25000,
+			paymentMethod: "qris",
+			proofImageUrl: "draft-proof",
+			isVerified: true,
+			verifiedBy: "hash",
+			rejectReason: null,
+			createdAt: new Date(),
+		});
+		await expect(
+			resubmitPayment(
+				{
+					paymentId,
+					participantId: res.participantId,
+					competitionId,
+					amount: 30000,
+					proofBlob: null,
+					isCash: false,
+				},
+				competition,
+			),
+		).rejects.toThrow("sudah terverifikasi");
+	});
+
+	it("live: RPC resubmit_payment dipanggil dgn payment_id & amount", async () => {
+		await setDemoMode(false);
+		sb.rpcResult = { ok: true };
+		const out = await resubmitPayment(
+			{
+				paymentId: "pay-r1",
+				participantId: "p-live-1",
+				competitionId,
+				amount: 30000,
+				proofBlob: null,
+				isCash: false,
+				phone: "081234567890",
+			},
+			competition,
+		);
+		expect(out.paymentId).toBe("pay-r1");
+		expect(sb.rpcs.at(-1)?.fn).toBe("resubmit_payment");
+		expect(sb.rpcs.at(-1)?.args).toMatchObject({
+			p_payment_id: "pay-r1",
+			p_amount: 30000,
+			p_phone: "081234567890",
+		});
+	});
+
+	it("live: RPC tolak already_verified → pesan ramah", async () => {
+		await setDemoMode(false);
+		sb.rpcResult = { ok: false, reason: "already_verified" };
+		await expect(
+			resubmitPayment(
+				{
+					paymentId: "pay-r2",
+					participantId: "p-live-1",
+					competitionId,
+					amount: 30000,
+					proofBlob: null,
+					isCash: false,
+				},
+				competition,
+			),
+		).rejects.toThrow("sudah terverifikasi");
+	});
+
+	it("live: offline saat resubmit → pesan offline, tanpa antrean", async () => {
+		await setDemoMode(false);
+		sb.rpcError = new TypeError("Failed to fetch");
+		await expect(
+			resubmitPayment(
+				{
+					paymentId: "pay-r3",
+					participantId: "p-live-1",
+					competitionId,
+					amount: 30000,
+					proofBlob: null,
+					isCash: false,
+				},
+				competition,
+			),
+		).rejects.toThrow("Sedang offline");
+		expect(await peekBatch(10)).toHaveLength(0);
 	});
 });
