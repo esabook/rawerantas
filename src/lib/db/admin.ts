@@ -417,6 +417,22 @@ async function recalcParticipantStatus(participantId: string): Promise<void> {
 }
 
 /**
+ * QW-5/A11: verifikasi non-tunai wajib punya bukti transfer. Tunai dikecualikan
+ * (bukti fisik dipegang panitia; baris tunai biasanya sudah verified saat insert).
+ */
+function assertProofForVerify(
+	paymentMethod: string | null,
+	proofImageUrl: string | null,
+): void {
+	if (paymentMethod === "cash") return;
+	if (!proofImageUrl || proofImageUrl.trim().length === 0) {
+		throw new Error(
+			"Verifikasi ditolak: bukti pembayaran tidak ada. Minta peserta unggah bukti atau tolak pembayaran.",
+		);
+	}
+}
+
+/**
  * Verifikasi pembayaran (demo + live). Demo: update payment lokal +
  * status peserta (lunas → fully_paid) + catat audit.
  */
@@ -430,6 +446,7 @@ export async function verifyPayment(
 		if (!payment) {
 			throw new Error("Pembayaran tidak ditemukan.");
 		}
+		assertProofForVerify(payment.paymentMethod, payment.proofImageUrl);
 		const updated = {
 			...payment,
 			isVerified: true,
@@ -448,6 +465,22 @@ export async function verifyPayment(
 		return { ok: true, status: "verified" };
 	}
 	const { supabase } = await import("./supabaseClient");
+	const { data: row, error: fetchError } = await supabase
+		.from("participant_payments")
+		.select("payment_method, proof_image_url")
+		.eq("id", paymentId)
+		.maybeSingle();
+	if (fetchError) {
+		throw new Error(`verifyPayment: ${fetchError.message}`);
+	}
+	if (!row) {
+		throw new Error("Pembayaran tidak ditemukan.");
+	}
+	const liveRow = row as {
+		payment_method: string | null;
+		proof_image_url: string | null;
+	};
+	assertProofForVerify(liveRow.payment_method, liveRow.proof_image_url);
 	const { error } = await supabase
 		.from("participant_payments")
 		.update({ is_verified: true, verified_by: actorHash, reject_reason: null })

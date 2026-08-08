@@ -422,4 +422,53 @@ describe("AdminPanel", () => {
 			checkinButtons.some((b) => !(b as HTMLButtonElement).disabled),
 		).toBe(true);
 	});
+
+	it("verifikasi pembayaran tanpa bukti → ditolak dgn alasan, baris tetap unverified (QW-5/A11)", async () => {
+		const { registerParticipant } = await import("$lib/db/register");
+		const { localPut, localStores } = await import("$lib/db/localStore");
+		const { getPayments } = await import("$lib/db/queries");
+		const res = await registerParticipant({
+			competitionId: mancing.id,
+			name: "Nia Tanpa Bukti",
+			phone: "081234500004",
+		});
+		const paymentId = crypto.randomUUID();
+		await localPut(localStores.payments, {
+			id: paymentId,
+			participantId: res.participantId,
+			amount: 25000,
+			paymentMethod: "qris",
+			proofImageUrl: null,
+			isVerified: false,
+			verifiedBy: null,
+			rejectReason: null,
+			createdAt: new Date(),
+		});
+
+		const { container } = render(AdminPanel);
+		await waitFor(
+			() => expect(container.textContent ?? "").toContain("Nia Tanpa Bukti"),
+			{ timeout: 5000 },
+		);
+		const row = Array.from(container.querySelectorAll("tr")).find(
+			(r) => (r.textContent ?? "").includes("Nia Tanpa Bukti"),
+		);
+		const verifyBtn = Array.from(
+			must(row).querySelectorAll("button"),
+		).find((b) => (b.textContent ?? "").trim() === "Verifikasi");
+		fireEvent.click(must(verifyBtn));
+		const confirmBtn = await waitFor(() =>
+			must(
+				Array.from(container.querySelectorAll("button")).find((b) =>
+					(b.textContent ?? "").includes("Konfirmasi verifikasi"),
+				),
+			),
+		);
+		fireEvent.click(confirmBtn);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Verifikasi ditolak");
+		});
+		const payments = await getPayments(res.participantId);
+		expect(payments.find((p) => p.id === paymentId)?.isVerified).toBe(false);
+	});
 });

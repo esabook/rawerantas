@@ -26,6 +26,7 @@ import {
 	verifyPayment,
 } from "$lib/db/admin";
 import { submitPayment } from "$lib/db/payment";
+import { localPut, localStores } from "$lib/db/localStore";
 import {
 	getCompetitions,
 	getPaymentConfigs,
@@ -138,6 +139,57 @@ describe("admin domain", () => {
 		expect(local.find((p) => p.id === res.participantId)?.status).toBe(
 			"fully_paid",
 		);
+	});
+
+	it("verify non-tunai tanpa bukti → ditolak, baris tetap unverified (QW-5/A11)", async () => {
+		const competition = demoCompetitions()[0];
+		const res = await registerParticipant({
+			competitionId: competition.id,
+			name: "Dedi Tanpa Bukti",
+			phone: "081234500002",
+		});
+		const paymentId = crypto.randomUUID();
+		await localPut(localStores.payments, {
+			id: paymentId,
+			participantId: res.participantId,
+			amount: 25000,
+			paymentMethod: "qris",
+			proofImageUrl: null,
+			isVerified: false,
+			verifiedBy: null,
+			rejectReason: null,
+			createdAt: new Date(),
+		});
+		const hash = await adminActorHash();
+		await expect(verifyPayment(paymentId, hash)).rejects.toThrow("bukti");
+		const payments = await getPayments(res.participantId);
+		expect(payments.find((p) => p.id === paymentId)?.isVerified).toBe(false);
+	});
+
+	it("verify tunai tanpa bukti tetap diperbolehkan (QW-5/A11)", async () => {
+		const competition = demoCompetitions()[0];
+		const res = await registerParticipant({
+			competitionId: competition.id,
+			name: "Eka Tunai Tanpa Bukti",
+			phone: "081234500003",
+		});
+		const paymentId = crypto.randomUUID();
+		await localPut(localStores.payments, {
+			id: paymentId,
+			participantId: res.participantId,
+			amount: 25000,
+			paymentMethod: "cash",
+			proofImageUrl: null,
+			isVerified: false,
+			verifiedBy: null,
+			rejectReason: null,
+			createdAt: new Date(),
+		});
+		const hash = await adminActorHash();
+		const { status } = await verifyPayment(paymentId, hash);
+		expect(status).toBe("verified");
+		const payments = await getPayments(res.participantId);
+		expect(payments.find((p) => p.id === paymentId)?.isVerified).toBe(true);
 	});
 
 	it("reject payment → reason + audit row", async () => {

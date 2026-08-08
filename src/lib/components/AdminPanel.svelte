@@ -605,6 +605,13 @@
 
 	const verify = async (p: PaymentWithMeta) => {
 		if (actingPayment !== null) return;
+		// QW-5/A11: non-tunai tanpa bukti pasti ditolak lapisan db — blokir
+		// dini di UI dengan pesan yang sama.
+		if (!hasProof(p) && p.paymentMethod !== "cash") {
+			paymentActionError =
+				"Verifikasi ditolak: bukti pembayaran tidak ada. Minta peserta unggah bukti atau tolak pembayaran.";
+			return;
+		}
 		actingPayment = p.id;
 		paymentActionError = "";
 		try {
