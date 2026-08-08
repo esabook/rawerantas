@@ -70,6 +70,7 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 					participant_id: payload.participantId,
 					round: payload.round,
 					status: payload.status,
+					flight_duration_ms: payload.flightDurationMs,
 					recorded_by: payload.recordedBy,
 					idempotency_key: payload.idempotencyKey,
 				}),
