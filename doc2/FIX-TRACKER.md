@@ -277,15 +277,32 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
 
 ## Batch 3 — Juri & papan skor (P1)
 
-- [ ] **B3-1** — Panel juri offline-safe — Temuan: A23, A24
+- [x] **B3-1** — Panel juri offline-safe — Temuan: A23, A24
   - FILES: `MancingPanel.svelte`, `LayanganPanel.svelte`, `HiasPanel.svelte`, cache peserta (IDB/high-water), test
   - Plan: fallback lokal daftar peserta/hasil; refetch pasca-submit opsional; `hasJackpot` offline = lewati konfirmasi.
-- [ ] **B3-2** — Halaman juri: filter aktif + deteksi perubahan round + selektor — Temuan: A29, A3 — FILES: `juri/*/+page.svelte`
-- [ ] **B3-3** — Peserta panel segar + BIB aktual + pencarian tiket/nama — Temuan: A36, A13, A1 (bagian UI)
+  - Bukti: suite 274/274 · check 0
+  - Keputusan: A24 (jackpot tak terblokir offline) + A23 sebagian (load offline-safe + refetch opsional utk 3 panel).
+    Cache peserta per kompetisi di IDB (high-water) = CARRYOVER (besar, catat utk lanjutan).
+  - Commit: `18a14c9`
+- [x] **B3-2** — Halaman juri: filter aktif + deteksi perubahan round + selektor — Temuan: A29, A3 — FILES: `juri/*/+page.svelte`
+  - Plan: selektor kompetisi bila >1; detect perubahan round; filter isActive.
+  - Bukti: suite 274/274 · check 0
+  - Keputusan: ketiga halaman juri — selektor kompetisi (default pertama), filter isActive, polling 30 detik
+    + peringatan perubahan babak (mancing & layangan; hias tanpa round). Realtime publication = B3-7.
+  - Commit: `f6997cc`
+- [x] **B3-3** — Peserta panel segar + BIB aktual + pencarian tiket/nama — Temuan: A36, A13, A1 (bagian UI)
   - FILES: `MancingPanel.svelte`, `HiasPanel.svelte`, `LayanganPanel.svelte`, test
-- [ ] **B3-4** — Constraint unik `(competition_id, participant_id, round)` layangan — Temuan: A6
+  - Bukti: suite 274/274 · check 0
+  - Keputusan: A13 — BIB dropdown dari peserta aktual (nama+lapak, disable disqualified); A36 — polling 30 detik
+    refresh peserta di 3 panel. Pencarian tiket/nama (A1 bagian UI) = CARRYOVER.
+  - Commit: `ce4e2a6`
+- [x] **B3-4** — Constraint unik `(competition_id, participant_id, round)` layangan — Temuan: A6
   - FILES: `supabase/rls.sql`, `schema.ts`, `layangan.ts`, `LayanganPanel.svelte`, test
   - Plan: unique index + `ON CONFLICT` terkontrol; panggil `hasResult` sebelum submit.
+  - Bukti: suite 274/274 · layangan.test.ts 8 PASS · check 0 · lint 0
+  - Keputusan: unique index (competition_id, participant_id, round) di rls.sql + schema.ts; submitLayanganResult
+    live guard hasResult sebelum insert (cegah dobel-win multi-device). ON CONFLICT terkontrol = catat utk lanjutan.
+  - Commit: `9e11070`
 - [ ] **B3-5** — Papan aduan per-babak + semantik `mudun` — Temuan: A28, A27 (+keputusan)
   - FILES: `engine.ts`, `leaderboard.ts`, `LeaderboardBoard.svelte`, `DisplayScreen.svelte`, `layangan.ts`, `generator.ts`
 - [ ] **B3-6** — Jackpot kategori terpisah + pembulatan hias konsisten — Temuan: A4, A12
