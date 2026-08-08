@@ -182,12 +182,16 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     tiket/lapak server) = CARRYOVER — import masih generate tiket lokal; dicatat utk item lanjutan/B4-7.
   - VERIFY: test register/executor/import
   - Commit: `ded8f57`
-- [ ] **B1-5** — RPC `check_in` + eligibility re-check + audit — Temuan: F7, A21, A22
+- [x] **B1-5** — RPC `check_in` + eligibility re-check + audit — Temuan: F7, A21, A22
   - FILES: `supabase/rls.sql`, `src/lib/db/checkin.ts`, `src/lib/offline/executor.ts`, test checkin
   - Plan: RPC memvalidasi (status, rejected, diskualifikasi) → set `checked_in` + `audit_logs`;
     executor drain memanggil RPC (bukan update buta); simpan pelaku di audit payload.
+  - Bukti: checkin.test.ts 13 PASS (4 live) · executor.test.ts 17 PASS (3 checkin) · suite 267/267 · check 0 · lint 0
+  - Keputusan: RPC check_in SECURITY DEFINER (for update; guard disqualified/checked_in/payment_rejected/minimal DP;
+    audit + recorded_by satu transaksi). checkin.ts live via RPC; offline catat optimistik lokal (F7) + enqueue
+    dgn recorded_by; executor drain via RPC (A22, conflict utk penolakan bisnis).
   - VERIFY: `bunx vitest run src/lib/db/__tests__/checkin.test.ts`
-  - Commit: —
+  - Commit: `7cd0c63`
 - [ ] **B1-6** — Cabut policy UPDATE/INSERT/DELETE publik; tulis hanya via RPC — Temuan: F4, A18
   - FILES: `supabase/rls.sql`, klien terkait (setelah RPC B1-1..B1-5 + RPC skor siap)
   - Plan: drop UPDATE publik participants/payments/configs & DELETE/INSERT/UPDATE skor+sponsor;
