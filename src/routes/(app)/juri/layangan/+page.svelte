@@ -19,9 +19,13 @@
 	const competition = $derived(aduan[0]);
 
 	onMount(() => {
-		void sha256Hex(env.juriPin).then((hash) => {
-			recordedBy = hash;
-		});
+		void sha256Hex(env.juriPin)
+			.then((hash) => {
+				recordedBy = hash;
+			})
+			.catch(() => {
+				recordedBy = "";
+			});
 		void getCompetitions(false)
 			.then((rows) => {
 				competitions = rows;

@@ -21,7 +21,13 @@ export interface GrantInfo {
 const textEncoder = new TextEncoder();
 
 export async function sha256Hex(input: string): Promise<string> {
-	const digest = await crypto.subtle.digest(
+	const cryptoApi = globalThis.crypto as Crypto | undefined;
+	if (!cryptoApi?.subtle) {
+		throw new Error(
+			"WebCrypto tidak tersedia di browser ini (butuh HTTPS/localhost).",
+		);
+	}
+	const digest = await cryptoApi.subtle.digest(
 		"SHA-256",
 		textEncoder.encode(input),
 	);
@@ -49,6 +55,9 @@ export function grantStorageKey(kind: PinKind): string {
 }
 
 export function readGrant(kind: PinKind): GrantInfo | null {
+	if (typeof sessionStorage === "undefined") {
+		return null;
+	}
 	const raw = sessionStorage.getItem(grantStorageKey(kind));
 	if (!raw) {
 		return null;
@@ -65,11 +74,17 @@ export function readGrant(kind: PinKind): GrantInfo | null {
 }
 
 export function writeGrant(kind: PinKind): void {
+	if (typeof sessionStorage === "undefined") {
+		return;
+	}
 	const grant: GrantInfo = { kind, at: Date.now() };
 	sessionStorage.setItem(grantStorageKey(kind), JSON.stringify(grant));
 }
 
 export function clearGrant(kind: PinKind): void {
+	if (typeof sessionStorage === "undefined") {
+		return;
+	}
 	sessionStorage.removeItem(grantStorageKey(kind));
 }
 
@@ -88,6 +103,9 @@ export interface PinState {
 }
 
 export function pinStateFromStorage(kind: PinKind): PinState {
+	if (typeof sessionStorage === "undefined") {
+		return { attempts: 0, lockedUntil: 0 };
+	}
 	const raw = sessionStorage.getItem(`${STORAGE_KEY}:${kind}:lockout`);
 	if (!raw) {
 		return { attempts: 0, lockedUntil: 0 };
@@ -100,6 +118,9 @@ export function pinStateFromStorage(kind: PinKind): PinState {
 }
 
 export function writePinState(kind: PinKind, state: PinState): void {
+	if (typeof sessionStorage === "undefined") {
+		return;
+	}
 	sessionStorage.setItem(
 		`${STORAGE_KEY}:${kind}:lockout`,
 		JSON.stringify(state),
