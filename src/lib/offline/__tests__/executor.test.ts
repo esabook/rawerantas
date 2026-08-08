@@ -17,6 +17,9 @@ vi.mock("$env/static/public", () => ({
 const captured = vi.hoisted(() => ({
 	inserts: [] as Array<{ table: string; row: Record<string, unknown> }>,
 	deletes: [] as Array<{ table: string; column: string; value: unknown }>,
+	updates: [] as Array<{ table: string; row: Record<string, unknown> }>,
+	uploads: [] as string[],
+	uploadError: null as Error | null,
 }));
 
 vi.mock("$lib/db/supabaseClient", () => ({
@@ -24,8 +27,19 @@ vi.mock("$lib/db/supabaseClient", () => ({
 		from: (table: string) => ({
 			insert: (row: Record<string, unknown>) => {
 				captured.inserts.push({ table, row });
-				return { error: null };
+				return {
+					error: null,
+					select: () => ({
+						single: async () => ({ data: { id: "row-uuid-1" }, error: null }),
+					}),
+				};
 			},
+			update: (row: Record<string, unknown>) => ({
+				eq: () => {
+					captured.updates.push({ table, row });
+					return { error: null };
+				},
+			}),
 			delete: () => ({
 				eq: (column: string, value: unknown) => {
 					captured.deletes.push({ table, column, value });
@@ -33,6 +47,17 @@ vi.mock("$lib/db/supabaseClient", () => ({
 				},
 			}),
 		}),
+		storage: {
+			from: () => ({
+				upload: (path: string) => {
+					captured.uploads.push(path);
+					return { error: captured.uploadError };
+				},
+				getPublicUrl: (path: string) => ({
+					data: { publicUrl: `https://cdn.test/${path}` },
+				}),
+			}),
+		},
 	},
 }));
 
@@ -158,5 +183,79 @@ describe("executor offline — delete skor (QW-2/A25)", () => {
 		expect(captured.deletes).toEqual([
 			{ table: "scores_layangan", column: "id", value: "db-uuid-8" },
 		]);
+	});
+});
+
+
+function paymentEntry(payload: Record<string, unknown>): QueueEntry {
+	return {
+		idempotencyKey: "payment:p-live-1:dp:1",
+		endpoint: "/rest/payments",
+		payload,
+		timestamp: 3,
+		retries: 0,
+		status: "pending",
+	};
+}
+
+const PAYMENT_PAYLOAD = {
+	participantId: "p-live-1",
+	competitionId: "c-1",
+	method: "qris",
+	amount: 25000,
+	mode: "dp",
+	isCash: false,
+	proof: new Uint8Array([1, 2, 3]).buffer,
+	proofMime: "image/jpeg",
+};
+
+describe("executor offline — pembayaran (QW-6/F15/A20)", () => {
+	beforeEach(() => {
+		captured.inserts.length = 0;
+		captured.updates.length = 0;
+		captured.uploads.length = 0;
+		captured.uploadError = null;
+	});
+
+	it("gagal upload bukti → error (retry), tanpa insert pembayaran", async () => {
+		captured.uploadError = new Error("storage gangguan");
+		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
+		expect(result).toBe("error");
+		expect(captured.uploads).toHaveLength(1);
+		expect(captured.inserts).toHaveLength(0);
+	});
+
+	it("upload sukses → insert dgn proof_image_url + update status peserta", async () => {
+		const result = await executeQueueEntry(paymentEntry(PAYMENT_PAYLOAD));
+		expect(result).toBe("ok");
+		expect(captured.inserts).toHaveLength(1);
+		expect(captured.inserts[0]?.table).toBe("participant_payments");
+		expect(captured.inserts[0]?.row.proof_image_url).toContain(
+			"https://cdn.test/proofs/p-live-1/",
+		);
+		expect(captured.updates).toHaveLength(1);
+		expect(captured.updates[0]).toEqual({
+			table: "participants",
+			row: { status: "dp_paid" },
+		});
+	});
+
+	it("pembayaran tunai → tanpa upload, insert verified tanpa bukti", async () => {
+		const result = await executeQueueEntry(
+			paymentEntry({
+				...PAYMENT_PAYLOAD,
+				method: "cash",
+				isCash: true,
+				proof: null,
+				mode: "full",
+			}),
+		);
+		expect(result).toBe("ok");
+		expect(captured.uploads).toHaveLength(0);
+		expect(captured.inserts[0]?.row).toMatchObject({
+			proof_image_url: null,
+			is_verified: true,
+		});
+		expect(captured.updates[0]?.row).toEqual({ status: "fully_paid" });
 	});
 });

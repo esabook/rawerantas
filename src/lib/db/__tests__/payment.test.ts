@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import "fake-indexeddb/auto";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { verifyPayment } from "$lib/db/admin";
 import { localGetAll, localStores } from "$lib/db/localStore";
 import {
@@ -13,6 +14,46 @@ import { getPayments } from "$lib/db/queries";
 import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";
 import { demoCompetitions } from "$lib/demo/generator";
 import { demoMode, setDemoMode } from "$lib/demo/store";
+import { clearQueue, peekBatch } from "$lib/offline/queue";
+
+/** Supabase tiruan utk jalur live QW-6/F15/A20 — upload storage bisa
+ * disetel gagal; insert/update ditangkap utk asersi. */
+const sb = vi.hoisted(() => ({
+	uploadError: null as Error | null,
+	inserts: [] as Array<{ table: string; row: Record<string, unknown> }>,
+	uploads: [] as string[],
+}));
+
+vi.mock("$lib/db/supabaseClient", () => ({
+	supabase: {
+		removeAllChannels: () => {},
+		from: (table: string) => ({
+			insert: (row: Record<string, unknown>) => {
+				sb.inserts.push({ table, row });
+				return {
+					error: null,
+					select: () => ({
+						single: async () => ({ data: { id: "pay-uuid-1" }, error: null }),
+					}),
+				};
+			},
+			update: () => ({
+				eq: () => ({ data: null, error: null }),
+			}),
+		}),
+		storage: {
+			from: () => ({
+				upload: (path: string) => {
+					sb.uploads.push(path);
+					return { error: sb.uploadError };
+				},
+				getPublicUrl: (path: string) => ({
+					data: { publicUrl: `https://cdn.test/${path}` },
+				}),
+			}),
+		},
+	},
+}));
 
 const competition = { fee: 100_000, minDp: 25_000 };
 const competitionId = demoCompetitions()[0].id;
@@ -159,4 +200,72 @@ describe("submitPayment (demo)", () => {
 			isVerified: true,
 		});
 	});
+
+describe("submitPayment live — bukti (QW-6/F15/A20)", () => {
+	const INPUT = (proofBlob: Blob | null) => ({
+		participantId: "p-live-1",
+		competitionId,
+		method: "qris",
+		amount: 30_000,
+		proofBlob,
+		isCash: false,
+	});
+
+	beforeEach(async () => {
+		sb.uploadError = null;
+		sb.inserts.length = 0;
+		sb.uploads.length = 0;
+		await clearQueue();
+		await setDemoMode(false);
+	});
+
+	afterAll(async () => {
+		await clearQueue();
+		await setDemoMode(true);
+	});
+
+	it("gagal upload bukti (error storage) → throw, tanpa insert pembayaran", async () => {
+		sb.uploadError = new Error("Bucket storage penuh");
+		await expect(
+			submitPayment(
+				INPUT(new Blob(["x"], { type: "image/jpeg" })),
+				"dp",
+				competition,
+			),
+		).rejects.toThrow();
+		expect(sb.uploads).toHaveLength(1);
+		expect(sb.inserts).toHaveLength(0);
+	});
+
+	it("gagal upload karena offline → masuk antrean dgn bukti, tanpa insert", async () => {
+		sb.uploadError = new TypeError("Failed to fetch");
+		const res = await submitPayment(
+			INPUT(new Blob(["x"], { type: "image/jpeg" })),
+			"dp",
+			competition,
+		);
+		expect(res.queued).toBe(true);
+		expect(sb.inserts).toHaveLength(0);
+		const entries = await peekBatch(10);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.endpoint).toBe("/rest/payments");
+		expect(
+			(entries[0]?.payload as Record<string, unknown>).proof,
+		).toBeInstanceOf(ArrayBuffer);
+	});
+
+	it("upload sukses → insert dgn proof_image_url terisi", async () => {
+		const res = await submitPayment(
+			INPUT(new Blob(["x"], { type: "image/jpeg" })),
+			"dp",
+			competition,
+		);
+		expect(res).toEqual({ paymentId: "pay-uuid-1", queued: false });
+		expect(sb.uploads).toHaveLength(1);
+		expect(sb.inserts[0]?.row.proof_image_url).toContain(
+			"https://cdn.test/proofs/p-live-1/",
+		);
+	});
+});
+
 });

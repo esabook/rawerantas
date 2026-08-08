@@ -148,12 +148,15 @@ async function executePayment(
 		const { error: uploadError } = await supabase.storage
 			.from(PROOF_IMAGES_BUCKET)
 			.upload(path, blob, { contentType: mime });
-		if (!uploadError) {
-			const { data } = supabase.storage
-				.from(PROOF_IMAGES_BUCKET)
-				.getPublicUrl(path);
-			proofUrl = data.publicUrl;
+		if (uploadError) {
+			// QW-6/F15/A20: jangan insert pembayaran tanpa bukti — laporkan
+			// gagal agar antrean me-retry (sampai cap RETRIES_CAP → dead).
+			return "error";
 		}
+		const { data } = supabase.storage
+			.from(PROOF_IMAGES_BUCKET)
+			.getPublicUrl(path);
+		proofUrl = data.publicUrl;
 	}
 	const { error, data } = await supabase
 		.from("participant_payments")

@@ -139,12 +139,17 @@ async function persistPayment(
 			const { error: uploadError } = await sb.storage
 				.from(PROOF_IMAGES_BUCKET)
 				.upload(path, input.proofBlob, { contentType: mime });
-			if (!uploadError) {
-				const { data } = sb.storage
-					.from(PROOF_IMAGES_BUCKET)
-					.getPublicUrl(path);
-				proofUrl = data.publicUrl;
+			if (uploadError) {
+				// QW-6/F15/A20: gagal upload = fatal — jangan insert tanpa bukti.
+				// Error offline jatuh ke catch di bawah → antrean (bukti ikut
+				// tersimpan di payload utk retry executor); error lain (storage
+				// penuh, salah bucket) muncul ke user sebagai pesan jelas.
+				throw uploadError;
 			}
+			const { data } = sb.storage
+				.from(PROOF_IMAGES_BUCKET)
+				.getPublicUrl(path);
+			proofUrl = data.publicUrl;
 		}
 		const { data, error } = await sb
 			.from("participant_payments")
