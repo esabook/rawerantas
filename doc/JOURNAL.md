@@ -303,4 +303,51 @@ Format entri:
   mulai Batch 0; Batch 1 butuh human queue apply `rls.sql`.
 - Tidak ada perubahan kode pada sesi ini (murni dokumen + skill), sesuai
   karakter review. Gates: tabel markdown konsisten (check kolom), seluruh
+
+## 2026-08-08 (malam) — Batch 0 FIX-TRACKER tuntas via /rawe3
+
+- Sesi eksekusi `/rawe3` pertama: Batch 0 (QW-1..QW-6) selesai semua — 6/6 DONE,
+  nol limbo. Rekonsiliasi awal bersih (tracker baru dibuat di `8be61c9`, belum
+  ada commit item). Semua referensi `file:baris` temuan diverifikasi ulang
+  sebelum fix dan masih akurat.
+- Item & commit:
+  - `c60dff6` **QW-1** (A26) — executor layangan menulis `flight_duration_ms`
+    (satu baris + 2 test executor baru; tie-break durasi kini konsisten
+    offline vs live).
+  - `eff8398` **QW-2** (A25) — undo skor queued pakai identitas yang benar:
+    kunci antrean submit queued kini = UUID idempotensi DB (payload.idempotencyKey);
+    saat `removePending` gagal (entri ter-drain) tombstone membawa
+    `idempotencyKey` dan executor delete memilih kolom `idempotency_key`
+    (fallback `id` utk jalur live) — ghost score ditutup. +12 test
+    (scores 4, layangan 4, executor 4). Keputusan: tombstone lama ber-payload
+    scoreId=kunci-antrean jadi dead code (tak bisa diselamatkan retroaktif).
+  - `0ff94d6` **QW-3** (A41, F23) — banner amber sticky "Mode Demo — data
+    hanya lokal" di AppShell (semua peran) + guard build `console.warn` di
+    env.ts bila `PUBLIC_ENABLE_DEMO_MODE=true` pada build non-dev. +2 test.
+    Keputusan: toggle runtime ber-PIN = keputusan produk, tidak dikerjakan;
+    demo/store.ts tak berubah (sudah memadai).
+  - `8b4aa08` **QW-4** (A10) — tab Panitia: `paidStatus === "none"` → span
+    "Belum layak" + title alasan (mencakup registered/diskualifikasi);
+    ParticipantDetailCard: derived `checkinBlockedReason` menonaktifkan tombol
+    + menampilkan alasan (registered & disqualified). Test lama "klik → error"
+    diperbarui jadi "nonaktif + alasan tanpa klik". Catatan: kasus rejected
+    murni tak terdeteksi di tab Panitia (`PanitiaParticipant` tanpa flag
+    rejected; admin.ts di luar FILES) → kandidat `/rawe2`.
+  - `ab6cb5c` **QW-5** (A11) — `assertProofForVerify`: verifyPayment menolak
+    pembayaran non-tunai tanpa bukti di jalur demo & live (live fetch baris
+    dulu); `cash` dikecualikan; UI blokir dini dgn pesan identik. Keputusan:
+    opsi "menolak" (bukan konfirmasi eksplisit). +3 test.
+  - `b1e5597` **QW-6** (F15, A20) — gagal upload bukti = fatal: jalur live
+    `throw` (error offline otomatis jatuh ke antrean dgn bukti di payload;
+    error storage muncul ke user), executor return `"error"` → retry s/d
+    RETRIES_CAP. +6 test.
+  - `030e6d1` style: follow-up format biome (tanpa perubahan perilaku) dari
+    gate lint — termasuk fix lint `noUnsafeOptionalChaining` di payment.test.ts.
+- Gates akhir batch: `bun run test` 238/238 (40 file, exit 0) · `bun run check`
+  0 errors · `bun run lint` scoped file tersentuh 0 errors. Audit nol-limbo:
+  6 DONE / 6 item.
+- Next: Batch 1 (fondasi server RPC + RLS; apply `supabase/rls.sql` = human
+  queue via dashboard Supabase). Urutan saklek: RPC B1-1..B1-5 & B1-7 siap
+  dulu, baru B1-6 cabut policy publik.
+
   referensi file:baris baru di-spot-check terhadap source.

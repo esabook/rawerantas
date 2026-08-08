@@ -82,37 +82,60 @@
 
 ## Batch 0 — Quick wins (tanpa migrasi DB; aman dikerjakan lebih dulu)
 
-- [ ] **QW-1** — Executor layangan menulis `flight_duration_ms` — Temuan: A26
+- [x] **QW-1** — Executor layangan menulis `flight_duration_ms` — Temuan: A26
   - FILES: `src/lib/offline/executor.ts`, `src/lib/offline/__tests__/`
   - Plan: tambah `flight_duration_ms: payload.flightDurationMs` pada case `/rest/scores/layangan`.
   - VERIFY: `bunx vitest run src/lib/offline/__tests__` · `bun run check`
-  - Commit: —
-- [ ] **QW-2** — Undo skor queued memakai identitas yang benar — Temuan: A25
+  - Bukti: `executor.test.ts` 2 test PASS (suite offline 37/37, exit 0) · `bun run check` 0 errors (exit 0)
+  - Commit: `c60dff6`
+- [x] **QW-2** — Undo skor queued memakai identitas yang benar — Temuan: A25
   - FILES: `src/lib/db/scores.ts`, `src/lib/db/layangan.ts`, `src/lib/offline/executor.ts`, test terkait
   - Plan: tombstone delete via `idempotency_key` (kolom sudah ada) alih-alih `id` ketika sumbernya antrean;
     pastikan `removePending` gagal → tombstone tetap valid.
+  - Bukti: scores.test.ts 9 PASS · layangan.test.ts 8 PASS · executor.test.ts 6 PASS (exit 0) · `bun run check` 0 errors
+  - Keputusan: kunci antrean submit queued = UUID idempotensi DB (payload.idempotencyKey), bukan kunci deskriptif;
+    executor delete memilih kolom `idempotency_key` vs `id` berdasarkan isi payload (kompatibel mundur dgn tombstone lama).
   - VERIFY: `bunx vitest run src/lib/db/__tests__/scores.test.ts src/lib/db/__tests__/layangan.test.ts`
-  - Commit: —
-- [ ] **QW-3** — Indikator MODE DEMO + guard build — Temuan: A41, F23
+  - Commit: `eff8398`
+- [x] **QW-3** — Indikator MODE DEMO + guard build — Temuan: A41, F23
   - FILES: `src/lib/components/AppShell.svelte`, `src/lib/demo/store.ts`, `src/lib/env.ts`
   - Plan: banner menonjol bila `demoMode` true; build warning bila `PUBLIC_ENABLE_DEMO_MODE=true` di luar dev.
+  - Bukti: AppShell.test.ts 2 PASS (banner tampil/sembunyi, exit 0) · `bun run check` 0 errors (exit 0)
+  - Keputusan: banner sticky amber di AppShell (mencakup semua peran via (app)/+layout); guard build berupa
+    console.warn di env.ts (pola sama dgn PUBLIC_BASE_URL); toggle runtime ber-PIN = keputusan produk, tidak dikerjakan.
+    demo/store.ts tidak berubah (sudah memadai).
   - VERIFY: `bun run check` + test render banner saat demo
-  - Commit: —
-- [ ] **QW-4** — Nonaktifkan tombol Check-in peserta belum layak + alasan — Temuan: A10
+  - Commit: `0ff94d6`
+- [x] **QW-4** — Nonaktifkan tombol Check-in peserta belum layak + alasan — Temuan: A10
   - FILES: `src/lib/components/AdminPanel.svelte`, `src/lib/components/ParticipantDetailCard.svelte`, test terkait
   - Plan: disable/ubah label bila `paidStatus === "none"` atau rejected; tampilkan alasan singkat.
+  - Bukti: AdminPanel.test.ts 8 PASS · ParticipantDetailCard.test.ts 4 PASS (exit 0) · `bun run check` 0 errors
+  - Keputusan: tab Panitia mengganti tombol Check-in dgn span "Belum layak" + title alasan utk `paidStatus === "none"`
+    (mencakup registered/diskualifikasi/ditolak tanpa verifikasi); ParticipantDetailCard menonaktifkan tombol +
+    teks alasan via derived `checkinBlockedReason`. Kasus rejected murni (punya DP verified + satu rejected) tak
+    terdeteksi di tab Panitia karena `PanitiaParticipant` tak bawa flag rejected — dicatat utk `/rawe2` (perlu ubah admin.ts, di luar FILES).
+    Test lama "klik → error syarat" diperbarui menjadi "nonaktif + alasan tanpa klik" (perubahan perilaku).
   - VERIFY: `bunx vitest run src/lib/components/__tests__/AdminPanel.test.ts src/lib/components/__tests__/ParticipantDetailCard.test.ts`
-  - Commit: —
-- [ ] **QW-5** — Verifikasi mensyaratkan bukti — Temuan: A11
+  - Commit: `8b4aa08`
+- [x] **QW-5** — Verifikasi mensyaratkan bukti — Temuan: A11
   - FILES: `src/lib/components/AdminPanel.svelte`, `src/lib/db/admin.ts`, `src/lib/db/__tests__/admin.test.ts`
   - Plan: `verifyPayment` menolak bila `proof_image_url` kosong (atau konfirmasi eksplisit "verify tanpa bukti" + audit).
+  - Bukti: admin.test.ts 10 PASS · AdminPanel.test.ts 9 PASS (exit 0) · `bun run check` 0 errors
+  - Keputusan: opsi "menolak" diambil (lebih aman daripada konfirmasi eksplisit). Guard `assertProofForVerify` di
+    kedua jalur (demo: cek record lokal; live: fetch baris dulu lalu update); metode `cash` dikecualikan
+    (bukti fisik di panitia). UI blokir dini di handler verify() dgn pesan identik. Test lama tetap hijau
+    (demo submitPayment non-tunai selalu menulis proofImageUrl "draft-proof").
   - VERIFY: `bunx vitest run src/lib/db/__tests__/admin.test.ts src/lib/components/__tests__/AdminPanel.test.ts`
-  - Commit: —
-- [ ] **QW-6** — Gagal upload bukti = error fatal (live & executor) — Temuan: F15, A20
+  - Commit: `ab6cb5c`
+- [x] **QW-6** — Gagal upload bukti = error fatal (live & executor) — Temuan: F15, A20
   - FILES: `src/lib/db/payment.ts`, `src/lib/offline/executor.ts`, test payment
   - Plan: jalur live: upload gagal → throw (jangan insert tanpa bukti); executor: upload gagal → return `error` (retry).
+  - Bukti: payment.test.ts 11 PASS · suite offline 44 PASS (8 file, exit 0) · `bun run check` 0 errors
+  - Keputusan: live throw memanfaatkan catch yang sudah ada — error offline (TypeError) otomatis jatuh ke antrean
+    dgn bukti di payload (retry executor), error storage lain muncul ke user. Executor mengembalikan "error"
+    (bukan lanjut insert) sehingga antrean retry s/d RETRIES_CAP → dead, tak ada baris tanpa bukti.
   - VERIFY: `bunx vitest run src/lib/db/__tests__/payment.test.ts src/lib/offline/__tests__`
-  - Commit: —
+  - Commit: `b1e5597`
 `bun run check` ≤120s · test file tersentuh ≤120s · suite penuh ≤300s · build ≤240s.
 Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
 
