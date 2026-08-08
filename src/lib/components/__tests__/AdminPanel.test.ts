@@ -404,8 +404,8 @@ describe("AdminPanel", () => {
 			expect(container.textContent ?? "").toContain("Belum layak");
 		});
 		// Baris peserta belum bayar: tanpa tombol Check-in (diganti label + alasan).
-		const unpaidRow = Array.from(container.querySelectorAll("tr")).find(
-			(row) => (row.textContent ?? "").includes("Belum layak"),
+		const unpaidRow = Array.from(container.querySelectorAll("tr")).find((row) =>
+			(row.textContent ?? "").includes("Belum layak"),
 		);
 		expect(unpaidRow).toBeDefined();
 		expect(
@@ -418,9 +418,9 @@ describe("AdminPanel", () => {
 			container.querySelectorAll("button"),
 		).filter((b) => (b.textContent ?? "").trim() === "Check-in");
 		expect(checkinButtons.length).toBeGreaterThan(0);
-		expect(
-			checkinButtons.some((b) => !(b as HTMLButtonElement).disabled),
-		).toBe(true);
+		expect(checkinButtons.some((b) => !(b as HTMLButtonElement).disabled)).toBe(
+			true,
+		);
 	});
 
 	it("verifikasi pembayaran tanpa bukti → ditolak dgn alasan, baris tetap unverified (QW-5/A11)", async () => {
@@ -450,12 +450,12 @@ describe("AdminPanel", () => {
 			() => expect(container.textContent ?? "").toContain("Nia Tanpa Bukti"),
 			{ timeout: 5000 },
 		);
-		const row = Array.from(container.querySelectorAll("tr")).find(
-			(r) => (r.textContent ?? "").includes("Nia Tanpa Bukti"),
+		const row = Array.from(container.querySelectorAll("tr")).find((r) =>
+			(r.textContent ?? "").includes("Nia Tanpa Bukti"),
 		);
-		const verifyBtn = Array.from(
-			must(row).querySelectorAll("button"),
-		).find((b) => (b.textContent ?? "").trim() === "Verifikasi");
+		const verifyBtn = Array.from(must(row).querySelectorAll("button")).find(
+			(b) => (b.textContent ?? "").trim() === "Verifikasi",
+		);
 		fireEvent.click(must(verifyBtn));
 		const confirmBtn = await waitFor(() =>
 			must(

@@ -146,9 +146,7 @@ async function persistPayment(
 				// penuh, salah bucket) muncul ke user sebagai pesan jelas.
 				throw uploadError;
 			}
-			const { data } = sb.storage
-				.from(PROOF_IMAGES_BUCKET)
-				.getPublicUrl(path);
+			const { data } = sb.storage.from(PROOF_IMAGES_BUCKET).getPublicUrl(path);
 			proofUrl = data.publicUrl;
 		}
 		const { data, error } = await sb

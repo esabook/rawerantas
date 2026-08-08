@@ -1,5 +1,13 @@
 import "fake-indexeddb/auto";
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { verifyPayment } from "$lib/db/admin";
 import { localGetAll, localStores } from "$lib/db/localStore";
 import {
@@ -201,71 +209,71 @@ describe("submitPayment (demo)", () => {
 		});
 	});
 
-describe("submitPayment live — bukti (QW-6/F15/A20)", () => {
-	const INPUT = (proofBlob: Blob | null) => ({
-		participantId: "p-live-1",
-		competitionId,
-		method: "qris",
-		amount: 30_000,
-		proofBlob,
-		isCash: false,
-	});
+	describe("submitPayment live — bukti (QW-6/F15/A20)", () => {
+		const INPUT = (proofBlob: Blob | null) => ({
+			participantId: "p-live-1",
+			competitionId,
+			method: "qris",
+			amount: 30_000,
+			proofBlob,
+			isCash: false,
+		});
 
-	beforeEach(async () => {
-		sb.uploadError = null;
-		sb.inserts.length = 0;
-		sb.uploads.length = 0;
-		await clearQueue();
-		await setDemoMode(false);
-	});
+		beforeEach(async () => {
+			sb.uploadError = null;
+			sb.inserts.length = 0;
+			sb.uploads.length = 0;
+			await clearQueue();
+			await setDemoMode(false);
+		});
 
-	afterAll(async () => {
-		await clearQueue();
-		await setDemoMode(true);
-	});
+		afterAll(async () => {
+			await clearQueue();
+			await setDemoMode(true);
+		});
 
-	it("gagal upload bukti (error storage) → throw, tanpa insert pembayaran", async () => {
-		sb.uploadError = new Error("Bucket storage penuh");
-		await expect(
-			submitPayment(
+		it("gagal upload bukti (error storage) → throw, tanpa insert pembayaran", async () => {
+			sb.uploadError = new Error("Bucket storage penuh");
+			await expect(
+				submitPayment(
+					INPUT(new Blob(["x"], { type: "image/jpeg" })),
+					"dp",
+					competition,
+				),
+			).rejects.toThrow();
+			expect(sb.uploads).toHaveLength(1);
+			expect(sb.inserts).toHaveLength(0);
+		});
+
+		it("gagal upload karena offline → masuk antrean dgn bukti, tanpa insert", async () => {
+			sb.uploadError = new TypeError("Failed to fetch");
+			const res = await submitPayment(
 				INPUT(new Blob(["x"], { type: "image/jpeg" })),
 				"dp",
 				competition,
-			),
-		).rejects.toThrow();
-		expect(sb.uploads).toHaveLength(1);
-		expect(sb.inserts).toHaveLength(0);
-	});
+			);
+			expect(res.queued).toBe(true);
+			expect(sb.inserts).toHaveLength(0);
+			const entries = await peekBatch(10);
+			expect(entries).toHaveLength(1);
+			expect(entries[0]?.endpoint).toBe("/rest/payments");
+			const queuedPayload = entries[0]?.payload as
+				| Record<string, unknown>
+				| undefined;
+			expect(queuedPayload?.proof).toBeInstanceOf(ArrayBuffer);
+		});
 
-	it("gagal upload karena offline → masuk antrean dgn bukti, tanpa insert", async () => {
-		sb.uploadError = new TypeError("Failed to fetch");
-		const res = await submitPayment(
-			INPUT(new Blob(["x"], { type: "image/jpeg" })),
-			"dp",
-			competition,
-		);
-		expect(res.queued).toBe(true);
-		expect(sb.inserts).toHaveLength(0);
-		const entries = await peekBatch(10);
-		expect(entries).toHaveLength(1);
-		expect(entries[0]?.endpoint).toBe("/rest/payments");
-		expect(
-			(entries[0]?.payload as Record<string, unknown>).proof,
-		).toBeInstanceOf(ArrayBuffer);
+		it("upload sukses → insert dgn proof_image_url terisi", async () => {
+			const res = await submitPayment(
+				INPUT(new Blob(["x"], { type: "image/jpeg" })),
+				"dp",
+				competition,
+			);
+			expect(res).toEqual({ paymentId: "pay-uuid-1", queued: false });
+			expect(sb.uploads).toHaveLength(1);
+			expect(sb.inserts[0]?.row.proof_image_url).toContain(
+				"https://cdn.test/proofs/p-live-1/",
+			);
+		});
 	});
-
-	it("upload sukses → insert dgn proof_image_url terisi", async () => {
-		const res = await submitPayment(
-			INPUT(new Blob(["x"], { type: "image/jpeg" })),
-			"dp",
-			competition,
-		);
-		expect(res).toEqual({ paymentId: "pay-uuid-1", queued: false });
-		expect(sb.uploads).toHaveLength(1);
-		expect(sb.inserts[0]?.row.proof_image_url).toContain(
-			"https://cdn.test/proofs/p-live-1/",
-		);
-	});
-});
-
 });

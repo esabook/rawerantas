@@ -155,9 +155,13 @@ export async function removeLayanganScore(
 		// Entri antrean sudah ter-drain: `id` adalah idempotency_key DB
 		// (kunci antrean == UUID idempotensi sejak QW-2/A25) — hapus lewat
 		// kolom itu; `.eq("id", kunci)` lama tak pernah cocok (ghost score).
-		await enqueue(`score-layangan-delete:${id}`, "/rest/scores/layangan/delete", {
-			idempotencyKey: id,
-		});
+		await enqueue(
+			`score-layangan-delete:${id}`,
+			"/rest/scores/layangan/delete",
+			{
+				idempotencyKey: id,
+			},
+		);
 		return;
 	}
 	await enqueue(`score-layangan-delete:${id}`, "/rest/scores/layangan/delete", {

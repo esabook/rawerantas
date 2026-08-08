@@ -114,10 +114,7 @@ describe("executor offline — skor layangan (QW-1/A26)", () => {
 			layanganEntry({ ...PAYLOAD, flightDurationMs: null }),
 		);
 		expect(result).toBe("ok");
-		expect(captured.inserts[0]?.row).toHaveProperty(
-			"flight_duration_ms",
-			null,
-		);
+		expect(captured.inserts[0]?.row).toHaveProperty("flight_duration_ms", null);
 	});
 });
 
@@ -149,7 +146,11 @@ describe("executor offline — delete skor (QW-2/A25)", () => {
 		);
 		expect(result).toBe("ok");
 		expect(captured.deletes).toEqual([
-			{ table: "scores_mancing", column: "idempotency_key", value: "uuid-idem-1" },
+			{
+				table: "scores_mancing",
+				column: "idempotency_key",
+				value: "uuid-idem-1",
+			},
 		]);
 	});
 
@@ -171,7 +172,11 @@ describe("executor offline — delete skor (QW-2/A25)", () => {
 		);
 		expect(result).toBe("ok");
 		expect(captured.deletes).toEqual([
-			{ table: "scores_layangan", column: "idempotency_key", value: "uuid-idem-2" },
+			{
+				table: "scores_layangan",
+				column: "idempotency_key",
+				value: "uuid-idem-2",
+			},
 		]);
 	});
 
@@ -185,7 +190,6 @@ describe("executor offline — delete skor (QW-2/A25)", () => {
 		]);
 	});
 });
-
 
 function paymentEntry(payload: Record<string, unknown>): QueueEntry {
 	return {

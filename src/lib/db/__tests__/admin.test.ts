@@ -25,8 +25,8 @@ import {
 	savePaymentConfig,
 	verifyPayment,
 } from "$lib/db/admin";
-import { submitPayment } from "$lib/db/payment";
 import { localPut, localStores } from "$lib/db/localStore";
+import { submitPayment } from "$lib/db/payment";
 import {
 	getCompetitions,
 	getPaymentConfigs,
