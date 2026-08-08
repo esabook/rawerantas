@@ -192,6 +192,12 @@ export async function submitLayanganResult(
 	}
 	const idempotencyKey = crypto.randomUUID();
 	try {
+		// B3-4/A6: guard multi-device — satu hasil per (kompetisi, peserta, babak).
+		if (
+			await hasResult(input.competitionId, input.participantId, input.round)
+		) {
+			throw new Error("Peserta sudah tercatat hasil pada babak ini.");
+		}
 		const { supabase } = await import("./supabaseClient");
 		const { data, error } = await supabase
 			.from("scores_layangan")

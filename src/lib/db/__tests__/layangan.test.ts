@@ -34,6 +34,13 @@ vi.mock("$lib/db/supabaseClient", () => ({
 					}),
 				};
 			},
+			select: () => ({
+				eq: () => ({
+					eq: () => ({
+						order: async () => ({ data: [], error: null }),
+					}),
+				}),
+			}),
 		}),
 	},
 }));

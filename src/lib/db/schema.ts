@@ -167,6 +167,12 @@ export const scoresLayangan = pgTable(
 	},
 	(table) => [
 		uniqueIndex("scores_layangan_idempotency_idx").on(table.idempotencyKey),
+		// B3-4/A6: satu hasil per (kompetisi, peserta, babak).
+		uniqueIndex("scores_layangan_participant_round_idx").on(
+			table.competitionId,
+			table.participantId,
+			table.round,
+		),
 	],
 );
 

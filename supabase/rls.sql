@@ -157,6 +157,10 @@ create unique index if not exists scores_mancing_idempotency_idx
 	on scores_mancing (idempotency_key);
 create unique index if not exists scores_layangan_idempotency_idx
 	on scores_layangan (idempotency_key);
+-- B3-4/A6: satu hasil per (kompetisi, peserta, babak) — cegah dobel-win
+-- multi-device.
+create unique index if not exists scores_layangan_participant_round_idx
+	on scores_layangan (competition_id, participant_id, round);
 create unique index if not exists scores_layangan_hias_idempotency_idx
 	on scores_layangan_hias (idempotency_key);
 create unique index if not exists scores_layangan_hias_participant_competition_idx
