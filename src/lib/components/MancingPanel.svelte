@@ -47,11 +47,16 @@
 
 	onMount(() => {
 		// B3-1/A23: offline-safe — kegagalan fetch tidak boleh mengosongkan panel.
-		void getParticipants(competitionId)
-			.then((rows) => {
-				participants = rows;
-			})
-			.catch(() => {});
+		const loadParticipants = () =>
+			getParticipants(competitionId)
+				.then((rows) => {
+					participants = rows;
+				})
+				.catch(() => {});
+		void loadParticipants();
+		// B3-3/A36: polling ringan agar peserta baru muncul tanpa reload.
+		const timer = setInterval(loadParticipants, 30_000);
+		return () => clearInterval(timer);
 	});
 
 	const press = (digit: string) => {
@@ -172,7 +177,7 @@
 		<span class="font-medium">BIB peserta</span>
 		<select
 			class="input"
-			bind:value={lapak}
+			value={lapak === null ? "" : String(lapak)}
 			onchange={(e) => {
 				lapak = e.currentTarget.value
 					? Number(e.currentTarget.value)
@@ -181,13 +186,12 @@
 				jackpotConfirm = false;
 			}}
 		>
-			<option value="" disabled>Pilih BIB (1–100)…</option>
-			{#each Array.from({ length: 100 }, (_, i) => i + 1) as n}
-				{@const p = participants.find(
-					(x) => x.lapakNumber === String(n),
-				)}
-				<option value={n} disabled={p?.status === "disqualified"}>
-					{n} — {p?.name ?? "belum terdaftar"}
+			<option value="" disabled>Pilih BIB…</option>
+			{#each participants
+				.filter((x) => x.lapakNumber != null && x.lapakNumber !== "")
+				.sort((a, b) => Number(a.lapakNumber) - Number(b.lapakNumber)) as p}
+				<option value={p.lapakNumber} disabled={p.status === "disqualified"}>
+					{p.lapakNumber} — {p.name}
 				</option>
 			{/each}
 		</select>

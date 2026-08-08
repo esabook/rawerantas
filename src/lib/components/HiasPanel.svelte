@@ -63,6 +63,9 @@
 
 	onMount(() => {
 		void load();
+		// B3-3/A36: polling ringan agar peserta baru muncul tanpa reload.
+		const timer = setInterval(load, 30_000);
+		return () => clearInterval(timer);
 	});
 
 	const select = async (p: Participant) => {
