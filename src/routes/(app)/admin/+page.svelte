@@ -10,7 +10,7 @@
 
 <PinGate kind="admin" title="PIN Admin">
 	{#snippet children()}
-		<div class="px-4 py-8">
+		<div class="min-w-0 w-full overflow-x-clip py-6 sm:px-4 sm:py-8">
 			<AdminPanel />
 		</div>
 	{/snippet}

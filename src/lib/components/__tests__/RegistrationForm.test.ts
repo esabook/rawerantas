@@ -49,20 +49,24 @@ const fillForm = async (overrides?: {
 	await fireEvent.input(screen.getByPlaceholderText("Nama peserta"), {
 		target: { value: overrides?.name ?? "Budi Santoso" },
 	});
-	await fireEvent.input(screen.getByPlaceholderText("08xxxxxxxxxx"), {
-		target: { value: overrides?.phone ?? "081234567890" },
+	await fireEvent.input(screen.getByPlaceholderText("81234567890"), {
+		target: { value: (overrides?.phone ?? "081234567890").replace(/^0/, "") },
 	});
-	const select = screen.getByRole("combobox");
-	await fireEvent.change(select, {
-		target: { value: overrides?.competitionId ?? comp.id },
-	});
+	const selectedId = overrides?.competitionId ?? comp.id;
+	const radio = screen
+		.getAllByRole("radio")
+		.find((element) => element.getAttribute("value") === selectedId);
+	if (!radio) {
+		throw new Error(`Kompetisi ${selectedId} tidak ditemukan pada radio card.`);
+	}
+	await fireEvent.click(radio);
 };
 
 describe("phone util", () => {
 	it("normalisasi 08… / +62… → 62…; validasi", () => {
-		expect(normalizePhone("081234567890")).toBe("6281234567890");
-		expect(normalizePhone("+62 812-3456-7890")).toBe("6281234567890");
-		expect(normalizePhone("6281234567890")).toBe("6281234567890");
+		expect(normalizePhone("081234567890")).toBe("+6281234567890");
+		expect(normalizePhone("+62 812-3456-7890")).toBe("+6281234567890");
+		expect(normalizePhone("6281234567890")).toBe("+6281234567890");
 		expect(isValidPhone("081234567890")).toBe(true);
 		expect(isValidPhone("08123")).toBe(false);
 		expect(isValidPhone("12123")).toBe(false);
@@ -113,7 +117,7 @@ describe("registerParticipant", () => {
 describe("RegistrationForm", () => {
 	it("validasi nomor WA salah → error + submit disabled", async () => {
 		await fillForm({ phone: "0812" });
-		expect(screen.getByText(/format nomor WA/i)).toBeTruthy();
+		expect(screen.getByText(/diawali angka 8/i)).toBeTruthy();
 		expect(
 			screen
 				.getByRole("button", { name: /daftar sekarang/i })
@@ -156,11 +160,11 @@ describe("draft restore (refresh setelah timeout)", () => {
 		render(RegistrationForm, { competitions: COMPETITIONS });
 		expect(screen.getByPlaceholderText("Nama peserta")).toHaveProperty(
 			"value",
-			"Sari Dewi",
+			"SARI DEWI",
 		);
-		expect(screen.getByPlaceholderText("08xxxxxxxxxx")).toHaveProperty(
+		expect(screen.getByPlaceholderText("81234567890")).toHaveProperty(
 			"value",
-			"081122334455",
+			"81122334455",
 		);
 		await fireEvent.click(
 			screen.getByRole("button", { name: /daftar sekarang/i }),

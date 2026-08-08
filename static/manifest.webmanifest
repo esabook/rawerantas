@@ -1,10 +1,10 @@
 {
-	"name": "Pesta Rakyat Agustusan",
-	"short_name": "Pesta Rakyat",
+	"name": "Rawerantas",
+	"short_name": "RWTS",
 	"start_url": "/",
 	"display": "standalone",
-	"background_color": "#0a0a0a",
-	"theme_color": "#0a0a0a",
+	"background_color": "#05070d",
+	"theme_color": "#05070d",
 	"icons": [
 		{
 			"src": "/favicon.svg",

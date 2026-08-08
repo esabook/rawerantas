@@ -93,7 +93,7 @@
 		}
 		const selectedP = selected;
 		if (!selectedP) {
-			error = "Peserta lapak belum termuat. Coba lagi.";
+			error = "Peserta BIB belum termuat. Coba lagi.";
 			return;
 		}
 		submitting = true;
@@ -107,18 +107,21 @@
 				isJackpot: jackpot,
 				recordedBy,
 			});
-			const label = `Lapak ${lapak} — ${(weight / 1000).toLocaleString("id-ID")} kg${jackpot ? " 🎗️" : ""}`;
-			undoable(result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`, {
-				onUndo: () => {
-					void removeScore(result.id, result.queued).then(() => {
-						undoable("Skor dibatalkan", {
-							onConfirm: () => {},
-							timeoutMs: 2000,
+			const label = `BIB ${lapak} — ${(weight / 1000).toLocaleString("id-ID")} kg${jackpot ? " 🎗️" : ""}`;
+			undoable(
+				result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`,
+				{
+					onUndo: () => {
+						void removeScore(result.id, result.queued).then(() => {
+							undoable("Skor dibatalkan", {
+								onConfirm: () => {},
+								timeoutMs: 2000,
+							});
 						});
-					});
+					},
+					onConfirm: () => {},
 				},
-				onConfirm: () => {},
-			});
+			);
 			digits = "";
 			jackpot = false;
 			jackpotConfirm = false;
@@ -137,33 +140,41 @@
 	};
 </script>
 
-<div class="mx-auto flex w-full max-w-md flex-col gap-4 rounded-xl border border-border bg-background/60 p-6">
+<div
+	class="flex w-full flex-col gap-4 rounded-xl border border-border bg-background/60 p-4"
+>
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-2">
 			<Fish class="h-5 w-5 text-gold" aria-hidden="true" />
 			<h1 class="font-bold">{competitionName}</h1>
 		</div>
 		{#if !$online}
-			<span class="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600">
+			<span
+				class="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600"
+			>
 				Offline — antrean
 			</span>
 		{/if}
 	</div>
 
 	<label class="flex flex-col gap-1 text-sm">
-		<span class="font-medium">Lapak peserta</span>
+		<span class="font-medium">BIB peserta</span>
 		<select
 			class="input"
 			bind:value={lapak}
 			onchange={(e) => {
-				lapak = e.currentTarget.value ? Number(e.currentTarget.value) : null;
+				lapak = e.currentTarget.value
+					? Number(e.currentTarget.value)
+					: null;
 				error = "";
 				jackpotConfirm = false;
 			}}
 		>
-			<option value="" disabled>Pilih lapak (1–100)…</option>
+			<option value="" disabled>Pilih BIB (1–100)…</option>
 			{#each Array.from({ length: 100 }, (_, i) => i + 1) as n}
-				{@const p = participants.find((x) => x.lapakNumber === String(n))}
+				{@const p = participants.find(
+					(x) => x.lapakNumber === String(n),
+				)}
 				<option value={n} disabled={p?.status === "disqualified"}>
 					{n} — {p?.name ?? "belum terdaftar"}
 				</option>
@@ -197,7 +208,9 @@
 		</div>
 	</div>
 
-	<label class="flex cursor-pointer items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
+	<label
+		class="flex cursor-pointer items-center justify-between rounded-lg border border-border/60 px-2 py-2 text-sm"
+	>
 		<span class="font-medium">Jackpot Pita</span>
 		<input
 			type="checkbox"
@@ -208,9 +221,12 @@
 	</label>
 
 	{#if jackpotConfirm && lapak !== null}
-		<div class="rounded-lg bg-destructive/10 p-3 text-xs text-destructive" role="alert">
+		<div
+			class="rounded-lg bg-destructive/10 p-3 text-xs text-destructive"
+			role="alert"
+		>
 			<TriangleAlert class="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-			Lapak ini sudah tercatat jackpot pita. Simpan tetap?
+			BIB ini sudah tercatat jackpot pita. Simpan tetap?
 		</div>
 	{/if}
 

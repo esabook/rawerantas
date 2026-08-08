@@ -3,6 +3,8 @@ import { demoMode } from "$lib/demo/store";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
 import type { Participant } from "./queries";
+import { getParticipantById, getPayments } from "./queries";
+import { PROOF_IMAGES_BUCKET } from "./storage";
 
 export interface PaymentInput {
 	participantId: string;
@@ -18,10 +20,26 @@ export interface PaymentResult {
 	queued: boolean;
 }
 
+export interface CashPaymentInput {
+	participantId: string;
+	competitionId: string;
+}
+
+export const PAYMENT_AMOUNT_STEP = 500;
+
 export class AmountBelowMinDpError extends Error {
 	constructor(minDp: number) {
 		super(`DP minimal Rp ${minDp.toLocaleString("id-ID")}.`);
 		this.name = "AmountBelowMinDpError";
+	}
+}
+
+export class InvalidDpIncrementError extends Error {
+	constructor() {
+		super(
+			`Nominal DP harus kelipatan Rp ${PAYMENT_AMOUNT_STEP.toLocaleString("id-ID")}.`,
+		);
+		this.name = "InvalidDpIncrementError";
 	}
 }
 
@@ -53,6 +71,9 @@ export function validateAmount(
 	if (mode === "full") {
 		return competition?.fee ?? amount;
 	}
+	if (!Number.isInteger(amount) || amount % PAYMENT_AMOUNT_STEP !== 0) {
+		throw new InvalidDpIncrementError();
+	}
 	const minDp = competition?.minDp ?? 0;
 	if (amount < minDp) {
 		throw new AmountBelowMinDpError(minDp);
@@ -66,6 +87,14 @@ export async function submitPayment(
 	competition: { fee: number; minDp: number } | undefined,
 ): Promise<PaymentResult> {
 	const amount = validateAmount(input.amount, competition, mode);
+	return persistPayment(input, mode, amount);
+}
+
+async function persistPayment(
+	input: PaymentInput,
+	mode: "dp" | "full",
+	amount: number,
+): Promise<PaymentResult> {
 	if (get(demoMode)) {
 		const participant: Participant = {
 			id: input.participantId,
@@ -75,6 +104,7 @@ export async function submitPayment(
 			name: "",
 			phone: "",
 			status: mode === "full" ? "fully_paid" : "dp_paid",
+			checkedInAt: null,
 			createdAt: new Date(),
 		};
 		await saveDemoPayment(
@@ -98,10 +128,12 @@ export async function submitPayment(
 		if (input.proofBlob && !input.isCash) {
 			const path = `proofs/${input.participantId}/${Date.now()}.jpg`;
 			const { error: uploadError } = await sb.storage
-				.from("proofs")
+				.from(PROOF_IMAGES_BUCKET)
 				.upload(path, input.proofBlob, { contentType: "image/jpeg" });
 			if (!uploadError) {
-				const { data } = sb.storage.from("proofs").getPublicUrl(path);
+				const { data } = sb.storage
+					.from(PROOF_IMAGES_BUCKET)
+					.getPublicUrl(path);
 				proofUrl = data.publicUrl;
 			}
 		}
@@ -134,9 +166,59 @@ export async function submitPayment(
 				method: input.method,
 				amount,
 				mode,
+				isCash: input.isCash,
 				proof: input.proofBlob ? await input.proofBlob.arrayBuffer() : null,
 			},
 		);
 		return { paymentId: null, queued: true };
 	}
+}
+
+/** Catat pelunasan tunai dari panitia dengan nominal sisa yang aktual. */
+export async function submitCashPayment(
+	input: CashPaymentInput,
+	competition: { fee: number } | undefined,
+): Promise<PaymentResult> {
+	const participant = await getParticipantById(input.participantId);
+	if (!participant) {
+		throw new Error("Peserta tidak ditemukan.");
+	}
+	if (participant.status === "disqualified") {
+		throw new Error("Peserta didiskualifikasi.");
+	}
+	if (participant.status === "checked_in") {
+		throw new Error("Peserta sudah check-in.");
+	}
+	if (!competition || competition.fee <= 0) {
+		throw new Error("Kompetisi tidak ditemukan.");
+	}
+
+	const payments = await getPayments(input.participantId);
+	const rejected = payments.find(
+		(p) => !p.isVerified && Boolean(p.rejectReason?.trim()),
+	);
+	if (rejected) {
+		throw new Error(
+			`Pembayaran peserta ditolak admin${rejected.rejectReason ? `: ${rejected.rejectReason.trim()}` : "."}`,
+		);
+	}
+	const paid = payments
+		.filter((p) => p.isVerified && !p.rejectReason?.trim())
+		.reduce((sum, p) => sum + Number(p.amount), 0);
+	const remaining = Math.max(0, competition.fee - paid);
+	if (remaining === 0) {
+		throw new Error("Peserta sudah lunas.");
+	}
+
+	return persistPayment(
+		{
+			...input,
+			method: "cash",
+			amount: remaining,
+			proofBlob: null,
+			isCash: true,
+		},
+		"full",
+		remaining,
+	);
 }

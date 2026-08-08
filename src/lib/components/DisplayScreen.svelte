@@ -51,7 +51,13 @@
 			};
 		}
 		if (competition?.scoringMode === "layangan_aduan") {
-			return { ...base, status: String(row.status ?? "") };
+			return {
+				...base,
+				status: String(row.status ?? ""),
+				flightDurationMs: Number(
+					row.flightDurationMs ?? row.flight_duration_ms ?? 0,
+				),
+			};
 		}
 		return {
 			...base,
@@ -86,6 +92,19 @@
 				return `${(score / 1000).toLocaleString("id-ID")} kg`;
 		}
 	};
+
+	const formatDuration = (ms: number): string => {
+		const totalSeconds = Math.max(0, Math.round(ms / 1000));
+		const minutes = Math.floor(totalSeconds / 60);
+		const seconds = totalSeconds % 60;
+		return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+	};
+
+	const maxDuration = (entries: ScoreRow[]): number =>
+		entries.reduce(
+			(max, entry) => Math.max(max, entry.flightDurationMs ?? 0),
+			0,
+		);
 
 	const signatureOf = (list: LeaderboardRow[]): string =>
 		JSON.stringify(
@@ -320,7 +339,7 @@
 </script>
 
 <div class="flex min-h-dvh w-full flex-col bg-background text-foreground">
-	<header class="flex items-center justify-between gap-4 border-b border-border/60 px-6 py-4">
+	<header class="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-4">
 		<div class="min-w-0">
 			<p class="text-2xl font-black uppercase tracking-widest">
 				{env.appName}
@@ -337,14 +356,14 @@
 
 	{#if error && rows.length > 0}
 		<p
-			class="absolute right-3 top-3 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-600"
+			class="absolute right-3 top-3 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-semibold text-amber-600"
 			role="status"
 		>
 			Luring — menampilkan data terakhir tersimpan
 		</p>
 	{/if}
 
-	<main class="flex flex-1 flex-col justify-center gap-6 overflow-hidden p-6">
+	<main class="flex flex-1 flex-col justify-center gap-4 overflow-hidden p-4">
 		{#if loading}
 			<p class="animate-pulse text-center text-2xl text-muted-foreground">
 				Memuat papan skor…
@@ -375,17 +394,24 @@
 							{row ? nameOf(row) : "Peserta"}
 						</p>
 						<p class="mt-1 text-sm text-muted-foreground">
-							{row && lapakOf(row) ? `Lapak ${lapakOf(row)}` : ""}
+							{row && lapakOf(row) ? `BIB ${lapakOf(row)}` : ""}
 						</p>
 						<p class="mt-2 font-mono text-4xl font-bold tabular-nums">
 							{formatScore(entry.score, entry.subScore)}
 						</p>
+						{#if competition?.scoringMode === "layangan_aduan"}
+							<p class="mt-1 text-xs text-muted-foreground">
+								Total {formatDuration(entry.subScore)} · Terlama {formatDuration(
+									maxDuration(entry.entries),
+								)}
+							</p>
+						{/if}
 					</div>
 				{/each}
 			</div>
 
 			{#if ranking.length > 3}
-				<ol class="mx-auto w-full max-w-4xl space-y-2">
+				<ol class="w-full space-y-2">
 					{#each ranking.slice(3, 10) as entry (entry.key)}
 						{@const row = byParticipant.get(entry.key)}
 						<li class="flex items-center justify-between gap-3 border-b border-border/30 px-2 py-2">
@@ -398,15 +424,23 @@
 										{row ? nameOf(row) : "Peserta"}
 									</p>
 									<p class="text-sm text-muted-foreground">
-										{row && lapakOf(row) ? `Lapak ${lapakOf(row)}` : ""}
+										{row && lapakOf(row) ? `BIB ${lapakOf(row)}` : ""}
 										{#if entry.entries.length > 1}
 											· {entry.entries.length} skor
 										{/if}
 									</p>
 								</div>
 							</div>
-							<span class="shrink-0 font-mono text-3xl font-bold tabular-nums">
+							<span class="shrink-0 text-right font-mono text-3xl font-bold tabular-nums">
 								{formatScore(entry.score, entry.subScore)}
+								{#if competition?.scoringMode === "layangan_aduan"}
+									<br />
+									<span class="text-xs font-normal text-muted-foreground">
+										Total {formatDuration(entry.subScore)} · Terlama {formatDuration(
+											maxDuration(entry.entries),
+										)}
+									</span>
+								{/if}
 							</span>
 						</li>
 					{/each}

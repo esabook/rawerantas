@@ -31,6 +31,7 @@ export async function saveProofDraft(draft: ProofDraft): Promise<void> {
 		tx.objectStore(STORE).put(draft);
 		tx.oncomplete = () => resolve();
 		tx.onerror = () => reject(tx.error);
+		tx.onabort = () => reject(tx.error);
 	});
 }
 
@@ -39,10 +40,15 @@ export async function loadProofDraft(
 ): Promise<ProofDraft | null> {
 	const db = await getDb();
 	return new Promise((resolve, reject) => {
-		const req = db.transaction(STORE).objectStore(STORE).get(participantId);
+		const tx = db.transaction(STORE, "readonly");
+		const req = tx.objectStore(STORE).get(participantId);
+		let draft: ProofDraft | null = null;
 		req.onsuccess = () =>
-			resolve((req.result as ProofDraft | undefined) ?? null);
+			(draft = (req.result as ProofDraft | undefined) ?? null);
 		req.onerror = () => reject(req.error);
+		tx.oncomplete = () => resolve(draft);
+		tx.onerror = () => reject(tx.error);
+		tx.onabort = () => reject(tx.error);
 	});
 }
 
@@ -53,5 +59,6 @@ export async function clearProofDraft(participantId: string): Promise<void> {
 		tx.objectStore(STORE).delete(participantId);
 		tx.oncomplete = () => resolve();
 		tx.onerror = () => reject(tx.error);
+		tx.onabort = () => reject(tx.error);
 	});
 }

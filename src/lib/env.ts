@@ -7,6 +7,7 @@ import {
 	PUBLIC_ENABLE_DEMO_MODE,
 	PUBLIC_EVENT_DATE,
 	PUBLIC_JURI_PIN,
+	PUBLIC_PANITIA_PIN,
 	PUBLIC_SUPABASE_ANON_KEY,
 	PUBLIC_SUPABASE_URL,
 } from "$env/static/public";
@@ -19,6 +20,7 @@ export const env = {
 	supabaseUrl: PUBLIC_SUPABASE_URL,
 	supabaseAnonKey: PUBLIC_SUPABASE_ANON_KEY,
 	juriPin: PUBLIC_JURI_PIN,
+	panitiaPin: PUBLIC_PANITIA_PIN,
 	adminPin: PUBLIC_ADMIN_PIN,
 	enableDemoMode: PUBLIC_ENABLE_DEMO_MODE,
 } as const;

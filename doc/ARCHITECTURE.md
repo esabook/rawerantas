@@ -22,7 +22,7 @@ silent fallback.
 # ---------------------------------------------------------
 # SISTEM UTAMA
 PUBLIC_BASE_URL="http://localhost:5173"   # Dipakai QR e-tiket + wa.me. WAJIB diisi sebelum build rilis.
-PUBLIC_APP_NAME="Pesta Rakyat Agustusan"
+PUBLIC_APP_NAME="Rawerantas"
 PUBLIC_APP_YEAR="2026"
 PUBLIC_EVENT_DATE="2026-08-17T07:00:00+07:00"  # ISO-8601. Sumber countdown.
 
@@ -31,8 +31,9 @@ PUBLIC_SUPABASE_URL="https://[YOUR_PROJECT_ID].supabase.co"
 PUBLIC_SUPABASE_ANON_KEY="[YOUR_ANON_KEY]"
 
 # KEAMANAN (UX Gate — lihat §6, BUKAN keamanan sungguhan)
-PUBLIC_JURI_PIN="1708"
-PUBLIC_ADMIN_PIN="1945"
+PUBLIC_JURI_PIN="170826"
+PUBLIC_PANITIA_PIN="260817"
+PUBLIC_ADMIN_PIN="194526"
 
 # FEATURE FLAGS
 PUBLIC_ENABLE_DEMO_MODE="true"
@@ -55,7 +56,7 @@ Aturan:
 | `/daftar` | Pendaftaran + pilih metode bayar + upload bukti | Publik |
 | `/tiket/[id]` | E-tiket digital (QR, print thermal, WA share) | Publik (via link tiket) |
 | `/leaderboard` | Layar penuh papan skor live | Publik |
-| `/panitia/checkin` | Scanner QR di pintu masuk | Panitia |
+| `/panitia/checkin` | Scanner QR di pintu masuk | PIN Panitia |
 | `/juri/mancing` | Input timbangan | PIN Juri |
 | `/juri/layangan` | 1-tap mudun/putus | PIN Juri |
 | `/juri/layangan-hias` | Skoring 3 kriteria (40/40/20) | PIN Juri |
@@ -157,7 +158,7 @@ Komponen:
 ## 6. Model Keamanan (keputusan eksplisit)
 
 **PIN = UX gate, BUKAN keamanan sungguhan.** SPA statis + `adapter-static`
-berarti `PUBLIC_JURI_PIN`/`PUBLIC_ADMIN_PIN` ter-inline di bundle. Siapa pun
+berarti `PUBLIC_JURI_PIN`/`PUBLIC_PANITIA_PIN`/`PUBLIC_ADMIN_PIN` ter-inline di bundle. Siapa pun
 dengan devtools bisa baca. Ini diterima sebagai trade-off: event desa, tanpa
 musuh canggih, offline-first dijaga penuh.
 

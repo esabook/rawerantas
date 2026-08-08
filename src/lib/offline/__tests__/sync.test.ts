@@ -144,7 +144,7 @@ describe("checkDraftRestore", () => {
 		const entry = {
 			idempotencyKey: "k1",
 			endpoint: "/rest/v1/participants",
-			payload: { phone: "6281234567890" },
+			payload: { phone: "+6281234567890" },
 			timestamp: 1,
 			retries: 0,
 			status: "pending" as const,
@@ -154,7 +154,7 @@ describe("checkDraftRestore", () => {
 			ticketNumber: "RA-001",
 		}));
 		expect(await checkDraftRestore(entry, lookup)).toBe(true);
-		expect(lookup).toHaveBeenCalledWith("6281234567890");
+		expect(lookup).toHaveBeenCalledWith("+6281234567890");
 	});
 
 	it("phone tidak ada / bukan string → false tanpa lookup", async () => {

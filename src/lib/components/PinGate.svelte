@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { Lock } from "@lucide/svelte";
 	import { sfx, vibrate } from "$lib/audio/sfx";
-	import { grantStillValid, readGrant, verifyPin, type PinKind } from "$lib/security/pin";
+	import {
+		grantStillValid,
+		PIN_LENGTH,
+		readGrant,
+		verifyPin,
+		type PinKind,
+	} from "$lib/security/pin";
 
 	let {
 		kind = "juri",
@@ -25,16 +31,19 @@
 		unlocked = grantStillValid(readGrant(kind));
 	});
 	const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
-	const dots = Array.from({ length: 4 }, (_, i) => i);
+	const dots = Array.from({ length: PIN_LENGTH }, (_, i) => i);
+	const roleLabel = $derived(
+		kind === "admin" ? "admin" : kind === "panitia" ? "panitia" : "juri",
+	);
 
 	const press = async (digit: string) => {
-		if (locked || verifying || pin.length >= 4) {
+		if (locked || verifying || pin.length >= PIN_LENGTH) {
 			return;
 		}
 		sfx.tap();
 		vibrate(10);
 		pin += digit;
-		if (pin.length === 4) {
+		if (pin.length === PIN_LENGTH) {
 			await submit();
 		}
 	};
@@ -49,7 +58,7 @@
 	};
 
 	const submit = async () => {
-		if (verifying || locked || pin.length !== 4) {
+		if (verifying || locked || pin.length !== PIN_LENGTH) {
 			return;
 		}
 		verifying = true;
@@ -86,11 +95,11 @@
 {#if unlocked}
 	{@render children()}
 {:else}
-	<div class="mx-auto flex w-full max-w-sm flex-col items-center gap-4 px-4 py-8">
+	<div class="flex w-full flex-col items-center gap-4 px-4 py-8">
 		<Lock class="h-10 w-10 text-secondary" aria-hidden="true" />
 		<h1 class="text-xl font-semibold">{title}</h1>
 		<p class="text-sm text-muted-foreground">
-			PIN {kind === "admin" ? "admin" : "juri"} 4 digit
+			PIN {roleLabel} {PIN_LENGTH} digit
 		</p>
 
 		{#if locked}
@@ -132,7 +141,7 @@
 							type="button"
 							class="btn h-14 text-xl"
 							onclick={() => press(key)}
-							disabled={verifying || pin.length >= 4}
+							disabled={verifying || pin.length >= PIN_LENGTH}
 						>
 							{key}
 						</button>

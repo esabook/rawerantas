@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { verifyPayment } from "$lib/db/admin";
 import { localGetAll, localStores } from "$lib/db/localStore";
 import {
 	AmountBelowMinDpError,
+	InvalidDpIncrementError,
 	resetDemoPayments,
+	submitCashPayment,
 	submitPayment,
 	validateAmount,
 } from "$lib/db/payment";
+import { getPayments } from "$lib/db/queries";
 import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";
 import { demoCompetitions } from "$lib/demo/generator";
 import { demoMode, setDemoMode } from "$lib/demo/store";
@@ -37,6 +41,12 @@ describe("validateAmount", () => {
 		);
 		expect(() => validateAmount(10_000, competition, "dp")).toThrow(
 			"DP minimal Rp 25.000",
+		);
+	});
+
+	it("menolak DP yang bukan kelipatan Rp500", () => {
+		expect(() => validateAmount(25_250, competition, "dp")).toThrow(
+			InvalidDpIncrementError,
 		);
 	});
 
@@ -111,6 +121,41 @@ describe("submitPayment (demo)", () => {
 		expect(payments[0]).toMatchObject({
 			participantId,
 			proofImageUrl: null,
+			isVerified: true,
+		});
+	});
+
+	it("pelunasan tunai panitia hanya mencatat sisa yang belum dibayar", async () => {
+		const participantId = await setupParticipant();
+		await submitPayment(
+			{
+				participantId,
+				competitionId,
+				method: "qris",
+				amount: 25_000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"dp",
+			competition,
+		);
+		const dpPayment = (await getPayments(participantId))[0];
+		if (!dpPayment) {
+			throw new Error("pembayaran DP test tidak ditemukan");
+		}
+		await verifyPayment(dpPayment.id, "panitia-test");
+		const res = await submitCashPayment(
+			{ participantId, competitionId },
+			competition,
+		);
+
+		expect(res).toEqual({ paymentId: null, queued: false });
+		const payments = await localGetAll<Record<string, unknown>>(
+			localStores.payments,
+		);
+		expect(payments).toHaveLength(2);
+		expect(payments.find((p) => p.paymentMethod === "cash")).toMatchObject({
+			amount: 75_000,
 			isVerified: true,
 		});
 	});

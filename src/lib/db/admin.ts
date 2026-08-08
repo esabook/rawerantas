@@ -16,6 +16,7 @@ import type {
 
 const COMP_STORE = localStores.competitions;
 const CONFIG_STORE = localStores.paymentConfigs;
+const SPONSOR_STORE = localStores.sponsors;
 const PAYMENT_STORE = localStores.payments;
 const AUDIT_STORE = localStores.auditLogs;
 
@@ -33,7 +34,6 @@ export interface AuditRecord {
 export interface PaymentWithMeta extends ParticipantPayment {
 	participantName: string;
 	competitionName: string;
-	rejectReason?: string | null;
 }
 
 /** Override kompetisi dari penyimpanan lokal admin (demo). */
@@ -74,9 +74,17 @@ export async function getMergedPaymentConfigs(
 	return activeOnly ? merged.filter((c) => c.isActive) : merged;
 }
 
-export async function saveCompetition(competition: Competition): Promise<void> {
+export async function saveCompetition(
+	competition: Competition,
+	actorHash: string,
+): Promise<void> {
 	if (get(demoMode)) {
 		await localPut(COMP_STORE, competition);
+		await audit("save_competition", "competitions", competition.id, actorHash, {
+			name: competition.name,
+			isActive: competition.isActive,
+			currentRound: competition.currentRound,
+		});
 		return;
 	}
 	const { supabase } = await import("./supabaseClient");
@@ -94,11 +102,29 @@ export async function saveCompetition(competition: Competition): Promise<void> {
 	if (error) {
 		throw new Error(`saveCompetition: ${error.message}`);
 	}
+	await audit("save_competition", "competitions", competition.id, actorHash, {
+		name: competition.name,
+		isActive: competition.isActive,
+		currentRound: competition.currentRound,
+	});
 }
 
-export async function savePaymentConfig(config: PaymentConfig): Promise<void> {
+export async function savePaymentConfig(
+	config: PaymentConfig,
+	actorHash: string,
+): Promise<void> {
 	if (get(demoMode)) {
 		await localPut(CONFIG_STORE, config);
+		await audit(
+			"save_payment_config",
+			"payment_configs",
+			config.id,
+			actorHash,
+			{
+				method: config.method,
+				isActive: config.isActive,
+			},
+		);
 		return;
 	}
 	const { supabase } = await import("./supabaseClient");
@@ -115,6 +141,10 @@ export async function savePaymentConfig(config: PaymentConfig): Promise<void> {
 	if (error) {
 		throw new Error(`savePaymentConfig: ${error.message}`);
 	}
+	await audit("save_payment_config", "payment_configs", config.id, actorHash, {
+		method: config.method,
+		isActive: config.isActive,
+	});
 }
 
 /**
@@ -123,6 +153,7 @@ export async function savePaymentConfig(config: PaymentConfig): Promise<void> {
  */
 export async function advanceRound(
 	competitionId: string,
+	actorHash: string,
 ): Promise<{ ok: boolean; round: number }> {
 	const merged = await getMergedCompetitions(false);
 	const competition = merged.find((c) => c.id === competitionId);
@@ -136,12 +167,16 @@ export async function advanceRound(
 		...competition,
 		currentRound: competition.currentRound + 1,
 	};
-	await saveCompetition(next);
+	await saveCompetition(next, actorHash);
 	return { ok: true, round: next.currentRound };
 }
 
 export async function resetDemoAdminState(): Promise<void> {
-	await Promise.all([localClear(COMP_STORE), localClear(CONFIG_STORE)]);
+	await Promise.all([
+		localClear(COMP_STORE),
+		localClear(CONFIG_STORE),
+		localClear(SPONSOR_STORE),
+	]);
 }
 
 /** Hash PIN admin sebagai actor hash untuk audit (`verified_by`/`recorded_by`). */
@@ -196,8 +231,25 @@ export async function demoAuditLogs(): Promise<AuditRecord[]> {
 /** Gabungan payment seed + lokal (demo), diperkaya nama peserta & lomba. */
 export async function getMergedPayments(): Promise<PaymentWithMeta[]> {
 	if (!get(demoMode)) {
-		const { getPayments } = await import("./queries");
-		return (await getPayments()) as PaymentWithMeta[];
+		const { getCompetitions, getParticipants, getPayments } = await import(
+			"./queries"
+		);
+		const [payments, participants, competitions] = await Promise.all([
+			getPayments(),
+			getParticipants(),
+			getCompetitions(false),
+		]);
+		const participantMap = new Map(participants.map((p) => [p.id, p]));
+		return payments.map((payment) => {
+			const participant = participantMap.get(payment.participantId);
+			return {
+				...payment,
+				participantName: participant?.name ?? "-",
+				competitionName:
+					competitions.find((c) => c.id === participant?.competitionId)?.name ??
+					"-",
+			};
+		});
 	}
 	const [local, seed, localParticipants, seedParticipants, competitions] =
 		await Promise.all([
@@ -258,9 +310,19 @@ async function recalcParticipantStatus(participantId: string): Promise<void> {
 	const competitions = await getCompetitions(false);
 	const fee =
 		competitions.find((c) => c.id === participant.competitionId)?.fee ?? 0;
+	const minDp =
+		competitions.find((c) => c.id === participant.competitionId)?.minDp ?? 0;
+	const nextStatus =
+		participant.status === "disqualified" || participant.status === "checked_in"
+			? participant.status
+			: verifiedTotal >= fee
+				? "fully_paid"
+				: verifiedTotal >= minDp
+					? "dp_paid"
+					: "registered";
 	const next: Participant = {
 		...participant,
-		status: verifiedTotal >= fee ? "fully_paid" : "dp_paid",
+		status: nextStatus,
 	};
 	await localPut(localStores.registrations, next);
 }
@@ -328,6 +390,7 @@ export async function rejectPayment(
 			verifiedBy: null,
 			rejectReason: reason,
 		});
+		await recalcParticipantStatus(payment.participantId);
 		await audit(
 			"reject_payment",
 			"participant_payments",

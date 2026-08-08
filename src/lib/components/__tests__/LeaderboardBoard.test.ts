@@ -11,8 +11,9 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
-	PUBLIC_ADMIN_PIN: "1234",
-	PUBLIC_JURI_PIN: "1234",
+	PUBLIC_ADMIN_PIN: "123456",
+	PUBLIC_PANITIA_PIN: "123456",
+	PUBLIC_JURI_PIN: "123456",
 }));
 
 afterEach(cleanup);
@@ -88,21 +89,36 @@ describe("LeaderboardBoard", () => {
 		expect(text.indexOf("Amin")).toBeLessThan(text.indexOf("Budi"));
 	});
 
-	it("layangan aduan: hitung kemenangan (menang)", () => {
+	it("layangan aduan: hitung kemenangan + total & terlama durasi terbang", () => {
 		const { container } = render(LeaderboardBoard, {
 			competition: comp("layangan_aduan"),
 			rows: [
-				row("a", "Amin", { status: "menang" }),
+				row("a", "Amin", { status: "menang", flightDurationMs: 40_000 }),
 				row("a", "Amin", {
 					status: "menang",
+					flightDurationMs: 70_000,
 					receivedAt: new Date("2026-08-17T09:00:00Z"),
 				}),
-				row("b", "Budi", { status: "putus" }),
+				row("b", "Budi", { status: "putus", flightDurationMs: 20_000 }),
 			],
 		});
 		const text = container.textContent ?? "";
 		expect(text).toContain("2 menang");
+		expect(text).toContain("Total 01:50");
+		expect(text).toContain("Terlama 01:10");
 		expect(text.indexOf("Amin")).toBeLessThan(text.indexOf("Budi"));
+	});
+
+	it("layangan aduan: menang sama → durasi total jadi tie-break", () => {
+		const { container } = render(LeaderboardBoard, {
+			competition: comp("layangan_aduan"),
+			rows: [
+				row("a", "Amin", { status: "menang", flightDurationMs: 30_000 }),
+				row("b", "Budi", { status: "menang", flightDurationMs: 90_000 }),
+			],
+		});
+		const text = container.textContent ?? "";
+		expect(text.indexOf("Budi")).toBeLessThan(text.indexOf("Amin"));
 	});
 
 	it("hias: total berbobot + tie-break received_at", () => {

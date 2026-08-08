@@ -41,14 +41,14 @@
 
 <PinGate kind="juri" title="PIN Juri Layangan">
 	{#snippet children()}
-		<div class="px-4 py-8">
+		<div class="py-8">
 			{#if loading}
 				<div class="flex flex-col items-center gap-2 py-16 text-muted-foreground">
 					<Loader2 class="h-6 w-6 animate-spin" aria-hidden="true" />
 					<p class="text-sm">Memuat…</p>
 				</div>
 			{:else if error || !competition}
-				<div class="mx-auto max-w-sm rounded-xl border border-border bg-background/60 p-8 text-center">
+				<div class="rounded-xl border border-border bg-background/60 p-8 text-center">
 					<AlertTriangle class="mx-auto h-8 w-8 text-destructive" aria-hidden="true" />
 					<h1 class="mt-3 text-lg font-bold">Kompetisi aduan layangan tidak ditemukan</h1>
 					<p class="mt-1 text-sm text-muted-foreground">

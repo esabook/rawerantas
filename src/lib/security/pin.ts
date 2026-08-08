@@ -2,15 +2,16 @@ import { env } from "$lib/env";
 
 const STORAGE_KEY = "rawerantas:pin-granted";
 const MAX_ATTEMPTS = 5;
+export const PIN_LENGTH = 6;
 
 export { MAX_ATTEMPTS };
 
 const LOCKOUT_MS = 30_000;
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
-export const DEMO_PIN = "1234";
+export const DEMO_PIN = "123456";
 export const STORAGE_LIFETIME = SESSION_LIFETIME_MS;
 
-export type PinKind = "juri" | "admin";
+export type PinKind = "juri" | "panitia" | "admin";
 
 export interface GrantInfo {
 	kind: PinKind;
@@ -30,7 +31,13 @@ export async function sha256Hex(input: string): Promise<string> {
 }
 
 export function pinForKind(kind: PinKind): string {
-	return kind === "admin" ? env.adminPin : env.juriPin;
+	if (kind === "admin") return env.adminPin;
+	if (kind === "panitia") return env.panitiaPin;
+	return env.juriPin;
+}
+
+export function isValidPin(pin: string): boolean {
+	return new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin);
 }
 
 export function demoPinHash(): Promise<string> {
@@ -122,6 +129,9 @@ export async function verifyPin(
 	kind: PinKind,
 	pin: string,
 ): Promise<GrantInfo> {
+	if (!isValidPin(pin)) {
+		throw new Error(`PIN harus ${PIN_LENGTH} digit.`);
+	}
 	const { locked } = await isLockedOut(kind);
 	if (locked) {
 		throw new PinLockoutError(
@@ -129,6 +139,9 @@ export async function verifyPin(
 		);
 	}
 	const configured = pinForKind(kind);
+	if (configured && !isValidPin(configured)) {
+		throw new Error(`Konfigurasi PIN ${kind} harus ${PIN_LENGTH} digit.`);
+	}
 	const expectedHash = configured
 		? await sha256Hex(configured)
 		: await demoPinHash();

@@ -28,13 +28,13 @@
 	let aesthetic = $state(80);
 	let stability = $state(80);
 	let creativity = $state(80);
-	let scored = $state<Record<string, { total: number; editable: boolean }>>({});
+	let scored = $state<Record<string, { total: number; editable: boolean }>>(
+		{},
+	);
 	let submitting = $state(false);
 	let error = $state("");
 
-	const selected = $derived(
-		participants.find((p) => p.id === selectedId),
-	);
+	const selected = $derived(participants.find((p) => p.id === selectedId));
 	const totalPreview = $derived(
 		computeHiasTotal(aesthetic, stability, creativity),
 	);
@@ -91,10 +91,13 @@
 				recordedBy,
 			});
 			const label = `${selected.name} — ${totalPreview} poin`;
-			undoable(result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`, {
-				onUndo: () => {},
-				onConfirm: () => {},
-			});
+			undoable(
+				result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`,
+				{
+					onUndo: () => {},
+					onConfirm: () => {},
+				},
+			);
 			scored[selected.id] = { total: totalPreview, editable: true };
 			await load();
 			sfx.coin();
@@ -109,14 +112,18 @@
 	};
 </script>
 
-<div class="mx-auto flex w-full max-w-md flex-col gap-4 rounded-xl border border-border bg-background/60 p-6">
+<div
+	class="flex w-full flex-col gap-4 rounded-xl border border-border bg-background/60 p-4"
+>
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-2">
 			<Wind class="h-5 w-5 text-gold" aria-hidden="true" />
 			<h1 class="font-bold">{competitionName}</h1>
 		</div>
 		{#if !$online}
-			<span class="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600">
+			<span
+				class="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600"
+			>
 				Offline — antrean
 			</span>
 		{/if}
@@ -131,7 +138,10 @@
 			{@const score = scored[p.id]}
 			<button
 				type="button"
-				class="btn flex flex-col gap-0.5 px-3 py-2 text-left text-sm {selectedId === p.id ? 'border-gold' : ''}"
+				class="btn flex flex-col gap-0.5 px-2 py-2 text-left text-sm {selectedId ===
+				p.id
+					? 'border-gold'
+					: ''}"
 				onclick={() => void select(p)}
 			>
 				<span class="font-semibold">{p.name}</span>
@@ -139,7 +149,9 @@
 					{#if score}
 						{score.total} poin
 						{#if score.editable}
-							<span class="inline-flex items-center gap-0.5 text-gold">
+							<span
+								class="inline-flex items-center gap-0.5 text-gold"
+							>
 								<Pencil class="h-3 w-3" aria-hidden="true" /> edit
 							</span>
 						{/if}
@@ -157,7 +169,9 @@
 			<label class="flex flex-col gap-1 text-sm">
 				<span class="flex justify-between">
 					<span class="font-medium">Estetika</span>
-					<span class="tabular-nums text-muted-foreground">{aesthetic}</span>
+					<span class="tabular-nums text-muted-foreground"
+						>{aesthetic}</span
+					>
 				</span>
 				<input
 					type="range"
@@ -171,7 +185,9 @@
 			<label class="flex flex-col gap-1 text-sm">
 				<span class="flex justify-between">
 					<span class="font-medium">Kestabilan</span>
-					<span class="tabular-nums text-muted-foreground">{stability}</span>
+					<span class="tabular-nums text-muted-foreground"
+						>{stability}</span
+					>
 				</span>
 				<input
 					type="range"
@@ -185,7 +201,9 @@
 			<label class="flex flex-col gap-1 text-sm">
 				<span class="flex justify-between">
 					<span class="font-medium">Kreativitas</span>
-					<span class="tabular-nums text-muted-foreground">{creativity}</span>
+					<span class="tabular-nums text-muted-foreground"
+						>{creativity}</span
+					>
 				</span>
 				<input
 					type="range"
@@ -196,9 +214,14 @@
 					onchange={() => sfx.slider()}
 				/>
 			</label>
-			<div class="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3">
+			<div
+				class="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3"
+			>
 				<span class="text-sm font-medium">Total berbobot</span>
-				<span class="font-mono text-2xl font-bold tabular-nums" aria-label="Total berbobot">
+				<span
+					class="font-mono text-2xl font-bold tabular-nums"
+					aria-label="Total berbobot"
+				>
 					{totalPreview}
 				</span>
 			</div>

@@ -100,9 +100,18 @@ async function idbOp<T>(
 }
 
 async function idbGetAll<T>(store: string): Promise<T[]> {
-	return idbOp([store], "readonly", (tx) => {
+	const db = await getIdb();
+	return new Promise<T[]>((resolve, reject) => {
+		const tx = db.transaction([store], "readonly");
 		const req = tx.objectStore(store).getAll();
-		return req.result as T[];
+		let rows: T[] = [];
+		req.onsuccess = () => {
+			rows = req.result as T[];
+		};
+		req.onerror = () => reject(req.error);
+		tx.oncomplete = () => resolve(rows);
+		tx.onerror = () => reject(tx.error);
+		tx.onabort = () => reject(tx.error);
 	});
 }
 
@@ -150,6 +159,7 @@ export const localStores = {
 	checkins: "demo_checkins",
 	competitions: "demo_competitions",
 	paymentConfigs: "demo_payment_configs",
+	sponsors: "demo_sponsors",
 	auditLogs: "demo_audit_logs",
 } as const;
 

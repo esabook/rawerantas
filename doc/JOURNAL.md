@@ -36,7 +36,7 @@ Format entri:
 - Keputusan: `ssr=false`/`prerender=false` di root layout — ARCHITECTURE §2 "SPA 100%", data semua klien (Supabase browser), dan O2-01 butuh navigateFallback ke index.html utk deep-link offline; prerender campuran hanya bikin dua jalur render.
 - Keputusan: `/display` (dan `/juri/*` di masa depan) di luar route group `(app)` — bypass nav struktural, tanpa conditional di komponen.
 - Penyimpangan: `+layout.ts` (FILES) = export `ssr`/`prerender` flags, bukan load function — load kosong tak diperlukan untuk layout statis.
-- Penyimpangan kecil: nama app sementara hardcode di AppShell ("Pesta Rakyat Agustusan") — `PUBLIC_APP_NAME` akan dibaca saat F0-03 (env helper) ditarik manusia; fallback ini sementara, dicatat.
+- Penyimpangan kecil: nama app sementara hardcode di AppShell ("Rawerantas") — `PUBLIC_APP_NAME` akan dibaca saat F0-03 (env helper) ditarik manusia; fallback ini sementara, dicatat.
 - Belum diverifikasi: render visual nav di browser (tidak ada browser di sesi ini) — hanya verifikasi struktural + curl; butuh cek manual sekali di Q8-02.
 - Task `F0-06` `DONE` — commit `9eede6b` — vitest 4.1 + @testing-library/svelte 5.4 + happy-dom 20.11; test block di vite.config.ts (happy-dom, include src/**/*.{test,spec}.{js,ts,svelte}); script `test` = `vitest run`, `test:watch` = `vitest`; kanon: `src/lib/utils/__tests__/example.test.ts` (cn) + `src/lib/components/__tests__/Example.test.ts` (render Greeting); 5 test hijau, check 0 error, build hijau.
 - Keputusan: `resolve.conditions: ['browser']` di vite.config.ts — tanpa ini render komponen gagal `lifecycle_function_unavailable` (svelte resolve ke build server); syarat resmi SvelteKit utk Vitest.
@@ -202,3 +202,69 @@ Format entri:
 - **CompetitionList**: grid→carousel `snap-x snap-mandatory no-scrollbar` (utility baru), kartu `w-72 shrink-0`, top accent bar (gold=live/muted=tutup), badge LIVE pulsing red-400, label `${liveCount} LIVE`, skeleton horizontal. `data-testid="competition-card"` dipertahankan.
 - **Seed**: ternyata sudah lengkap sejak awal (mancing 50 skor, layangan aduan 30, hias 25; 3 lomba isActive) — DEMO_MODE query via `demo*` functions; tidak ada perubahan data. Admin lokal langsung lihat top3 tiap lomba.
 - Gates: test 194/194 · check 0 · lint 0 · build ✓ (font ter-bundle: `sekuya-latin-400-normal.*.woff2` di assets).
+
+## 2026-08-07 (lanjutan 4) — FASE 9 production readiness
+
+- Permintaan user: audit + fixing plan persiapan deploy production. 3 sub-agent
+  Explore paralel (security/env, offline-engine, build/deploy) memverifikasi
+  klaim `doc/` terhadap kode nyata — hasil ditambahkan sebagai `R9-01`..`R9-10`
+  di `TASKS.md` FASE 9, semua `DONE` sesi ini (belum commit — belum diminta user).
+- Temuan kritis (bukan seperti dugaan awal): `competitions`/`payment_configs`
+  di `supabase/rls.sql` TANPA policy UPDATE sama sekali (bukan `sponsors`
+  kebanyakan akses seperti diduga sub-agent) — `A7-02` config manager akan
+  gagal total begitu RLS diterapkan. Fix: tambah policy admin-update
+  kolom-terbatas + `scores_mancing`/`scores_layangan` undo-delete (19→23
+  policy, 8→9 tabel).
+- Temuan kritis #2: `runSyncOnce()` (sync loop offline) lengkap + teruji unit
+  test tapi TIDAK PERNAH dipanggil kode aplikasi nyata — skor/pembayaran/
+  registrasi offline tak akan pernah sampai ke Supabase. Fix: `src/lib/offline/executor.ts`
+  baru (ExecuteOp konkret per endpoint) + wiring trigger (online event,
+  interval 15s, mount) di `networkStore.ts`. Perbaikan turunan wajib:
+  idempotency_key scores_mancing/layangan/hias kini dibuat sekali sebelum
+  live-attempt & dipakai ulang di payload antrean (sebelumnya generate ulang
+  tiap retry = tak benar-benar idempotent terhadap request pertama yang
+  gagal setelah commit di server).
+- `static/_redirects` hilang (deep link 404 di CF Pages) — ditambahkan.
+  Guard `PUBLIC_BASE_URL` di `vite.config.ts` diubah dari warn ke hard-fail
+  saat mode production.
+- `R9-07` (enable lint `.svelte`): dicoba, 119 error + 375 warning di 180
+  file — terlalu besar, DEFERRED (lihat `DEFERRED.md`), config dikembalikan.
+- Dead code: 7/8 primitive shadcn dihapus (`button`,`card`,`dialog`,`input`,
+  `select`,`separator`,`slider` — 0 importer); `datatable` dipertahankan
+  (dipakai `AdminPanel.svelte`).
+- CI baru: `.github/workflows/ci.yml` (lint→check→test→build tiap push/PR).
+- Gates: test 209/209 (37 file, naik dari 188/35 — RUN-REPORT.md di-update
+  dgn catatan, bukan ditimpa) · check 0 · lint 0 · build ✓.
+
+## 2026-08-07 (lanjutan 5) — fix scrollbar horizontal 360px `/daftar`
+
+- Permintaan user: cek kenapa muncul scrollbar horizontal di layar 360px,
+  contoh page `/daftar`. Investigasi browser langsung (viewport 360×740).
+- **Root cause** (bukan BottomNav seperti dugaan awal — itu korban, bukan
+  sumber): tiap kartu kompetisi di carousel `RegistrationForm.svelte`
+  (`role="radiogroup"`) punya `<input type="radio" class="sr-only">` untuk
+  semantik native — Tailwind `sr-only` = `position:absolute` tanpa
+  top/left eksplisit. Wrapper kartunya TIDAK punya `position:relative`, jadi
+  containing block input itu naik sampai ke viewport (ICB), bukan kartu —
+  input lolos dari clipping `overflow-x-auto` carousel sepenuhnya dan
+  ter-render di "static position"-nya (kartu ke-3 dalam baris flex
+  yang TAK di-scroll, ±577px) — inilah yang menggelembungkan
+  `document.documentElement.scrollWidth` ke 578px, yang pada gilirannya
+  merusak containing block `position:fixed` BottomNav (ikut melebar ke 578px
+  meski BottomNav sendiri tak bermasalah).
+- Debug butuh ~15 iterasi karena red herring berlapis: `min-w-0` di grid
+  item BottomNav, `overflow-x:hidden` di html/body (memblokir SCROLL tapi
+  tak memperbaiki UKURAN — nav "LEADERBOARD" jadi tak terjangkau off-screen,
+  bug baru!), `max-w-full` di carousel — semua tak berpengaruh sampai
+  bisection `.remove()` per-kartu membuktikan kartu ke-3 (dan `sr-only`
+  input-nya) adalah sumbernya.
+- Fix presisi: tambah `relative` ke wrapper kartu (satu class). Hardening
+  tambahan (aman, tak mengubah perilaku): `overflow-x:hidden` di `html`/`body`
+  (app.css) sbg backstop, `min-w-0 truncate` di label BottomNav, `max-w-full`
+  di carousel.
+- Catatan risiko serupa TIDAK diperbaiki (di luar scope, tak menunjukkan
+  gejala): `AdminPanel.svelte:1079` — `<input type="file" class="sr-only">`
+  dalam `<label>` tanpa `relative`, dropzone tunggal (bukan list horizontal)
+  jadi belum terbukti bermasalah.
+- Gates: test 209/209 · check 0 · lint 0 · build ✓ · verifikasi visual browser
+  360×740 (scrollWidth=clientWidth=360, 3 item BottomNav utuh & terjangkau).

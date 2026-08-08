@@ -38,6 +38,118 @@ export type LeaderboardRow = {
 	participants?: { name: string; lapak_number: string | null } | null;
 };
 
+type DbRow = Record<string, unknown>;
+
+const value = <T>(row: DbRow, camel: string, snake: string): T =>
+	(row[camel] ?? row[snake]) as T;
+
+export const normalizeCompetitionRow = (row: DbRow): Competition =>
+	({
+		...row,
+		scoringMode: value(row, "scoringMode", "scoring_mode"),
+		minDp: value(row, "minDp", "min_dp"),
+		totalQuota: value(row, "totalQuota", "total_quota"),
+		currentRound: value(row, "currentRound", "current_round"),
+		isActive: value(row, "isActive", "is_active"),
+		createdAt: value(row, "createdAt", "created_at"),
+	}) as Competition;
+
+export const normalizePaymentConfigRow = (row: DbRow): PaymentConfig =>
+	({
+		...row,
+		accountName: value(row, "accountName", "account_name"),
+		accountNumber: value(row, "accountNumber", "account_number"),
+		qrisImageUrl: value(row, "qrisImageUrl", "qris_image_url"),
+		isActive: value(row, "isActive", "is_active"),
+		createdAt: value(row, "createdAt", "created_at"),
+	}) as PaymentConfig;
+
+export const normalizeParticipantRow = (row: DbRow): Participant =>
+	({
+		...row,
+		competitionId: value(row, "competitionId", "competition_id"),
+		ticketNumber: value(row, "ticketNumber", "ticket_number"),
+		lapakNumber: value(row, "lapakNumber", "lapak_number"),
+		checkedInAt: value(row, "checkedInAt", "checked_in_at"),
+		createdAt: value(row, "createdAt", "created_at"),
+	}) as Participant;
+
+export const normalizePaymentRow = (row: DbRow): ParticipantPayment =>
+	({
+		...row,
+		participantId: value(row, "participantId", "participant_id"),
+		paymentMethod: value(row, "paymentMethod", "payment_method"),
+		proofImageUrl: value(row, "proofImageUrl", "proof_image_url"),
+		isVerified: value(row, "isVerified", "is_verified"),
+		verifiedBy: value(row, "verifiedBy", "verified_by"),
+		rejectReason: value(row, "rejectReason", "reject_reason"),
+		createdAt: value(row, "createdAt", "created_at"),
+	}) as ParticipantPayment;
+
+export const normalizeMancingScoreRow = (row: DbRow): ScoreMancing =>
+	({
+		...row,
+		competitionId: value(row, "competitionId", "competition_id"),
+		participantId: value(row, "participantId", "participant_id"),
+		fishWeightGram: value(row, "fishWeightGram", "fish_weight_gram"),
+		fishType: value(row, "fishType", "fish_type"),
+		isJackpot: value(row, "isJackpot", "is_jackpot"),
+		runningTotal: value(row, "runningTotal", "running_total"),
+		recordedBy: value(row, "recordedBy", "recorded_by"),
+		idempotencyKey: value(row, "idempotencyKey", "idempotency_key"),
+		receivedAt: value(row, "receivedAt", "received_at"),
+		createdAt: value(row, "createdAt", "created_at"),
+	}) as ScoreMancing;
+
+export const normalizeLayanganScoreRow = (row: DbRow): ScoreLayangan =>
+	({
+		...row,
+		competitionId: value(row, "competitionId", "competition_id"),
+		participantId: value(row, "participantId", "participant_id"),
+		flightDurationMs: value(row, "flightDurationMs", "flight_duration_ms"),
+		recordedBy: value(row, "recordedBy", "recorded_by"),
+		idempotencyKey: value(row, "idempotencyKey", "idempotency_key"),
+		receivedAt: value(row, "receivedAt", "received_at"),
+		createdAt: value(row, "createdAt", "created_at"),
+	}) as ScoreLayangan;
+
+export const normalizeHiasScoreRow = (row: DbRow): ScoreLayanganHias =>
+	({
+		...row,
+		competitionId: value(row, "competitionId", "competition_id"),
+		participantId: value(row, "participantId", "participant_id"),
+		totalWeighted: value(row, "totalWeighted", "total_weighted"),
+		recordedBy: value(row, "recordedBy", "recorded_by"),
+		idempotencyKey: value(row, "idempotencyKey", "idempotency_key"),
+		receivedAt: value(row, "receivedAt", "received_at"),
+		editedAt: value(row, "editedAt", "edited_at"),
+		createdAt: value(row, "createdAt", "created_at"),
+	}) as ScoreLayanganHias;
+
+const normalizeLeaderboardRow = (
+	row: DbRow,
+	table: "scores_mancing" | "scores_layangan" | "scores_layangan_hias",
+): LeaderboardRow => {
+	const normalized =
+		table === "scores_mancing"
+			? normalizeMancingScoreRow(row)
+			: table === "scores_layangan"
+				? normalizeLayanganScoreRow(row)
+				: normalizeHiasScoreRow(row);
+	return {
+		...normalized,
+		weight:
+			table === "scores_mancing"
+				? (normalized as ScoreMancing).fishWeightGram
+				: undefined,
+		total_weighted:
+			table === "scores_layangan_hias"
+				? (normalized as ScoreLayanganHias).totalWeighted
+				: row.total_weighted,
+		participants: (row.participants ?? null) as LeaderboardRow["participants"],
+	} as LeaderboardRow;
+};
+
 export async function getCompetitions(
 	activeOnly = true,
 ): Promise<Competition[]> {
@@ -57,7 +169,7 @@ export async function getCompetitions(
 	if (error) {
 		throw new Error(`getCompetitions: ${error.message}`);
 	}
-	return (data ?? []) as Competition[];
+	return (data ?? []).map((row) => normalizeCompetitionRow(row as DbRow));
 }
 
 export async function getPaymentConfigs(
@@ -79,7 +191,7 @@ export async function getPaymentConfigs(
 	if (error) {
 		throw new Error(`getPaymentConfigs: ${error.message}`);
 	}
-	return (data ?? []) as PaymentConfig[];
+	return (data ?? []).map((row) => normalizePaymentConfigRow(row as DbRow));
 }
 
 export async function getParticipants(
@@ -103,7 +215,7 @@ export async function getParticipants(
 	if (error) {
 		throw new Error(`getParticipants: ${error.message}`);
 	}
-	return (data ?? []) as Participant[];
+	return (data ?? []).map((row) => normalizeParticipantRow(row as DbRow));
 }
 
 /**
@@ -131,7 +243,7 @@ export async function getParticipantById(
 	if (error) {
 		throw new Error(`getParticipantById: ${error.message}`);
 	}
-	return (data ?? null) as Participant | null;
+	return data ? normalizeParticipantRow(data as DbRow) : null;
 }
 
 export async function getPayments(
@@ -156,7 +268,7 @@ export async function getPayments(
 	if (error) {
 		throw new Error(`getPayments: ${error.message}`);
 	}
-	return (data ?? []) as ParticipantPayment[];
+	return (data ?? []).map((row) => normalizePaymentRow(row as DbRow));
 }
 
 export async function getLeaderboard(
@@ -197,5 +309,7 @@ export async function getLeaderboard(
 	if (error) {
 		throw new Error(`getLeaderboard: ${error.message}`);
 	}
-	return (data ?? []) as LeaderboardRow[];
+	return (data ?? []).map((row) =>
+		normalizeLeaderboardRow(row as DbRow, table),
+	);
 }

@@ -7,6 +7,7 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/.codebase-memory
 
 # OS
 .DS_Store
@@ -21,3 +22,6 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Local tooling
+.claude/

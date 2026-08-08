@@ -99,8 +99,12 @@ export async function compressImage(
 	);
 	canvas.width = target.width;
 	canvas.height = target.height;
-	ctx.drawImage(bitmap, 0, 0, target.width, target.height);
-	bitmap.close();
+	try {
+		ctx.drawImage(bitmap, 0, 0, target.width, target.height);
+	} finally {
+		// ImageBitmap hanya ditutup setelah draw selesai, termasuk saat canvas gagal.
+		bitmap.close();
+	}
 
 	const { quality } = await findQualityForSize(
 		(q) => encodeBlob(canvas, outputMime, q).then((blob) => blob?.size ?? 0),

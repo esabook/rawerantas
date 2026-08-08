@@ -64,7 +64,9 @@
 	const restoreDraft = async () => {
 		const draft = await loadProofDraft(participantId);
 		if (draft) {
-			file = new File([draft.blob], draft.name, { type: draft.blob.type });
+			file = new File([draft.blob], draft.name, {
+				type: draft.blob.type,
+			});
 			previewUrl = URL.createObjectURL(draft.blob);
 			draftOffer = false;
 		}
@@ -84,15 +86,27 @@
 	<span class="font-medium">{label}</span>
 
 	{#if draftOffer}
-		<div class="flex items-center justify-between gap-2 rounded-lg bg-muted p-3" role="note">
+		<div
+			class="flex items-center justify-between gap-2 rounded-lg bg-muted p-3"
+			role="note"
+		>
 			<p class="text-xs text-muted-foreground">
 				Bukti tersimpan dari percobaan sebelumnya ditemukan.
 			</p>
 			<div class="flex gap-2">
-				<button type="button" class="btn btn-sm" onclick={restoreDraft} disabled={!$online}>
+				<button
+					type="button"
+					class="btn btn-sm"
+					onclick={restoreDraft}
+					disabled={!$online}
+				>
 					Pulihkan
 				</button>
-				<button type="button" class="btn btn-ghost btn-sm" onclick={clear}>
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm"
+					onclick={clear}
+				>
 					Buang
 				</button>
 			</div>
@@ -108,7 +122,7 @@
 		{#if !file}
 			<button
 				type="button"
-				class="flex flex-col items-center gap-1 rounded-lg border border-dashed border-border p-6 text-muted-foreground hover:border-secondary"
+				class="flex flex-col items-center gap-1 rounded-lg border border-dashed border-border p-4 text-muted-foreground hover:border-secondary"
 				onclick={() => fileInput?.click()}
 				disabled={compressing}
 			>
@@ -121,13 +135,26 @@
 				{/if}
 			</button>
 		{:else}
-			<div class="flex items-center gap-3 rounded-lg border border-border/60 p-2">
-				<img src={previewUrl ?? ""} alt="Pratinjau bukti" class="h-16 w-16 rounded object-cover" />
+			<div
+				class="flex items-center gap-3 rounded-lg border border-border/60 p-2"
+			>
+				<img
+					src={previewUrl ?? ""}
+					alt="Pratinjau bukti"
+					class="h-16 w-16 rounded object-cover"
+				/>
 				<div class="min-w-0 flex-1">
 					<p class="truncate text-xs font-medium">{file.name}</p>
-					<p class="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+					<p class="text-xs text-muted-foreground">
+						{(file.size / 1024).toFixed(1)} KB
+					</p>
 				</div>
-				<button type="button" class="btn btn-ghost btn-sm" onclick={clear} aria-label="Hapus bukti">
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm"
+					onclick={clear}
+					aria-label="Hapus bukti"
+				>
 					<X class="h-4 w-4" aria-hidden="true" />
 				</button>
 			</div>

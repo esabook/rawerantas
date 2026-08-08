@@ -30,7 +30,7 @@
 	<legend class="font-medium">Metode pembayaran</legend>
 
 	{#each configsActive as c}
-		<label class="flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2">
+		<label class="flex items-center gap-2 rounded-lg border border-border/60 px-2 py-2">
 			<input
 				type="radio"
 				name="payment-method"

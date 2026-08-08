@@ -60,6 +60,15 @@ export const paymentConfigs = pgTable("payment_configs", {
 		.notNull(),
 });
 
+export const sponsors = pgTable("sponsors", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	imageUrl: text("image_url").notNull(),
+	url: text("url").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
 export const participants = pgTable("participants", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	competitionId: uuid("competition_id")
@@ -73,6 +82,7 @@ export const participants = pgTable("participants", {
 		.$type<ParticipantStatus>()
 		.notNull()
 		.default("registered"),
+	checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
@@ -88,6 +98,7 @@ export const participantPayments = pgTable("participant_payments", {
 	proofImageUrl: text("proof_image_url"),
 	isVerified: boolean("is_verified").notNull().default(false),
 	verifiedBy: text("verified_by"),
+	rejectReason: text("reject_reason"),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
@@ -133,6 +144,7 @@ export const scoresLayangan = pgTable(
 			.references(() => participants.id),
 		round: integer("round").notNull(),
 		status: text("status").$type<LayanganStatus>().notNull(),
+		flightDurationMs: integer("flight_duration_ms"),
 		recordedBy: text("recorded_by").notNull(),
 		idempotencyKey: uuid("idempotency_key").notNull().unique(),
 		receivedAt: timestamp("received_at", { withTimezone: true })
@@ -178,6 +190,10 @@ export const scoresLayanganHias = pgTable(
 	(table) => [
 		uniqueIndex("scores_layangan_hias_idempotency_idx").on(
 			table.idempotencyKey,
+		),
+		uniqueIndex("scores_layangan_hias_participant_competition_idx").on(
+			table.competitionId,
+			table.participantId,
 		),
 		check(
 			"hias_kriteria_0_100",

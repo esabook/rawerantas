@@ -12,6 +12,7 @@ export interface ScoreRow {
 	creativity?: number | null;
 	totalWeighted?: number | null;
 	status?: string | null;
+	flightDurationMs?: number | null;
 	receivedAt: Date | string;
 }
 
@@ -110,7 +111,11 @@ const compute = (
 		case "layangan_aduan": {
 			const wins = entries.filter((entry) => entry.status === "menang");
 			const bestAt = wins.length > 0 ? toDate(wins[0].receivedAt) : new Date(0);
-			return { score: wins.length, subScore: 0, bestAt };
+			const totalDuration = entries.reduce(
+				(sum, entry) => sum + (entry.flightDurationMs ?? 0),
+				0,
+			);
+			return { score: wins.length, subScore: totalDuration, bestAt };
 		}
 		case "layangan_hias": {
 			let score = -Infinity;

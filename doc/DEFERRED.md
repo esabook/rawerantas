@@ -14,7 +14,14 @@ pernah "asumsikan selesai".
 
 ## Pool aktif
 
-Belum ada. Terisi oleh run pertama (skill `rawe1`).
+- [ ] `R9-07` — Enable lint `.svelte` di `biome.json` (saat ini `!**/*.svelte`
+  exclude semua) — dicoba (`includes` tanpa exclude, `bunx biome check .`):
+  119 error + 375 warning di 180 file, terlalu besar untuk diperbaiki aman
+  dalam satu task tanpa risiko regresi UI. Config dikembalikan ke exclude
+  semula. Upgrade path: pecah per-domain (components/, routes/) jadi
+  beberapa task terpisah, mulai dari kategori error paling ringan
+  (import order, unused var) sebelum kategori style/a11y yang lebih besar
+  — logged 2026-08-07.
 
 ## Kandidat yang diketahui di awal (belum diputuskan, bukan deferral tetap)
 

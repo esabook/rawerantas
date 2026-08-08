@@ -3,6 +3,7 @@ import { demoHiasScores } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
+import { getSupabase, normalizeHiasScoreRow } from "./queries";
 
 const STORE = localStores.scoresHias;
 
@@ -75,6 +76,20 @@ async function localScores(): Promise<HiasScoreRecord[]> {
 export async function getAllHiasScores(
 	competitionId: string,
 ): Promise<HiasScoreRecord[]> {
+	if (!get(demoMode)) {
+		const { supabase } = await getSupabase();
+		const { data, error } = await supabase
+			.from("scores_layangan_hias")
+			.select("*")
+			.eq("competition_id", competitionId)
+			.order("received_at", { ascending: true });
+		if (error) {
+			throw new Error(`getAllHiasScores: ${error.message}`);
+		}
+		return (data ?? []).map((row) =>
+			normalizeHiasScoreRow(row as Record<string, unknown>),
+		) as HiasScoreRecord[];
+	}
 	const local = await localScores();
 	const localByParticipant = new Map(local.map((s) => [s.participantId, s]));
 	const merged = demoHiasScores()
@@ -99,6 +114,23 @@ export async function getHiasScore(
 	competitionId: string,
 	participantId: string,
 ): Promise<HiasScoreRecord | null> {
+	if (!get(demoMode)) {
+		const { supabase } = await getSupabase();
+		const { data, error } = await supabase
+			.from("scores_layangan_hias")
+			.select("*")
+			.eq("competition_id", competitionId)
+			.eq("participant_id", participantId)
+			.maybeSingle();
+		if (error) {
+			throw new Error(`getHiasScore: ${error.message}`);
+		}
+		return data
+			? (normalizeHiasScoreRow(
+					data as Record<string, unknown>,
+				) as HiasScoreRecord)
+			: null;
+	}
 	const local = await localScores();
 	const fromLocal = local.find(
 		(s) =>
@@ -152,6 +184,7 @@ export async function submitHiasScore(
 		await saveLocal(record);
 		return { queued: false, participantId: record.participantId };
 	}
+	const idempotencyKey = existing?.idempotencyKey ?? crypto.randomUUID();
 	try {
 		const { supabase } = await import("./supabaseClient");
 		if (existing) {
@@ -161,7 +194,6 @@ export async function submitHiasScore(
 					aesthetic,
 					stability,
 					creativity,
-					total_weighted: totalWeighted,
 					edited_at: new Date().toISOString(),
 					recorded_by: input.recordedBy,
 				})
@@ -181,7 +213,7 @@ export async function submitHiasScore(
 				stability,
 				creativity,
 				recorded_by: input.recordedBy,
-				idempotency_key: crypto.randomUUID(),
+				idempotency_key: idempotencyKey,
 			})
 			.select("id")
 			.single();
@@ -200,6 +232,8 @@ export async function submitHiasScore(
 				stability,
 				creativity,
 				recordedBy: input.recordedBy,
+				idempotencyKey,
+				existing: Boolean(existing),
 			},
 		);
 		return { queued: true, participantId: input.participantId };

@@ -16,6 +16,7 @@
 	let rows = $state<Awaited<ReturnType<typeof getLeaderboardRows>>>([]);
 	let lastKnown = $state<typeof rows>([]);
 	let loading = $state(true);
+	let refreshing = $state(false);
 	let error = $state("");
 	let lastTop = $state("");
 
@@ -25,9 +26,10 @@
 	const demo = $derived(get(demoMode));
 
 	const refresh = async () => {
-		if (!competition) {
+		if (!competition || refreshing) {
 			return;
 		}
+		refreshing = true;
 		try {
 			const next = await getLeaderboardRows(
 				competition.id,
@@ -53,6 +55,8 @@
 				e instanceof Error
 					? `Gagal memuat skor: ${e.message}`
 					: "Gagal memuat skor.";
+		} finally {
+			refreshing = false;
 		}
 	};
 
@@ -81,17 +85,29 @@
 					.channel("leaderboard-live")
 					.on(
 						"postgres_changes",
-						{ event: "*", schema: "public", table: "scores_mancing" },
+						{
+							event: "*",
+							schema: "public",
+							table: "scores_mancing",
+						},
 						() => void refresh(),
 					)
 					.on(
 						"postgres_changes",
-						{ event: "*", schema: "public", table: "scores_layangan" },
+						{
+							event: "*",
+							schema: "public",
+							table: "scores_layangan",
+						},
 						() => void refresh(),
 					)
 					.on(
 						"postgres_changes",
-						{ event: "*", schema: "public", table: "scores_layangan_hias" },
+						{
+							event: "*",
+							schema: "public",
+							table: "scores_layangan_hias",
+						},
 						() => void refresh(),
 					)
 					.subscribe();
@@ -114,36 +130,50 @@
 	<title>Leaderboard | {env.appName}</title>
 </svelte:head>
 
-<div class="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-8">
+<div class="flex w-full flex-col gap-4 py-8">
 	<div class="flex items-center justify-between">
 		<h1 class="text-lg font-bold">Leaderboard</h1>
 		<button
 			type="button"
-			class="btn btn-ghost"
+			class="btn btn-ghost btn-sm"
 			onclick={() => void refresh()}
+			disabled={refreshing}
+			aria-busy={refreshing}
 			aria-label="Muat ulang skor"
 		>
-			<RefreshCw class="h-4 w-4" aria-hidden="true" />
-			Muat ulang
+			<RefreshCw
+				class="h-4 w-4 {refreshing ? 'animate-spin' : ''}"
+				aria-hidden="true"
+			/>
+			<!-- {refreshing ? "Memuat…" : "Muat ulang"} -->
 		</button>
 	</div>
 
 	{#if loading}
 		<div class="flex flex-col gap-2" aria-label="memuat papan skor">
 			{#each [1, 2, 3, 4] as i}
-				<div class="h-12 animate-pulse rounded-lg border border-border/60 bg-background/60"></div>
+				<div
+					class="h-12 animate-pulse rounded-lg border border-border/60 bg-background/60"
+				></div>
 			{/each}
 		</div>
 	{:else if !competition}
-		<div class="rounded-lg border border-border/60 p-8 text-center text-sm text-muted-foreground">
+		<div
+			class="rounded-lg border border-border/60 p-8 text-center text-sm text-muted-foreground"
+		>
 			Tidak ada kompetisi aktif.
 		</div>
 	{:else}
-		<div class="flex flex-wrap gap-2">
+		<div
+			class="no-scrollbar flex min-w-0 snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2 [touch-action:pan-x]"
+		>
 			{#each competitions as c (c.id)}
 				<button
 					type="button"
-					class="btn {competition.id === c.id ? 'btn-gold' : ''}"
+					class="btn shrink-0 snap-start whitespace-nowrap {competition.id ===
+					c.id
+						? 'btn-gold'
+						: ''}"
 					onclick={() => {
 						selectedId = c.id;
 						void refresh();

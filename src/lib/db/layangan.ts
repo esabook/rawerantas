@@ -20,6 +20,7 @@ export interface LayanganScoreRecord {
 	participantId: string;
 	round: number;
 	status: LayanganStatus;
+	flightDurationMs: number | null;
 	receivedAt: Date;
 	idempotencyKey: string;
 	recordedBy: string;
@@ -30,6 +31,7 @@ export interface LayanganScoreInput {
 	participantId: string;
 	round: number;
 	status: LayanganStatus;
+	flightDurationMs: number | null;
 	recordedBy: string;
 }
 
@@ -53,6 +55,23 @@ async function localScores(): Promise<LayanganScoreRecord[]> {
 export async function getAllLayanganScores(
 	competitionId: string,
 ): Promise<LayanganScoreRecord[]> {
+	if (!get(demoMode)) {
+		const { getSupabase, normalizeLayanganScoreRow } = await import(
+			"./queries"
+		);
+		const { supabase } = await getSupabase();
+		const { data, error } = await supabase
+			.from("scores_layangan")
+			.select("*")
+			.eq("competition_id", competitionId)
+			.order("received_at", { ascending: true });
+		if (error) {
+			throw new Error(`getAllLayanganScores: ${error.message}`);
+		}
+		return (data ?? []).map((row) =>
+			normalizeLayanganScoreRow(row as Record<string, unknown>),
+		) as LayanganScoreRecord[];
+	}
 	const seeded = demoLayanganScores().filter(
 		(s) => s.competitionId === competitionId,
 	) as LayanganScoreRecord[];
@@ -68,6 +87,24 @@ export async function getRoundResults(
 	competitionId: string,
 	round: number,
 ): Promise<LayanganScoreRecord[]> {
+	if (!get(demoMode)) {
+		const { getSupabase, normalizeLayanganScoreRow } = await import(
+			"./queries"
+		);
+		const { supabase } = await getSupabase();
+		const { data, error } = await supabase
+			.from("scores_layangan")
+			.select("*")
+			.eq("competition_id", competitionId)
+			.eq("round", round)
+			.order("received_at", { ascending: true });
+		if (error) {
+			throw new Error(`getRoundResults: ${error.message}`);
+		}
+		return (data ?? []).map((row) =>
+			normalizeLayanganScoreRow(row as Record<string, unknown>),
+		) as LayanganScoreRecord[];
+	}
 	const seeded = demoLayanganScores().filter(
 		(s) => s.competitionId === competitionId && s.round === round,
 	) as LayanganScoreRecord[];
@@ -130,6 +167,7 @@ export async function submitLayanganResult(
 			participantId: input.participantId,
 			round: input.round,
 			status: input.status,
+			flightDurationMs: input.flightDurationMs,
 			receivedAt: new Date(),
 			idempotencyKey: crypto.randomUUID(),
 			recordedBy: input.recordedBy,
@@ -137,6 +175,7 @@ export async function submitLayanganResult(
 		await saveLocal(record);
 		return { queued: false, id: record.id };
 	}
+	const idempotencyKey = crypto.randomUUID();
 	try {
 		const { supabase } = await import("./supabaseClient");
 		const { data, error } = await supabase
@@ -146,8 +185,9 @@ export async function submitLayanganResult(
 				participant_id: input.participantId,
 				round: input.round,
 				status: input.status,
+				flight_duration_ms: input.flightDurationMs,
 				recorded_by: input.recordedBy,
-				idempotency_key: crypto.randomUUID(),
+				idempotency_key: idempotencyKey,
 			})
 			.select("id")
 			.single();
@@ -162,7 +202,9 @@ export async function submitLayanganResult(
 			participantId: input.participantId,
 			round: input.round,
 			status: input.status,
+			flightDurationMs: input.flightDurationMs,
 			recordedBy: input.recordedBy,
+			idempotencyKey,
 		});
 		return { queued: true, id: key };
 	}

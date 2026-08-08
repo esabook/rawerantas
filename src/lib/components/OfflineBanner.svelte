@@ -7,7 +7,7 @@
 	<div
 		role="status"
 		aria-live="polite"
-		class="glass-panel z-30 mx-auto flex w-full max-w-lg items-center gap-2 px-4 py-2 text-sm {!$online ? 'bg-destructive/20' : ''}"
+		class="glass-panel z-30 flex w-full items-center gap-2 px-4 py-2 text-sm {!$online ? 'bg-destructive/20' : ''}"
 	>
 		{#if !$online}
 			<WifiOff class="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />

@@ -3,15 +3,22 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 
-function baseUrlGuard(baseUrl: string | undefined): Plugin {
+const DEV_DEFAULT_BASE_URL = "http://localhost:5173";
+
+function baseUrlGuard(baseUrl: string | undefined, mode: string): Plugin {
 	return {
 		name: "base-url-guard",
 		buildStart() {
-			if (baseUrl === undefined || baseUrl.length === 0) {
-				console.warn(
-					"[env] PUBLIC_BASE_URL kosong — QR e-tiket dan link wa.me akan salah. Isi di .env sebelum build rilis.",
-				);
+			const isEmpty = baseUrl === undefined || baseUrl.length === 0;
+			const isDevDefault = baseUrl === DEV_DEFAULT_BASE_URL;
+			if (!isEmpty && !isDevDefault) return;
+			const message = isEmpty
+				? "[env] PUBLIC_BASE_URL kosong — QR e-tiket dan link wa.me akan salah. Isi di .env sebelum build rilis."
+				: `[env] PUBLIC_BASE_URL masih nilai dev default (${DEV_DEFAULT_BASE_URL}) — QR e-tiket dan link wa.me akan mati di production. Isi domain rilis sebelum build.`;
+			if (mode === "production") {
+				throw new Error(message);
 			}
+			console.warn(message);
 		},
 	};
 }
@@ -21,7 +28,7 @@ export default defineConfig(({ mode }) => {
 	return {
 		plugins: [
 			tailwindcss(),
-			baseUrlGuard(env.PUBLIC_BASE_URL),
+			baseUrlGuard(env.PUBLIC_BASE_URL, mode),
 			sveltekit({
 				compilerOptions: {
 					// Force runes mode for the project, except for libraries. Can be removed in svelte 6.

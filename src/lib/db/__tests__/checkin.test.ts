@@ -8,8 +8,9 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
-	PUBLIC_ADMIN_PIN: "1234",
-	PUBLIC_JURI_PIN: "1234",
+	PUBLIC_ADMIN_PIN: "123456",
+	PUBLIC_PANITIA_PIN: "123456",
+	PUBLIC_JURI_PIN: "123456",
 }));
 
 const DISQ_ID = "disq-0000-0000-0000-000000000000";
@@ -36,14 +37,18 @@ vi.mock("$lib/db/queries", async (importOriginal) => {
 	};
 });
 
+import { rejectPayment } from "$lib/db/admin";
 import {
 	CheckinError,
 	checkInParticipant,
 	findParticipantByTicket,
+	getCheckinStats,
 	getCheckinSummary,
 	resetDemoCheckins,
 } from "$lib/db/checkin";
-import { demoParticipants } from "$lib/demo/generator";
+import { resetDemoPayments, submitPayment } from "$lib/db/payment";
+import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";
+import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
 import { setDemoMode } from "$lib/demo/store";
 
 const dpPaid = demoParticipants().find((p) => p.status === "dp_paid");
@@ -60,6 +65,8 @@ describe("checkin domain", () => {
 	beforeEach(async () => {
 		await setDemoMode(true);
 		await resetDemoCheckins();
+		await resetDemoPayments();
+		await resetDemoRegistrations();
 	});
 
 	it("ringkasan: status seed + sisa bayar", async () => {
@@ -82,6 +89,86 @@ describe("checkin domain", () => {
 		await checkInParticipant(dpPaid.id);
 		const { eligibility } = await checkInParticipant(dpPaid.id);
 		expect(eligibility).toBe("already");
+	});
+
+	it("statistik menghitung peserta terdaftar dan sisa belum check-in", async () => {
+		const before = await getCheckinStats();
+		await checkInParticipant(dpPaid.id);
+		const after = await getCheckinStats();
+
+		expect(after.registered).toBe(before.registered);
+		expect(after.checkedIn).toBe(before.checkedIn + 1);
+		expect(after.remaining).toBe(before.remaining - 1);
+	});
+
+	it("statistik dan pencarian dapat difilter berdasarkan lomba", async () => {
+		const competition = demoCompetitions()[0];
+		const participantInCompetition = demoParticipants().find(
+			(p) => p.competitionId === competition.id,
+		);
+		const participantInOtherCompetition = demoParticipants().find(
+			(p) => p.competitionId !== competition.id,
+		);
+		if (!participantInCompetition || !participantInOtherCompetition) {
+			throw new Error("peserta untuk test filter tidak ditemukan");
+		}
+
+		const stats = await getCheckinStats(competition.id);
+		expect(stats.registered).toBe(
+			demoParticipants().filter((p) => p.competitionId === competition.id)
+				.length,
+		);
+		expect(
+			await findParticipantByTicket(
+				participantInCompetition.ticketNumber,
+				competition.id,
+			),
+		).not.toBeNull();
+		expect(
+			await findParticipantByTicket(
+				participantInOtherCompetition.ticketNumber,
+				competition.id,
+			),
+		).toBeNull();
+	});
+
+	it("pembayaran tertolak tidak dihitung dan tidak bisa masuk dari pencarian", async () => {
+		const competition = demoCompetitions()[0];
+		const registration = await registerParticipant({
+			competitionId: competition.id,
+			name: "Peserta Tertolak",
+			phone: "081234567899",
+		});
+		await submitPayment(
+			{
+				participantId: registration.participantId,
+				competitionId: competition.id,
+				method: "qris",
+				amount: 25_000,
+				proofBlob: null,
+				isCash: false,
+			},
+			"dp",
+			competition,
+		);
+		const { getPayments } = await import("$lib/db/queries");
+		const payment = (await getPayments(registration.participantId))[0];
+		if (!payment) {
+			throw new Error("pembayaran test tidak ditemukan");
+		}
+		await rejectPayment(payment.id, "panitia-test", "Bukti tidak valid");
+
+		const stats = await getCheckinStats();
+		const summary = await getCheckinSummary(registration.participantId);
+		expect(summary.paid).toBe(0);
+		expect(summary.paymentRejected).toBe(true);
+		expect(stats.registered).toBe(50);
+		await expect(
+			findParticipantByTicket(summary.participant.ticketNumber),
+		).rejects.toThrow("ditolak admin");
+		await expect(
+			checkInParticipant(registration.participantId),
+		).rejects.toThrow("ditolak admin");
 	});
 
 	it("peserta registered (tanpa DP) → ditolak", async () => {

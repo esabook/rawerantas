@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { env } from "$lib/env";
 
-	let { eventDate, endDate }: { eventDate?: string; endDate?: string } = $props();
+	let { eventDate, endDate }: { eventDate?: string; endDate?: string } =
+		$props();
 
 	const DEFAULT_EVENT_HOURS = 12;
 
@@ -18,7 +19,9 @@
 		endDate !== undefined
 			? parse(endDate)
 			: start
-				? new Date(start.getTime() + DEFAULT_EVENT_HOURS * 60 * 60 * 1000)
+				? new Date(
+						start.getTime() + DEFAULT_EVENT_HOURS * 60 * 60 * 1000,
+					)
 				: null,
 	);
 
@@ -68,7 +71,12 @@
 </script>
 
 <div
-	class="mx-auto flex w-full max-w-md flex-col items-center gap-3 rounded-xl border border-border/60 bg-background/60 px-6 py-6 text-center {status === 'live' ? 'border-gold bg-gold/10' : ''}"
+	class="flex w-full flex-col items-center gap-3 rounded-xl border px-4 py-5 text-center {status ===
+	'segera'
+		? 'border-rose-200/45 bg-[linear-gradient(135deg,rgba(127,29,29,0.72),rgba(10,15,28,0.96)_54%,rgba(248,250,252,0.12))] shadow-[0_0_34px_rgba(220,38,38,0.18)]'
+		: status === 'live'
+			? 'border-gold bg-gold/10'
+			: 'border-slate-800 bg-background/60'} sm:px-4 sm:py-6"
 	role="status"
 	aria-live="polite"
 >
@@ -79,36 +87,75 @@
 		</p>
 	{:else}
 		<p
-			class="text-xs font-semibold uppercase tracking-widest {status === 'live' ? 'text-gold' : 'text-secondary'}"
+			class="font-display text-xs font-semibold uppercase tracking-widest {status ===
+			'segera'
+				? 'text-rose-100'
+				: status === 'live'
+					? 'text-gold'
+					: 'text-secondary'}"
 		>
 			{statusLabel[status]}
 		</p>
 		{#if parts && status === "segera"}
 			<div class="grid w-full grid-cols-4 gap-2" aria-label="countdown">
-				<div class="flex flex-col items-center gap-1 rounded-xl border border-border/60 bg-background/80 px-1 py-2.5">
-					<span class="text-2xl font-bold tabular-nums">{parts.days}</span>
-					<span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">hari</span>
+				<div
+					class="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-white/20 bg-slate-950/70 px-1 py-2.5"
+				>
+					<span
+						class="font-display text-2xl font-bold tabular-nums text-white"
+						>{parts.days}</span
+					>
+					<span
+						class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+						>hari</span
+					>
 				</div>
-				<div class="flex flex-col items-center gap-1 rounded-xl border border-border/60 bg-background/80 px-1 py-2.5">
-					<span class="text-2xl font-bold tabular-nums">{pad(parts.hours)}</span>
-					<span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">jam</span>
+				<div
+					class="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-white/20 bg-slate-950/70 px-1 py-2.5"
+				>
+					<span
+						class="font-display text-2xl font-bold tabular-nums text-white"
+						>{pad(parts.hours)}</span
+					>
+					<span
+						class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+						>jam</span
+					>
 				</div>
-				<div class="flex flex-col items-center gap-1 rounded-xl border border-border/60 bg-background/80 px-1 py-2.5">
-					<span class="text-2xl font-bold tabular-nums">{pad(parts.minutes)}</span>
-					<span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">menit</span>
+				<div
+					class="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-white/20 bg-slate-950/70 px-1 py-2.5"
+				>
+					<span
+						class="font-display text-2xl font-bold tabular-nums text-white"
+						>{pad(parts.minutes)}</span
+					>
+					<span
+						class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+						>menit</span
+					>
 				</div>
-				<div class="flex flex-col items-center gap-1 rounded-xl border border-gold/40 bg-gold/10 px-1 py-2.5">
-					<span class="text-2xl font-bold tabular-nums text-gold">{pad(parts.seconds)}</span>
-					<span class="text-[10px] font-medium uppercase tracking-wide text-gold">detik</span>
+				<div
+					class="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-white/75 bg-white/10 px-1 py-2.5 shadow-[0_0_16px_rgba(248,250,252,0.15)]"
+				>
+					<span
+						class="font-display text-2xl font-bold tabular-nums text-white"
+						>{pad(parts.seconds)}</span
+					>
+					<span
+						class="text-[10px] font-medium uppercase tracking-wide text-white"
+						>detik</span
+					>
 				</div>
 			</div>
 		{:else if status === "live"}
-			<p class="text-2xl font-bold text-gold">Live!</p>
+			<p class="font-display text-2xl font-bold text-cyan-200">Live!</p>
 			<p class="text-sm text-muted-foreground">
 				Event berlangsung hingga {end?.toLocaleString("id-ID")}
 			</p>
 		{:else if status === "habis"}
-			<p class="text-2xl font-bold">Sampai jumpa tahun depan!</p>
+			<p class="font-display text-2xl font-bold">
+				Sampai jumpa tahun depan!
+			</p>
 		{/if}
 	{/if}
 </div>

@@ -11,8 +11,9 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
-	PUBLIC_ADMIN_PIN: "1234",
-	PUBLIC_JURI_PIN: "1234",
+	PUBLIC_ADMIN_PIN: "123456",
+	PUBLIC_PANITIA_PIN: "123456",
+	PUBLIC_JURI_PIN: "123456",
 }));
 
 import LayanganPanel from "$lib/components/LayanganPanel.svelte";
@@ -37,13 +38,33 @@ const renderPanel = async (round: number) => {
 	});
 	await waitFor(
 		() => {
+			expect(result.container.textContent ?? "").toContain(`Babak ${round}`);
 			expect(
-				result.container.querySelectorAll("button:has(svg)").length,
+				result.container.querySelectorAll("ul button").length,
 			).toBeGreaterThan(0);
 		},
 		{ timeout: 5000 },
 	);
 	return result;
+};
+
+const findButton = (container: HTMLElement, label: string) =>
+	Array.from(container.querySelectorAll("button")).find((b) =>
+		(b.textContent ?? "").includes(label),
+	);
+
+const startAndStopTimer = async (container: HTMLElement) => {
+	const start = findButton(container, "Mulai Terbang");
+	expect(start).toBeDefined();
+	await fireEvent.click(start as Element);
+	await waitFor(() => expect(findButton(container, "Berhenti")).toBeDefined());
+	await fireEvent.click(findButton(container, "Berhenti") as Element);
+	await waitFor(() => {
+		const mudun = findButton(container, "Catat MUDUN") as
+			| HTMLButtonElement
+			| undefined;
+		expect(mudun?.disabled).toBe(false);
+	});
 };
 
 describe("LayanganPanel", () => {
@@ -69,24 +90,45 @@ describe("LayanganPanel", () => {
 		online.set(true);
 	});
 
-	it("peserta dengan hasil seed babak 1 tidak muncul sebagai aktif", async () => {
+	it("card menampilkan semua peserta dengan label status", async () => {
 		const { container } = await renderPanel(1);
-		const buttons = Array.from(container.querySelectorAll("button")).filter(
-			(b) => (b.textContent ?? "").includes("MUDUN"),
-		);
-		expect(buttons.length).toBeLessThan(aduanParticipants.length);
-		expect(buttons.length).toBeGreaterThan(0);
+		const cards = container.querySelectorAll("ul button");
+		expect(cards.length).toBeLessThan(aduanParticipants.length);
+		expect(container.textContent ?? "").toContain("BELUM DINILAI");
+		const scoredTab = Array.from(
+			container.querySelectorAll('[role="tab"]'),
+		).find((button) => (button.textContent ?? "").includes("Sudah dinilai"));
+		expect(scoredTab).toBeDefined();
+		await fireEvent.click(scoredTab as Element);
+		await waitFor(() => {
+			expect(container.querySelectorAll("ul button").length).toBeGreaterThan(0);
+			expect(container.textContent ?? "").toContain("MUDUN");
+		});
+		expect(
+			Array.from(container.querySelectorAll("button")).filter((button) =>
+				(button.textContent ?? "").includes("Catat MUDUN"),
+			).length,
+		).toBe(0);
 	});
 
-	it("klik MUDUN → toast, peserta pindah ke hasil tercatat", async () => {
+	it("klik card → popup konfirmasi → MUDUN tercatat", async () => {
 		const { container } = await renderPanel(2);
-		const buttons = () =>
-			Array.from(container.querySelectorAll("button")).filter((b) =>
-				(b.textContent ?? "").includes("MUDUN"),
+		const pendingCards = () =>
+			Array.from(container.querySelectorAll("ul button")).filter((b) =>
+				(b.textContent ?? "").includes("BELUM DINILAI"),
 			);
-		const before = buttons().length;
+		const before = pendingCards().length;
 		expect(before).toBeGreaterThan(0);
-		fireEvent.click(buttons()[0]);
+		await fireEvent.click(pendingCards()[0]);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
+		});
+		await startAndStopTimer(container);
+		const mudun = Array.from(container.querySelectorAll("button")).find((b) =>
+			(b.textContent ?? "").includes("Catat MUDUN"),
+		);
+		expect(mudun).toBeDefined();
+		await fireEvent.click(mudun as Element);
 		await waitFor(
 			() => {
 				expect(get(toasts).some((t) => t.message.includes("Tersimpan"))).toBe(
@@ -97,18 +139,28 @@ describe("LayanganPanel", () => {
 		);
 		toasts.set([]);
 		await waitFor(() => {
-			expect(buttons().length).toBe(before - 1);
+			expect(pendingCards().length).toBe(before - 1);
 		});
 	});
 
-	it("undo 5 detik mengembalikan peserta ke daftar aktif", async () => {
+	it("undo 5 detik mengembalikan status card menjadi belum dinilai", async () => {
 		const { container } = await renderPanel(2);
-		const buttons = () =>
-			Array.from(container.querySelectorAll("button")).filter((b) =>
-				(b.textContent ?? "").includes("MUDUN"),
+		const pendingCards = () =>
+			Array.from(container.querySelectorAll("ul button")).filter((b) =>
+				(b.textContent ?? "").includes("BELUM DINILAI"),
 			);
-		const before = buttons().length;
-		fireEvent.click(buttons()[0]);
+		const before = pendingCards().length;
+		await fireEvent.click(pendingCards()[0]);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
+		});
+		await startAndStopTimer(container);
+		const mudun = () =>
+			Array.from(container.querySelectorAll("button")).find((b) =>
+				(b.textContent ?? "").includes("Catat MUDUN"),
+			);
+		await waitFor(() => expect(mudun()).toBeDefined());
+		await fireEvent.click(mudun() as Element);
 		await waitFor(
 			() => {
 				const t = get(toasts).find((x) => x.message.includes("Tersimpan"));
@@ -120,11 +172,11 @@ describe("LayanganPanel", () => {
 			{ timeout: 5000 },
 		);
 		await waitFor(() => {
-			expect(buttons().length).toBe(before);
+			expect(pendingCards().length).toBe(before);
 		});
 	});
 
-	it("round berubah → board reset (semua peserta aktif lagi)", async () => {
+	it("round berubah → label babak ikut berubah", async () => {
 		const { container } = await renderPanel(1);
 		expect((container.textContent ?? "").includes("Babak 1")).toBe(true);
 		const a = await renderPanel(2);
@@ -134,16 +186,38 @@ describe("LayanganPanel", () => {
 
 	it("klik PUTUS mencatat status putus", async () => {
 		const { container } = await renderPanel(2);
-		const putus = Array.from(container.querySelectorAll("button")).filter((b) =>
-			(b.textContent ?? "").includes("PUTUS"),
-		)[0];
+		const card = container.querySelector("ul button");
+		expect(card).toBeDefined();
+		await fireEvent.click(card as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
+		});
+		await startAndStopTimer(container);
+		const putus = Array.from(container.querySelectorAll("button")).find((b) =>
+			(b.textContent ?? "").includes("Catat PUTUS"),
+		);
 		expect(putus).toBeDefined();
-		fireEvent.click(putus as Element);
+		await fireEvent.click(putus as Element);
 		await waitFor(
 			() => {
 				expect(get(toasts).some((t) => t.message.includes("PUTUS"))).toBe(true);
 			},
 			{ timeout: 5000 },
 		);
+	});
+
+	it("mencari nomor peserta memfilter card", async () => {
+		const { container } = await renderPanel(2);
+		const search = container.querySelector('input[type="search"]');
+		expect(search).toBeDefined();
+		await fireEvent.input(search as HTMLInputElement, {
+			target: { value: aduanParticipants[0].ticketNumber },
+		});
+		await waitFor(() => {
+			expect(container.querySelectorAll("ul button").length).toBe(1);
+			expect(container.textContent ?? "").toContain(
+				aduanParticipants[0].ticketNumber,
+			);
+		});
 	});
 });

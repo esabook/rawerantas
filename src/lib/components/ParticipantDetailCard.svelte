@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { CheckCircle2, Loader2, LogIn, UserCheck, XCircle } from "@lucide/svelte";
+	import {
+		Banknote,
+		CheckCircle2,
+		Loader2,
+		LogIn,
+		XCircle,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { sfx, vibrate } from "$lib/audio/sfx";
 	import { undoable } from "$lib/components/toast/toastStore";
@@ -9,6 +15,7 @@
 		getCheckinSummary,
 	} from "$lib/db/checkin";
 	import type { CheckinSummary } from "$lib/db/checkin";
+	import { submitCashPayment } from "$lib/db/payment";
 
 	let {
 		participantId,
@@ -21,6 +28,7 @@
 	let summary = $state<CheckinSummary | null>(null);
 	let loading = $state(true);
 	let checking = $state(false);
+	let paying = $state(false);
 	let error = $state("");
 
 	const statusLabel: Record<string, string> = {
@@ -48,13 +56,16 @@
 	});
 
 	const checkin = async () => {
-		if (checking) {
+		if (checking || paying || summary?.paymentRejected) {
 			return;
 		}
 		checking = true;
 		error = "";
 		try {
-			const { eligibility } = await checkInParticipant(participantId, null);
+			const { eligibility } = await checkInParticipant(
+				participantId,
+				null,
+			);
 			if (eligibility === "already") {
 				undoable("Peserta sudah check-in sebelumnya.", {
 					onConfirm: () => {},
@@ -79,6 +90,45 @@
 			checking = false;
 		}
 	};
+
+	const payCash = async () => {
+		if (
+			!summary ||
+			paying ||
+			checking ||
+			summary.paymentRejected ||
+			summary.status === "checked_in" ||
+			summary.remaining <= 0
+		) {
+			return;
+		}
+		paying = true;
+		error = "";
+		try {
+			await submitCashPayment(
+				{
+					participantId: summary.participant.id,
+					competitionId: summary.participant.competitionId,
+				},
+				{ fee: summary.fee },
+			);
+			undoable("Pelunasan tunai berhasil dicatat.", {
+				onConfirm: () => {},
+			});
+			sfx.coin();
+			vibrate([80, 40, 120]);
+			await load();
+		} catch (e) {
+			sfx.error();
+			vibrate([120, 60, 120]);
+			error =
+				e instanceof Error
+					? e.message
+					: "Gagal mencatat pembayaran tunai.";
+		} finally {
+			paying = false;
+		}
+	};
 </script>
 
 {#if loading}
@@ -87,41 +137,67 @@
 		<p class="text-sm">Memuat peserta…</p>
 	</div>
 {:else if error && !summary}
-	<div class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+	<div
+		class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+		role="alert"
+	>
 		<XCircle class="mr-1 inline h-4 w-4" aria-hidden="true" />
 		{error}
 	</div>
 {:else if summary}
-	<div class="flex flex-col gap-3 rounded-xl border border-border bg-background/60 p-5">
+	<div
+		class="flex flex-col gap-3 rounded-xl border border-border bg-background/60 p-5"
+	>
 		<div class="flex items-start justify-between gap-3">
 			<div>
 				<p class="text-lg font-bold">{summary.participant.name}</p>
 				<p class="text-xs text-muted-foreground">
-					{summary.competitionName} · Tiket {summary.participant.ticketNumber}
+					{summary.competitionName} · Tiket {summary.participant
+						.ticketNumber}
 				</p>
 				<p class="text-xs text-muted-foreground">
-					Lapak {summary.participant.lapakNumber}
+					BIB {summary.participant.lapakNumber}
 				</p>
 			</div>
 			<span
-				class="rounded-full px-2.5 py-1 text-xs font-semibold {summary.status === 'checked_in'
-					? 'bg-sky-500/15 text-sky-600'
-					: summary.status === 'disqualified'
-						? 'bg-destructive/15 text-destructive'
-						: summary.status === 'fully_paid'
-							? 'bg-emerald-500/15 text-emerald-600'
-							: 'bg-amber-500/15 text-amber-600'}"
+				class="rounded-full px-2.5 py-1 text-xs font-semibold {summary.paymentRejected
+					? 'bg-rose-500/15 text-rose-600'
+					: summary.status === 'checked_in'
+						? 'bg-sky-500/15 text-sky-600'
+						: summary.status === 'disqualified'
+							? 'bg-destructive/15 text-destructive'
+							: summary.status === 'fully_paid'
+								? 'bg-emerald-500/15 text-emerald-600'
+								: 'bg-amber-500/15 text-amber-600'}"
 			>
-				{statusLabel[summary.status] ?? summary.status}
+				{summary.paymentRejected
+					? "Pembayaran ditolak"
+					: (statusLabel[summary.status] ?? summary.status)}
 			</span>
 		</div>
 
-		<div class="flex justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
+		<div
+			class="flex justify-between rounded-lg border border-border/60 px-2 py-2 text-sm"
+		>
 			<span class="text-muted-foreground">Sisa bayar</span>
 			<span class="font-mono font-semibold tabular-nums">
 				{summary.remaining.toLocaleString("id-ID")}
 			</span>
 		</div>
+
+		{#if summary.paymentRejected}
+			<div
+				class="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-700"
+				role="alert"
+			>
+				<p>Pembayaran ditolak admin. Peserta tidak dapat check-in.</p>
+				{#if summary.rejectionReason}
+					<p class="mt-1 text-xs">
+						Alasan: {summary.rejectionReason}
+					</p>
+				{/if}
+			</div>
+		{/if}
 
 		{#if summary.checkedInAt}
 			<p class="text-xs text-muted-foreground" role="status">
@@ -133,12 +209,35 @@
 			<p class="text-sm text-destructive" role="alert">{error}</p>
 		{/if}
 
-		{#if summary.status !== "checked_in"}
+		{#if !summary.paymentRejected && summary.status !== "checked_in" && summary.remaining > 0}
+			<button
+				type="button"
+				class="btn btn-ghost h-11 text-sm"
+				onclick={() => void payCash()}
+				disabled={paying || checking}
+			>
+				{#if paying}
+					<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+					Mencatat…
+				{:else}
+					<Banknote class="h-4 w-4" aria-hidden="true" />
+					Bayar tunai Rp {summary.remaining.toLocaleString("id-ID")}
+				{/if}
+			</button>
+		{/if}
+
+		{#if summary.paymentRejected}
+			<p class="text-sm font-semibold text-rose-700" role="status">
+				Check-in diblokir.
+			</p>
+		{:else if summary.status !== "checked_in"}
 			<button
 				type="button"
 				class="btn btn-gold h-12 text-base"
 				onclick={() => void checkin()}
-				disabled={checking || summary.status === "disqualified"}
+				disabled={checking ||
+					paying ||
+					summary.status === "disqualified"}
 			>
 				{#if checking}
 					<Loader2 class="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -149,7 +248,10 @@
 				{/if}
 			</button>
 		{:else}
-			<p class="flex items-center gap-1.5 text-sm text-emerald-600" role="status">
+			<p
+				class="flex items-center gap-1.5 text-sm text-emerald-600"
+				role="status"
+			>
 				<CheckCircle2 class="h-4 w-4" aria-hidden="true" />
 				Peserta sudah masuk.
 			</p>

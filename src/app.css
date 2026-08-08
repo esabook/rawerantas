@@ -6,31 +6,31 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-	--background: #0a0a0a;
-	--foreground: #f8fafc;
-	--card: #141414;
+	--background: #05070d;
+	--foreground: #e5edf7;
+	--card: #0a0f1c;
 	--card-foreground: #f8fafc;
-	--popover: #141414;
+	--popover: #0a0f1c;
 	--popover-foreground: #f8fafc;
-	--primary: #7f1d1d;
+	--primary: #1d4ed8;
 	--primary-foreground: #f8fafc;
-	--secondary: #d97706;
-	--secondary-foreground: #0a0a0a;
-	--muted: #262626;
-	--muted-foreground: #a3a3a3;
-	--accent: #262626;
+	--secondary: #22d3ee;
+	--secondary-foreground: #06111b;
+	--muted: #111827;
+	--muted-foreground: #94a3b8;
+	--accent: #172033;
 	--accent-foreground: #f8fafc;
-	--success: #059669;
+	--success: #34d399;
 	--success-foreground: #f8fafc;
-	--destructive: #e11d48;
+	--destructive: #fb7185;
 	--destructive-foreground: #f8fafc;
-	--border: #262626;
-	--input: #262626;
-	--ring: #d97706;
-	--chart-1: #d97706;
-	--chart-2: #7f1d1d;
-	--chart-3: #059669;
-	--chart-4: #a3a3a3;
+	--border: #1e293b;
+	--input: #111827;
+	--ring: #22d3ee;
+	--chart-1: #22d3ee;
+	--chart-2: #2563eb;
+	--chart-3: #34d399;
+	--chart-4: #94a3b8;
 	--chart-5: #f8fafc;
 	--radius: 0.625rem;
 }
@@ -104,11 +104,84 @@
 }
 
 @utility btn-sm {
-	@apply gap-1.5 rounded-md px-3 py-1.5 text-xs;
+	@apply gap-1.5 rounded-md px-2 py-1.5 text-xs;
+}
+
+@keyframes rainbow-edge-weave {
+	0% {
+		background-position: 0% 50%;
+		box-shadow:
+			0 0 9px rgb(0 255 255 / 0.34),
+			0 0 22px rgb(0 255 255 / 0.12);
+	}
+	14.285% {
+		background-position: 50% 50%;
+		box-shadow:
+			0 0 9px rgb(255 0 255 / 0.38),
+			0 0 22px rgb(255 0 255 / 0.14);
+	}
+	28.57% {
+		background-position: 100% 50%;
+		box-shadow:
+			0 0 9px rgb(255 255 0 / 0.4),
+			0 0 22px rgb(255 255 0 / 0.14);
+	}
+	42.855% {
+		background-position: 150% 50%;
+		box-shadow:
+			0 0 9px rgb(248 250 252 / 0.38),
+			0 0 22px rgb(248 250 252 / 0.13);
+	}
+	57.14% {
+		background-position: 200% 50%;
+		box-shadow:
+			0 0 9px rgb(255 0 72 / 0.4),
+			0 0 22px rgb(255 0 72 / 0.14);
+	}
+	71.425% {
+		background-position: 250% 50%;
+		box-shadow:
+			0 0 9px rgb(0 255 114 / 0.38),
+			0 0 22px rgb(0 255 114 / 0.14);
+	}
+	85.71% {
+		background-position: 300% 50%;
+		box-shadow:
+			0 0 9px rgb(59 91 255 / 0.4),
+			0 0 22px rgb(59 91 255 / 0.14);
+	}
+	100% {
+		background-position: 0% 50%;
+		box-shadow:
+			0 0 9px rgb(0 255 255 / 0.34),
+			0 0 22px rgb(0 255 255 / 0.12);
+	}
+}
+
+.rainbow-edge-button {
+	border: 1px solid transparent;
+	background:
+		linear-gradient(rgb(15 23 42 / 0.94), rgb(15 23 42 / 0.72)) padding-box,
+		linear-gradient(
+			90deg,
+			#00ffff 0%,
+			#ff00ff 14.285%,
+			#ffff00 28.57%,
+			#05070d 42.855%,
+			#ff0048 57.14%,
+			#00ff72 71.425%,
+			#3b5bff 85.71%,
+			#00ffff 100%
+		)
+		border-box;
+	background-size:
+		100% 100%,
+		300% 100%;
+	animation: rainbow-edge-weave 3.5s linear infinite;
 }
 
 @utility input {
-	@apply w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+	@apply w-full rounded-lg border border-border bg-background px-2 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 @utility no-scrollbar {
@@ -146,9 +219,11 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+		overflow-x: hidden;
 	}
 	html {
 		@apply font-sans;
+		overflow-x: hidden;
 	}
 	* {
 		-webkit-user-select: none;

@@ -16,6 +16,7 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
 	PUBLIC_ADMIN_PIN: "",
+	PUBLIC_PANITIA_PIN: "",
 	PUBLIC_JURI_PIN: "",
 }));
 
@@ -51,7 +52,7 @@ describe("verifyPin", () => {
 	it("PIN benar → grant ditulis; salah → error", async () => {
 		const grant = await verifyPin("juri", DEMO_PIN);
 		expect(grant.kind).toBe("juri");
-		await expect(verifyPin("juri", "0000")).rejects.toThrow("PIN salah");
+		await expect(verifyPin("juri", "000000")).rejects.toThrow("PIN salah");
 	});
 
 	it("lockout 5× salah → PinLockoutError", async () => {
@@ -73,7 +74,7 @@ describe("PinGate", () => {
 	});
 
 	it("PIN salah → error tampil, children tidak render", async () => {
-		await typePin("0000");
+		await typePin("000000");
 		await waitFor(() =>
 			expect(
 				(screen.getByRole("alert").textContent ?? "").includes("PIN salah"),
@@ -84,7 +85,7 @@ describe("PinGate", () => {
 
 	it("5× salah → lockout message + keypad hilang", async () => {
 		for (let i = 0; i < MAX_ATTEMPTS; i++) {
-			await typePin("0000");
+			await typePin("000000");
 			await waitFor(() => expect(screen.queryByRole("alert")).toBeTruthy());
 		}
 		await waitFor(() =>

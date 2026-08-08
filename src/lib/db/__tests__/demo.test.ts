@@ -9,6 +9,7 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_EVENT_DATE: "",
 	PUBLIC_JURI_PIN: "",
 	PUBLIC_ADMIN_PIN: "",
+	PUBLIC_PANITIA_PIN: "",
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 }));
 

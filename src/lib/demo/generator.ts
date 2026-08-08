@@ -7,12 +7,14 @@ import type {
 	scoresLayangan,
 	scoresLayanganHias,
 	scoresMancing,
+	sponsors,
 } from "../db/schema";
 
 export type MockCompetition = InferSelectModel<typeof competitions>;
 export type MockParticipant = InferSelectModel<typeof participants>;
 export type MockPayment = InferSelectModel<typeof participantPayments>;
 export type MockPaymentConfig = InferSelectModel<typeof paymentConfigs>;
+export type MockSponsor = InferSelectModel<typeof sponsors>;
 export type MockMancing = InferSelectModel<typeof scoresMancing>;
 export type MockLayangan = InferSelectModel<typeof scoresLayangan>;
 export type MockHias = InferSelectModel<typeof scoresLayanganHias>;
@@ -136,7 +138,7 @@ export const mockParticipants: MockParticipant[] = Array.from(
 			ticketNumber: `RA-2026-${idx.toString().padStart(3, "0")}`,
 			lapakNumber: idx.toString(),
 			name: `${FIRST_NAMES[idx % FIRST_NAMES.length]} ${LAST_NAMES[(idx * 7) % LAST_NAMES.length]}`,
-			phone: `6281${int(100000000, 999999999)}`,
+			phone: `+6281${int(100000000, 999999999)}`,
 			status:
 				idx <= 12
 					? "fully_paid"
@@ -145,6 +147,7 @@ export const mockParticipants: MockParticipant[] = Array.from(
 						: idx <= 30
 							? "checked_in"
 							: "registered",
+			checkedInAt: idx > 22 && idx <= 30 ? at(-int(1_000, 20_000)) : null,
 			createdAt: at(-int(1_000, 40_000)),
 		};
 	},
@@ -162,6 +165,7 @@ export const mockPayments: MockPayment[] = mockParticipants
 		isVerified: p.status === "fully_paid" || p.status === "checked_in",
 		verifiedBy:
 			p.status === "fully_paid" || p.status === "checked_in" ? PIN_HASH : null,
+		rejectReason: null,
 		createdAt: at(-int(1_000, 40_000)),
 	}));
 
@@ -205,6 +209,27 @@ export const mockPaymentConfigs: MockPaymentConfig[] = [
 		instructions: "Bayar tunai ke panitia di lokasi.",
 		isActive: false,
 		createdAt: at(-27_000),
+	},
+];
+
+export const mockSponsors: MockSponsor[] = [
+	{
+		id: uuid(3000),
+		imageUrl: "https://placehold.co/1200x360/0b1020/22d3ee?text=SPONSOR+ARENA",
+		url: "https://example.com/arena",
+		createdAt: at(-20_000),
+	},
+	{
+		id: uuid(3001),
+		imageUrl: "https://placehold.co/1200x360/111827/a5b4fc?text=PARTNER+WARGA",
+		url: "https://example.com/partner",
+		createdAt: at(-19_000),
+	},
+	{
+		id: uuid(3002),
+		imageUrl: "https://placehold.co/1200x360/450a0a/fda4af?text=DUKUNG+LOMBA",
+		url: "https://example.com/support",
+		createdAt: at(-18_000),
 	},
 ];
 
@@ -254,6 +279,7 @@ export const mockLayanganScores: MockLayangan[] = mockParticipants
 		participantId: p.id,
 		round: 1,
 		status: pick(["mudun", "putus", "menang"] as const),
+		flightDurationMs: int(30_000, 600_000),
 		recordedBy: PIN_HASH,
 		idempotencyKey: uuid(50_000 + i),
 		receivedAt: at(int(600_000, 7_200_000)),
@@ -289,3 +315,4 @@ export const demoLayanganScores = () => mockLayanganScores;
 export const demoHiasScores = () => mockHiasScores;
 export const demoPayments = () => mockPayments;
 export const demoPaymentConfigs = () => mockPaymentConfigs;
+export const demoSponsors = () => mockSponsors;

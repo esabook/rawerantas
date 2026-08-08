@@ -66,6 +66,21 @@ async function localScores(): Promise<MancingScoreRecord[]> {
 export async function getAllScores(
 	competitionId: string,
 ): Promise<MancingScoreRecord[]> {
+	if (!get(demoMode)) {
+		const { getSupabase, normalizeMancingScoreRow } = await import("./queries");
+		const { supabase } = await getSupabase();
+		const { data, error } = await supabase
+			.from("scores_mancing")
+			.select("*")
+			.eq("competition_id", competitionId)
+			.order("received_at", { ascending: true });
+		if (error) {
+			throw new Error(`getAllScores: ${error.message}`);
+		}
+		return (data ?? []).map((row) =>
+			normalizeMancingScoreRow(row as Record<string, unknown>),
+		) as MancingScoreRecord[];
+	}
 	const seeded = demoMancingScores().filter(
 		(s) => s.competitionId === competitionId,
 	);
@@ -81,6 +96,21 @@ export async function hasJackpot(
 	competitionId: string,
 	participantId: string,
 ): Promise<boolean> {
+	if (!get(demoMode)) {
+		const { getSupabase } = await import("./queries");
+		const { supabase } = await getSupabase();
+		const { data, error } = await supabase
+			.from("scores_mancing")
+			.select("id")
+			.eq("competition_id", competitionId)
+			.eq("participant_id", participantId)
+			.eq("is_jackpot", true)
+			.limit(1);
+		if (error) {
+			throw new Error(`hasJackpot: ${error.message}`);
+		}
+		return (data ?? []).length > 0;
+	}
 	const rows = await getAllScores(competitionId);
 	return rows.some((r) => r.participantId === participantId && r.isJackpot);
 }
@@ -133,6 +163,7 @@ export async function submitMancingScore(
 		await saveLocal(record);
 		return { queued: false, id: record.id };
 	}
+	const idempotencyKey = crypto.randomUUID();
 	try {
 		const { supabase } = await import("./supabaseClient");
 		const { data, error } = await supabase
@@ -143,7 +174,7 @@ export async function submitMancingScore(
 				fish_weight_gram: gram,
 				is_jackpot: input.isJackpot,
 				recorded_by: input.recordedBy,
-				idempotency_key: crypto.randomUUID(),
+				idempotency_key: idempotencyKey,
 			})
 			.select("id")
 			.single();
@@ -159,6 +190,7 @@ export async function submitMancingScore(
 			fishWeightGram: gram,
 			isJackpot: input.isJackpot,
 			recordedBy: input.recordedBy,
+			idempotencyKey,
 		});
 		return { queued: true, id: key };
 	}

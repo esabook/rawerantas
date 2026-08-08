@@ -9,8 +9,9 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
-	PUBLIC_ADMIN_PIN: "1234",
-	PUBLIC_JURI_PIN: "1234",
+	PUBLIC_ADMIN_PIN: "123456",
+	PUBLIC_PANITIA_PIN: "123456",
+	PUBLIC_JURI_PIN: "123456",
 }));
 
 vi.mock("qrcode", () => ({
@@ -33,6 +34,7 @@ const participant: Participant = {
 	name: "Budi Santoso",
 	phone: "6281234567890",
 	status: "fully_paid",
+	checkedInAt: null,
 	createdAt: new Date(),
 };
 
@@ -46,7 +48,7 @@ describe("TicketCard", () => {
 		expect(text).toContain(competition.name);
 		expect(text).toContain("RA-2026-001");
 		expect(text).toContain("Lunas");
-		expect(text).toContain("Lapak #7");
+		expect(text).toContain("BIB #7");
 	});
 
 	it("status lunas menampilkan verifikasi pembayaran", () => {

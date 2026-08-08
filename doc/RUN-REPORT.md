@@ -48,6 +48,10 @@ files; `bun run check` → 0 error; `bunx biome check src/lib src/routes` →
 warnings pre-existing (tts test), tidak ada error; `bun run build` → hijau
 (3 pass).
 
+UPDATE pasca FASE 9 (2026-08-07): `bun run test` → 209 passed / 37 files,
+`bun run lint` → 0 error. Angka di atas basi karena test bertambah selama
+FASE 9 (bukan regresi) — lihat `TASKS.md` FASE 9 untuk detail.
+
 ## Menyimpang dari rencana
 
 - A7-02: `queries.ts` demo branch getCompetitions/getPaymentConfigs dialihkan

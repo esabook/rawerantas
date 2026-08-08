@@ -1,16 +1,23 @@
 import { get } from "svelte/store";
+import { demoParticipants } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
-import type { Participant } from "./queries";
+import type { Participant, ParticipantPayment } from "./queries";
 import {
 	getCompetitions,
 	getParticipantById,
+	getParticipants,
 	getPayments,
 	getSupabase,
+	normalizeParticipantRow,
 } from "./queries";
 
 const STORE = localStores.checkins;
+
+const isRejectedPayment = (
+	payment: Pick<ParticipantPayment, "isVerified" | "rejectReason">,
+): boolean => !payment.isVerified && Boolean(payment.rejectReason?.trim());
 
 export interface CheckinRecord {
 	participantId: string;
@@ -22,6 +29,7 @@ export type CheckinEligibility =
 	| "ok"
 	| "already"
 	| "disqualified"
+	| "payment_rejected"
 	| "not_eligible";
 
 export interface CheckinSummary {
@@ -32,6 +40,14 @@ export interface CheckinSummary {
 	remaining: number;
 	status: Participant["status"];
 	checkedInAt: Date | null;
+	paymentRejected: boolean;
+	rejectionReason: string | null;
+}
+
+export interface CheckinStats {
+	registered: number;
+	checkedIn: number;
+	remaining: number;
 }
 
 export class CheckinError extends Error {
@@ -61,6 +77,51 @@ async function getCheckin(
 	return all.find((c) => c.participantId === participantId) ?? null;
 }
 
+export async function getCheckinStats(
+	competitionId?: string,
+): Promise<CheckinStats> {
+	const isDemo = get(demoMode);
+	let participants: Participant[];
+	if (isDemo) {
+		const { demoLocalParticipants } = await import("./register");
+		participants = [...demoParticipants(), ...(await demoLocalParticipants())];
+		if (competitionId) {
+			participants = participants.filter(
+				(participant) => participant.competitionId === competitionId,
+			);
+		}
+	} else {
+		participants = await getParticipants(competitionId);
+	}
+	const uniqueParticipants = [
+		...new Map(
+			participants.map((participant) => [participant.id, participant]),
+		).values(),
+	];
+	const rejectedParticipantIds = new Set(
+		(await getPayments()).filter(isRejectedPayment).map((p) => p.participantId),
+	);
+	const eligibleParticipants = uniqueParticipants.filter(
+		(participant) =>
+			participant.status !== "disqualified" &&
+			!rejectedParticipantIds.has(participant.id),
+	);
+	const localCheckinIds = isDemo
+		? new Set((await localCheckins()).map((checkin) => checkin.participantId))
+		: new Set<string>();
+	const checkedIn = eligibleParticipants.filter(
+		(participant) =>
+			participant.status === "checked_in" ||
+			localCheckinIds.has(participant.id),
+	).length;
+
+	return {
+		registered: eligibleParticipants.length,
+		checkedIn,
+		remaining: Math.max(0, eligibleParticipants.length - checkedIn),
+	};
+}
+
 /**
  * Ringkasan check-in peserta: data peserta, lomba, status pembayaran,
  * sisa bayar. Mode demo: status efektif = seed/lokal ATAU checked_in lokal.
@@ -78,16 +139,35 @@ export async function getCheckinSummary(
 		(c) => c.id === participant.competitionId,
 	);
 	const checkin = await getCheckin(participantId);
-	const paid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+	const rejectedPayment = payments.find(isRejectedPayment);
+	const paid = payments
+		.filter((p) => p.isVerified && !p.rejectReason?.trim())
+		.reduce((sum, p) => sum + Number(p.amount), 0);
 	const fee = competition?.fee ?? 0;
+	let status: Participant["status"] = checkin
+		? "checked_in"
+		: participant.status;
+	if (!checkin && status !== "disqualified") {
+		if (fee > 0 && paid >= fee) {
+			status = "fully_paid";
+		} else if (
+			status === "registered" &&
+			(competition?.minDp ?? 0) > 0 &&
+			paid >= (competition?.minDp ?? 0)
+		) {
+			status = "dp_paid";
+		}
+	}
 	return {
 		participant,
 		competitionName: competition?.name ?? null,
 		fee,
 		paid,
 		remaining: Math.max(0, fee - paid),
-		status: checkin ? "checked_in" : participant.status,
+		status,
 		checkedInAt: checkin?.checkedInAt ?? null,
+		paymentRejected: Boolean(rejectedPayment),
+		rejectionReason: rejectedPayment?.rejectReason?.trim() ?? null,
 	};
 }
 
@@ -100,14 +180,19 @@ export async function checkInParticipant(
 	recordedBy: string | null = null,
 ): Promise<{ eligibility: CheckinEligibility; summary: CheckinSummary }> {
 	const summary = await getCheckinSummary(participantId);
-	const { participant } = summary;
-	if (participant.status === "disqualified") {
+	if (summary.status === "disqualified") {
 		throw new CheckinError("disqualified", "Peserta didiskualifikasi.");
 	}
+	if (summary.paymentRejected) {
+		throw new CheckinError(
+			"payment_rejected",
+			`Pembayaran peserta ditolak admin${summary.rejectionReason ? `: ${summary.rejectionReason}` : "."}`,
+		);
+	}
 	if (
-		participant.status !== "dp_paid" &&
-		participant.status !== "fully_paid" &&
-		participant.status !== "checked_in"
+		summary.status !== "dp_paid" &&
+		summary.status !== "fully_paid" &&
+		summary.status !== "checked_in"
 	) {
 		throw new CheckinError(
 			"not_eligible",
@@ -158,8 +243,10 @@ export async function checkInParticipant(
  */
 export async function findParticipantByTicket(
 	ticketNumber: string,
+	competitionId?: string,
 ): Promise<Participant | null> {
 	const normalized = ticketNumber.trim().toUpperCase();
+	let participant: Participant | null = null;
 	if (get(demoMode)) {
 		const { demoParticipants } = await import("$lib/demo/generator");
 		const { demoLocalParticipants } = await import("./register");
@@ -167,17 +254,44 @@ export async function findParticipantByTicket(
 			Promise.resolve(demoParticipants()),
 			demoLocalParticipants(),
 		]);
-		return (
-			[...local, ...seed].find((p) => p.ticketNumber === normalized) ?? null
+		participant =
+			[...local, ...seed].find((p) => p.ticketNumber === normalized) ?? null;
+		if (
+			participant &&
+			competitionId &&
+			participant.competitionId !== competitionId
+		) {
+			participant = null;
+		}
+	} else {
+		const { supabase } = await getSupabase();
+		let query = supabase
+			.from("participants")
+			.select("*")
+			.eq("ticket_number", normalized);
+		if (competitionId) {
+			query = query.eq("competition_id", competitionId);
+		}
+		const { data } = await query.maybeSingle();
+		participant = data
+			? normalizeParticipantRow(data as Record<string, unknown>)
+			: null;
+	}
+	if (!participant) {
+		return null;
+	}
+
+	const summary = await getCheckinSummary(participant.id);
+	if (summary.status === "disqualified") {
+		throw new CheckinError("disqualified", "Peserta didiskualifikasi.");
+	}
+	if (summary.paymentRejected) {
+		throw new CheckinError(
+			"payment_rejected",
+			`Pembayaran peserta ditolak admin${summary.rejectionReason ? `: ${summary.rejectionReason}` : "."}`,
 		);
 	}
-	const { supabase } = await getSupabase();
-	const { data } = await supabase
-		.from("participants")
-		.select("*")
-		.eq("ticket_number", normalized)
-		.maybeSingle();
-	return (data ?? null) as Participant | null;
+	return { ...summary.participant, status: summary.status };
 }
 
 export async function resetDemoCheckins(): Promise<void> {

@@ -48,7 +48,7 @@
 					<p class="text-sm">Memuat…</p>
 				</div>
 			{:else if error || !competition}
-				<div class="mx-auto max-w-sm rounded-xl border border-border bg-background/60 p-8 text-center">
+				<div class="rounded-xl border border-border bg-background/60 p-8 text-center">
 					<AlertTriangle class="mx-auto h-8 w-8 text-destructive" aria-hidden="true" />
 					<h1 class="mt-3 text-lg font-bold">Kompetisi layangan hias tidak ditemukan</h1>
 					<p class="mt-1 text-sm text-muted-foreground">

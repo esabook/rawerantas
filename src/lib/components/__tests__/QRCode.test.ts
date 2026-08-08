@@ -10,6 +10,7 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
 	PUBLIC_ADMIN_PIN: "",
+	PUBLIC_PANITIA_PIN: "",
 	PUBLIC_JURI_PIN: "",
 }));
 

@@ -10,8 +10,9 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
-	PUBLIC_ADMIN_PIN: "1234",
-	PUBLIC_JURI_PIN: "1234",
+	PUBLIC_ADMIN_PIN: "123456",
+	PUBLIC_PANITIA_PIN: "123456",
+	PUBLIC_JURI_PIN: "123456",
 }));
 
 const h = vi.hoisted(() => ({ spoken: [] as string[] }));
@@ -147,7 +148,10 @@ describe("DisplayScreen", () => {
 			expect(container.textContent ?? "").toContain("Aduan Layangan");
 		});
 		const { advanceRound } = await import("$lib/db/admin");
-		const { round } = await advanceRound(demoCompetitions()[1].id);
+		const { round } = await advanceRound(
+			demoCompetitions()[1].id,
+			"test-actor-hash",
+		);
 		expect(round).toBe(2);
 		await vi.advanceTimersByTimeAsync(DISPLAY_POLL_MS + 100);
 		await waitFor(() => {

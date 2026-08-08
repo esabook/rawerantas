@@ -8,8 +8,9 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
-	PUBLIC_ADMIN_PIN: "1234",
-	PUBLIC_JURI_PIN: "1234",
+	PUBLIC_ADMIN_PIN: "123456",
+	PUBLIC_PANITIA_PIN: "123456",
+	PUBLIC_JURI_PIN: "123456",
 }));
 
 import {
@@ -39,6 +40,7 @@ describe("layangan score domain", () => {
 			participantId: pesertaAduan.id,
 			round: 3,
 			status: "menang",
+			flightDurationMs: null,
 			recordedBy: "hash-juri",
 		});
 		expect(id).toBeTruthy();
@@ -46,6 +48,7 @@ describe("layangan score domain", () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0]).toMatchObject({
 			status: "menang",
+			flightDurationMs: null,
 			recordedBy: "hash-juri",
 		});
 	});
@@ -57,6 +60,7 @@ describe("layangan score domain", () => {
 			participantId: pesertaAduan.id,
 			round: 2,
 			status: "putus",
+			flightDurationMs: null,
 			recordedBy: "hash-juri",
 		});
 		expect(await hasResult(competitionId, pesertaAduan.id, 2)).toBe(true);
@@ -69,6 +73,7 @@ describe("layangan score domain", () => {
 			participantId: pesertaAduan.id,
 			round: 3,
 			status: "menang",
+			flightDurationMs: null,
 			recordedBy: "hash-juri",
 		});
 		await removeLayanganScore(id, false);
@@ -81,6 +86,7 @@ describe("layangan score domain", () => {
 			participantId: pesertaAduan.id,
 			round: 3,
 			status: "menang",
+			flightDurationMs: null,
 			recordedBy: "hash-juri",
 		});
 		await resetDemoLayanganScores();

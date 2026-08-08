@@ -8,8 +8,9 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ENABLE_DEMO_MODE: "true",
 	PUBLIC_SUPABASE_URL: "",
 	PUBLIC_SUPABASE_ANON_KEY: "",
-	PUBLIC_ADMIN_PIN: "1234",
-	PUBLIC_JURI_PIN: "1234",
+	PUBLIC_ADMIN_PIN: "123456",
+	PUBLIC_PANITIA_PIN: "123456",
+	PUBLIC_JURI_PIN: "123456",
 }));
 
 import {
@@ -178,36 +179,45 @@ describe("admin domain", () => {
 		expect(audits[0]?.payload?.reason).toBe("Bukti tidak terbaca");
 	});
 
-	it("saveCompetition → getCompetitions merge override", async () => {
-		await saveCompetition({ ...mancing, fee: 75000 });
+	it("saveCompetition → getCompetitions merge override + audit", async () => {
+		const hash = await adminActorHash();
+		await saveCompetition({ ...mancing, fee: 75000 }, hash);
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === mancing.id)?.fee).toBe(75000);
+		const audits = await demoAuditLogs();
+		expect(audits[0]?.action).toBe("save_competition");
+		expect(audits[0]?.actorHash).toBe(hash);
 	});
 
-	it("savePaymentConfig toggle non-aktif → tidak muncul di getPaymentConfigs(true)", async () => {
-		await savePaymentConfig({ ...qris, isActive: false });
+	it("savePaymentConfig toggle non-aktif → tidak muncul di getPaymentConfigs(true) + audit", async () => {
+		const hash = await adminActorHash();
+		await savePaymentConfig({ ...qris, isActive: false }, hash);
 		const all = await getPaymentConfigs(false);
 		expect(all.find((c) => c.id === qris.id)?.isActive).toBe(false);
 		const active = await getPaymentConfigs(true);
 		expect(active.some((c) => c.id === qris.id)).toBe(false);
+		const audits = await demoAuditLogs();
+		expect(audits[0]?.action).toBe("save_payment_config");
 	});
 
 	it("advance round hanya mode aduan layangan", async () => {
-		await expect(advanceRound(mancing.id)).rejects.toThrow(
+		const hash = await adminActorHash();
+		await expect(advanceRound(mancing.id, hash)).rejects.toThrow(
 			"hanya untuk mode aduan",
 		);
 	});
 
 	it("advance round aduan → current_round +1 dan terlihat via getCompetitions", async () => {
 		const before = aduan.currentRound;
-		const { round } = await advanceRound(aduan.id);
+		const hash = await adminActorHash();
+		const { round } = await advanceRound(aduan.id, hash);
 		expect(round).toBe(before + 1);
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === aduan.id)?.currentRound).toBe(before + 1);
 	});
 
 	it("reset membersihkan override", async () => {
-		await saveCompetition({ ...mancing, fee: 90000 });
+		await saveCompetition({ ...mancing, fee: 90000 }, await adminActorHash());
 		await resetDemoAdminState();
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === mancing.id)?.fee).toBe(mancing.fee);

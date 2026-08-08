@@ -3,7 +3,7 @@ import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
 import { demoMode } from "$lib/demo/store";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
-import type { Participant } from "./queries";
+import { normalizeParticipantRow, type Participant } from "./queries";
 
 export interface RegistrationInput {
 	competitionId: string;
@@ -43,20 +43,53 @@ export async function demoLocalParticipants(): Promise<Participant[]> {
 	return demoRegistrations();
 }
 
+/**
+ * Cari semua pendaftaran berdasarkan nomor WA canonical (+62...).
+ * Guest memakai nomor ini sebagai identitas lokal; satu nomor bisa mengikuti
+ * lebih dari satu arena lomba.
+ */
+export async function findParticipantsByPhone(
+	rawPhone: string,
+): Promise<Participant[]> {
+	const phone = normalizePhone(rawPhone);
+	if (get(demoMode)) {
+		const [local, seeded] = await Promise.all([
+			demoLocalParticipants(),
+			Promise.resolve(demoParticipants()),
+		]);
+		return [...local, ...seeded].filter(
+			(participant) => participant.phone === phone,
+		);
+	}
+
+	const { supabase } = await import("./supabaseClient");
+	const { data, error } = await supabase
+		.from("participants")
+		.select("*")
+		.eq("phone", phone)
+		.order("created_at", { ascending: false });
+	if (error) {
+		throw new Error(`findParticipantsByPhone: ${error.message}`);
+	}
+		return (data ?? []).map((row) =>
+			normalizeParticipantRow(row as Record<string, unknown>),
+		);
+	}
+
 async function saveDemoRegistration(participant: Participant): Promise<void> {
 	await localPut(STORE, participant);
 }
 
 export function normalizePhone(raw: string): string {
-	const digits = raw.replace(/[^\d+]/g, "");
-	if (digits.startsWith("+62")) {
-		return `62${digits.slice(3)}`;
-	}
+	const digits = raw.replace(/\D/g, "");
 	if (digits.startsWith("62")) {
-		return digits;
+		return `+${digits}`;
 	}
 	if (digits.startsWith("0")) {
-		return `62${digits.slice(1)}`;
+		return `+62${digits.slice(1)}`;
+	}
+	if (digits.startsWith("8")) {
+		return `+62${digits}`;
 	}
 	return digits;
 }
@@ -66,8 +99,28 @@ export function isValidPhone(raw: string): boolean {
 	return /^(?:\+62|62|08)\d{8,12}$/.test(digits);
 }
 
-function nextTicketNumber(seq: number): string {
+export function nextTicketNumber(seq: number): string {
 	return `T-${String(seq).padStart(6, "0")}`;
+}
+
+/** Deteksi kegagalan jaringan (offline) vs error server nyata. */
+function isOfflineError(error: unknown): boolean {
+	if (
+		typeof navigator !== "undefined" &&
+		navigator.onLine === false
+	) {
+		return true;
+	}
+	if (error instanceof TypeError) {
+		return true;
+	}
+	if (typeof error === "object" && error !== null) {
+		const e = error as { status?: unknown; code?: unknown };
+		if (e.status === 0 || e.code === 0) {
+			return true;
+		}
+	}
+	return false;
 }
 
 export async function registerParticipant(
@@ -92,13 +145,16 @@ export async function registerParticipant(
 		if (error) {
 			throw error;
 		}
+		const participant = normalizeParticipantRow(
+			data as Record<string, unknown>,
+		);
 		return {
-			participantId: (data as Participant).id,
-			ticketNumber: (data as Participant).ticketNumber,
+			participantId: participant.id,
+			ticketNumber: participant.ticketNumber,
 			duplicated: false,
 			queued: false,
 		};
-	} catch {
+	} catch (e) {
 		const { data: existing } = await supabase
 			.from("participants")
 			.select("id, ticket_number")
@@ -112,6 +168,9 @@ export async function registerParticipant(
 				duplicated: true,
 				queued: false,
 			};
+		}
+		if (!isOfflineError(e)) {
+			throw e;
 		}
 		await enqueue(
 			`register:${input.competitionId}:${normalizePhone(input.phone)}`,
@@ -167,6 +226,7 @@ async function registerParticipantDemo(
 		name: input.name.trim(),
 		phone,
 		status: "registered",
+		checkedInAt: null,
 		createdAt: new Date(),
 	};
 	await saveDemoRegistration(participant);

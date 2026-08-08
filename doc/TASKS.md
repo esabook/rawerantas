@@ -65,6 +65,7 @@ berhenti, bukan menebak.
 | 6 | `J6-*` juri | `J6-03` `DONE` |
 | 7 | `A7-*` admin & display | `A7-04` `DONE` |
 | 8 | `Q8-*` QA & deploy | `Q8-04` `DONE` |
+| 9 | `R9-*` production readiness (fix agent-fixable dari audit deploy) | `R9-10` `DONE` |
 
 ---
 
@@ -160,7 +161,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       Edge: URL/key kosong saat build → konstruksi client gagal; harus error eksplisit (bukan console.error lalu lanjut); jangan simpan instance di module-level tanpa penanganan HMR SvelteKit (re-export dari `$lib`).
 
 - [ ] `D1-03` · `SEC/BLOCKED/P1/E:S` · `DEP:D1-01` · `BLOCKS:A7-01` — RLS SQL: tulis file SQL policies (SELECT publik utk tabel publik; INSERT publik utk registrasi+skor; UPDATE terbatas; `verified_by`/`recorded_by` = hash PIN) + skrip apply via service role; done when SQL tereksekusi (oleh manusia/konsol) dan policies tercatat di evidence; agen hanya siapkan SQL + panduan, BUKAN menyentuh service role key.
-  - ARTEFAK DONE (`0c03d83`): `supabase/rls.sql` (15 policies, 8 tabel RLS on) + `supabase/README.md` (panduan apply, bucket `proof-images`, checklist). EKSEKUSI menunggu manusia (konsol/service role) → antrean manusia. Status tetap BLOCKED sampai policies ter-apply + tercatat.
+  - ARTEFAK DONE (`0c03d83`): `supabase/rls.sql` (23 policies, 9 tabel RLS on — diperbarui `R9-01`: fix sponsors write-policy, tambah competitions/payment_configs admin-update dan scores_mancing/scores_layangan undo-delete yang sebelumnya hilang) + `supabase/README.md` (panduan apply, bucket `proof-images`, checklist). EKSEKUSI menunggu manusia (konsol/service role) → antrean manusia. Status tetap BLOCKED sampai policies ter-apply + tercatat.
       FILES: supabase/rls.sql (baru), supabase/README.md (baru)
       VERIFY: artefak — rls.sql ada + panduan apply + checklist policies
       Edge: RLS apply butuh service role / konsol = **human queue** → kalau belum, task `BLOCKED`+JOURNAL, lanjut; jangan pakai `GRANT ALL`; proof images pakai Storage bucket policy (public-read, upload lewat client).
@@ -209,7 +210,7 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
 
 ## FASE 3: KOMPONEN SHARED — IN PROGRESS
 
-- [x] `C3-01` · `FE/DONE/P0/E:M` · `DEP:F0-03` · `BLOCKS:J6-01,J6-02,J6-03,A7-01,A7-02,A7-03` — `PinGate.svelte`: baca `PUBLIC_JURI_PIN`/`PUBLIC_ADMIN_PIN` dari env (hash SHA-256 dibandingkan, bukan plaintext), 4-digit pad, simpan sukses di `sessionStorage` (bukan localStorage), lockout 5x salah PIN per sesi (cooldown 30s), slot `children` dirender hanya setelah lolos; done when test: PIN benar → render, salah 5x → lockout, refresh session → tetap terbuka.
+- [x] `C3-01` · `FE/DONE/P0/E:M` · `DEP:F0-03` · `BLOCKS:J6-01,J6-02,J6-03,A7-01,A7-02,A7-03` — `PinGate.svelte`: baca `PUBLIC_JURI_PIN`/`PUBLIC_PANITIA_PIN`/`PUBLIC_ADMIN_PIN` dari env (hash SHA-256 dibandingkan, bukan plaintext), keypad 6 digit, simpan sukses di `sessionStorage` (bukan localStorage), lockout 5x salah PIN per sesi (cooldown 30s), slot `children` dirender hanya setelah lolos; done when test: PIN benar → render, salah 5x → lockout, refresh session → tetap terbuka.
       FILES: src/lib/components/PinGate.svelte (baru), src/lib/components/__tests__/PinGate.test.ts (baru)
       VERIFY: bun run test && bun run check
       Edge: `crypto.subtle` butuh secure context — polyfill di test (F0-06 note); PIN di hash SHA-256 bundle = UX gate, catat ulang di kode (bukan security claim); akses `/display` pakai ADMIN_PIN juga.
@@ -333,6 +334,113 @@ Segmen `LANE/STATUS/PRIORITY/EFFORT` selalu 4 bagian dipisah `/`, tanpa spasi.
       FILES: .opencode/skills/rawe1/SKILL.md (timeout table), doc/RUN-REPORT.md
       VERIFY: artefak — hasil sync test + tabel timeout terukur
       Edge: butuh 2 perangkat/2 orang = **human queue** (BLOCKED+JOURNAL kalau belum); kalau bertemu bug sync → fix task baru atau amend task terkait (jangan commit baru utk task lama — disiplin amend).
+
+## FASE 9: PRODUCTION READINESS
+
+Lahir dari audit persiapan deploy (3 sub-agent: security/env, offline-engine,
+build/deploy) yang memverifikasi klaim `doc/` terhadap kode nyata. Semua task
+di bawah agent-fixable, terpisah dari human queue (`D1-01`/`D1-03`/`Q8-03`/
+`Q8-04` di atas — status keempatnya TIDAK berubah oleh fase ini).
+
+- [x] `R9-01` · `SEC/DONE/P0/E:S` · `DEP:—` · `BLOCKS:D1-03` — Fix gap RLS
+  nyata (bukan seperti dugaan awal "sponsors kebanyakan akses" — investigasi
+  menunjukkan `competitions`/`payment_configs` justru **tanpa policy UPDATE
+  sama sekali**, jadi `saveCompetition`/`savePaymentConfig`/`advanceRound`
+  (A7-02) akan gagal total begitu RLS aktif; `sponsors` full-CRUD publik
+  ternyata konsisten dengan fitur AdminPanel sponsor yang memang di-wire,
+  dibiarkan). Tambah `competitions admin update`, `payment_configs admin
+  update` (kolom dibatasi ke yang ditulis admin.ts), plus
+  `scores_mancing`/`scores_layangan undo delete` (dibutuhkan `R9-02` untuk
+  tombstone) — total 19→23 policy, 8→9 tabel RLS.
+      FILES: supabase/rls.sql
+      VERIFY: grep -c "create policy" supabase/rls.sql → 23
+      Edge: sponsors sengaja TIDAK direstriksi (fitur nyata, bukan bug).
+
+- [x] `R9-02` · `RUN/DONE/P0/E:M` · `DEP:R9-01` · `BLOCKS:Q8-04` — Wire sync
+  loop: `runSyncOnce()` sebelumnya tak pernah dipanggil kode aplikasi nyata
+  (hanya test). Tambah `src/lib/offline/executor.ts` (ExecuteOp konkret,
+  cermin live-path tiap modul db/*.ts, map unique_violation Postgres →
+  `conflict`) + wiring trigger (online event, interval 15s, app mount, guard
+  in-flight) di `networkStore.ts` yang sudah ada. Perbaikan tambahan yang
+  ditemukan wajib: idempotency_key di scores_mancing/layangan/hias kini
+  dibuat SEKALI sebelum live-attempt dan dipakai ulang di payload antrean
+  (sebelumnya generate ulang tiap retry = tak benar-benar idempotent).
+      FILES: src/lib/offline/executor.ts (baru), src/lib/offline/networkStore.ts,
+      src/lib/db/scores.ts, src/lib/db/layangan.ts, src/lib/db/hias.ts,
+      src/lib/db/register.ts (export nextTicketNumber),
+      src/lib/offline/__tests__/syncManager.test.ts (baru)
+      VERIFY: bun run test && bun run check && bun run build
+      Edge: payment/register tak punya kolom idempotency_key di skema — tetap
+      pola existing (register cek existing-by-phone dulu di executor, sama
+      seperti live catch-block; payment tak diubah, risiko duplikat pada retry
+      langka dicatat, bukan "diperbaiki" di luar scope schema/migration.
+
+- [x] `R9-03` · `REL/DONE/P0/E:XS` · `DEP:—` · `BLOCKS:Q8-03` — `static/_redirects`
+  (`/* /index.html 200`) untuk SPA fallback Cloudflare Pages.
+      FILES: static/_redirects (baru)
+      VERIFY: bun run build && cat build/_redirects
+      Edge: —
+
+- [x] `R9-04` · `OPS/DONE/P1/E:XS` · `DEP:—` · `BLOCKS:Q8-03` — Guard
+  `PUBLIC_BASE_URL` di `vite.config.ts` kini hard-fail (`throw`, exit ≠0) saat
+  `mode==="production"` dan kosong ATAU masih nilai dev default
+  `http://localhost:5173`; mode lain (dev/test) tetap warn-only.
+      FILES: vite.config.ts
+      VERIFY: PUBLIC_BASE_URL="" bun run build (exit ≠0) &&
+      PUBLIC_BASE_URL="https://..." bun run build (exit 0)
+      Edge: —
+
+- [x] `R9-05` · `SEC/DONE/P1/E:S` · `DEP:—` · `BLOCKS:—` — Audit log untuk
+  `saveCompetition`/`savePaymentConfig`/`advanceRound` (sebelumnya hanya
+  verify/reject payment yang teraudit). Kedua fungsi kini butuh `actorHash`
+  parameter — semua call site (`AdminPanel.svelte`) diupdate memanggil
+  `adminActorHash()`.
+      FILES: src/lib/db/admin.ts, src/lib/components/AdminPanel.svelte,
+      src/lib/db/__tests__/admin.test.ts,
+      src/lib/components/__tests__/DisplayScreen.test.ts
+      VERIFY: bun run test
+      Edge: —
+
+- [x] `R9-06` · `QA/DONE/P2/E:XS` · `DEP:—` · `BLOCKS:—` — `bunx biome check
+  --write .` untuk 12+ error format/import-order; 0 error tersisa (1 warning
+  pre-existing di `participantImport.ts`, di luar scope — non-null assertion,
+  butuh perubahan logika).
+      FILES: (auto-fix, banyak file — format/import-order saja)
+      VERIFY: bun run lint → 0 error
+      Edge: —
+
+- [x] `R9-07` · `QA/DONE/P3/E:S` · `DEP:R9-06` · `BLOCKS:—` — Dicoba: enable
+  lint `.svelte` (`includes` tanpa exclude) → 119 error + 375 warning di 180
+  file. Terlalu besar/berisiko untuk diperbaiki dalam task ini — DEFERRED,
+  config dikembalikan ke exclude semula.
+      FILES: doc/DEFERRED.md (entri baru)
+      VERIFY: bunx biome check . (dgn includes tanpa exclude) → 119 errors, 375 warnings
+      Edge: keputusan tercatat, bukan setengah-fix.
+
+- [x] `R9-08` · `QA/DONE/P3/E:XS` · `DEP:—` · `BLOCKS:—` — Hapus 7 dari 8
+  primitive shadcn (`button`,`card`,`dialog`,`input`,`select`,`separator`,
+  `slider` — 0 importer eksternal, dikonfirmasi ulang per-file); `datatable`
+  DIPERTAHANKAN (satu-satunya yang dipakai nyata, oleh `AdminPanel.svelte`).
+      FILES: src/lib/components/ui/{button,card,dialog,input,select,separator,slider}/ (hapus, git rm)
+      VERIFY: bun run check && bun run build && bun run test
+      Edge: —
+
+- [x] `R9-09` · `OPS/DONE/P1/E:S` · `DEP:—` · `BLOCKS:—` — CI minimal: GitHub
+  Actions (`bun install --frozen-lockfile && lint && check && test && build`)
+  di tiap push/PR ke `main`.
+      FILES: .github/workflows/ci.yml (baru)
+      VERIFY: (push/PR pertama — cek tab Actions hijau; belum ada remote push
+      di sesi ini, jadi belum tereksekusi live)
+      Edge: build step CI pakai PUBLIC_BASE_URL placeholder valid (bukan nilai
+      deploy asli) supaya lolos guard `R9-04`.
+
+- [x] `R9-10` · `QA/DONE/P3/E:XS` · `DEP:R9-01,R9-02` · `BLOCKS:—` —
+  Sinkronkan angka basi: `TASKS.md` D1-03 (15/8 → 23/9), `RUN-REPORT.md`
+  (188/35 → 209/37, ditambahkan sebagai catatan UPDATE, bukan menimpa evidence
+  historis Q8-02).
+      FILES: doc/TASKS.md, doc/RUN-REPORT.md
+      VERIFY: grep -c "create policy" supabase/rls.sql && bun run test
+      Edge: —
 
 ---
 
