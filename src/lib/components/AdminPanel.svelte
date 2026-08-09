@@ -510,7 +510,7 @@
 		panitiaSaving = row.participant.id;
 		error = "";
 		try {
-			await undoCheckIn(row.participant.id);
+			await undoCheckIn(row.participant.id, await adminActorHash());
 			sfx.confirm();
 			undoable("Check-in dibatalkan.", { onConfirm: () => {} });
 			await load();

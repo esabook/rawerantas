@@ -491,13 +491,23 @@ describe("verify/reject live via RPC (B1-3)", () => {
 				);
 				await resetDemoCheckins();
 				await checkInParticipant(res.participantId);
-				await undoCheckIn(res.participantId);
+				await undoCheckIn(res.participantId, await adminActorHash());
 				// status lokal tetap fully_paid (tidak turun ke dp_paid)
 				const { demoLocalParticipants } = await import("$lib/db/register");
 				const local = await demoLocalParticipants();
 				expect(local.find((p) => p.id === res.participantId)?.status).toBe(
 					"fully_paid",
 				);
+				// A21: undo check-in terekam di audit demo
+				const { demoAuditLogs } = await import("$lib/db/admin");
+				const logs = await demoAuditLogs();
+				expect(
+					logs.some(
+						(l) =>
+							l.action === "undo_check_in" &&
+							l.entityId === res.participantId,
+					),
+				).toBe(true);
 			});
 		});
 	});
