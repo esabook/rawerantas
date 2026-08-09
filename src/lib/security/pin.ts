@@ -8,7 +8,7 @@ export { MAX_ATTEMPTS };
 
 const LOCKOUT_MS = 30_000;
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
-export const DEMO_PIN = "123456";
+export const DEMO_PIN = "123123";
 export const STORAGE_LIFETIME = SESSION_LIFETIME_MS;
 
 export type PinKind = "juri" | "panitia" | "admin";
