@@ -834,6 +834,7 @@ declare
 	v_competition_name text;
 	v_ticket text;
 	v_inserted boolean;
+	v_lapak text;
 begin
 	if data_lock_is_locked() then
 		return jsonb_build_object('ok', false, 'reason', 'locked');
@@ -870,11 +871,20 @@ begin
 	-- Nomor tiket dari sequence global (F2).
 	v_ticket := 'T-' || lpad(nextval('participant_ticket_seq')::text, 6, '0');
 
+	-- A1: assign lapak (BIB) otomatis — nomor berurutan per kompetisi, menyambung
+	-- nilai numerik terbesar yg sudah ada. (Tanpa unique constraint: tabrakan nomor
+	-- mungkin di bawah konkurensi ekstrem; baris peserta tetap unik via
+	-- (competition_id, phone).)
+	select coalesce(max(lapak_number::integer), 0) + 1 into v_lapak
+	from participants
+	where competition_id = p_competition
+		and lapak_number ~ '^[0-9]+$';
+
 	-- Dedupe idempoten (F3): bila ada race pendaftaran nomor sama, kembalikan
 	-- baris existing (slot yang sudah direservasi barusan jadi terbuang — kasus
 	-- ekstrem concurrency, diterima).
-	insert into participants (competition_id, name, phone, ticket_number, status)
-	values (p_competition, trim(p_name), p_phone, v_ticket, 'registered')
+	insert into participants (competition_id, name, phone, ticket_number, lapak_number, status)
+	values (p_competition, trim(p_name), p_phone, v_ticket, v_lapak, 'registered')
 	on conflict (competition_id, phone)
 	do update set id = participants.id
 	returning id, ticket_number, (xmax = 0) as inserted

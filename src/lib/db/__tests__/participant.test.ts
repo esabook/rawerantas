@@ -141,3 +141,34 @@ describe("registerParticipant live via RPC (B1-4)", () => {
 		expect(entries[0]?.idempotencyKey).toBe(sb.rpcs[0]?.args.p_idempotency_key);
 	});
 });
+
+describe("registerParticipant demo — assign lapak berurutan (A1)", () => {
+	beforeEach(async () => {
+		await setDemoMode(true);
+		await resetDemoRegistrations();
+	});
+
+	it("peserta baru dapat lapak = max(numerik) kompetisi + 1", async () => {
+		const { demoParticipants } = await import("$lib/demo/generator");
+		const comp = demoCompetitions()[0];
+		const existing = demoParticipants().filter(
+			(p) => p.competitionId === comp.id,
+		);
+		const maxLapak = Math.max(
+			0,
+			...existing
+				.map((p) => Number(p.lapakNumber))
+				.filter((n) => Number.isFinite(n)),
+		);
+		const res = await registerParticipant({
+			competitionId: comp.id,
+			name: "Uji Lapak",
+			phone: "081234500099",
+		});
+		const { demoLocalParticipants } = await import("$lib/db/register");
+		const local = await demoLocalParticipants();
+		const row = local.find((p) => p.id === res.participantId);
+		expect(row?.lapakNumber).toBe(String(maxLapak + 1));
+		expect(row?.lapakNumber).not.toBeNull();
+	});
+});

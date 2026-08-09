@@ -210,11 +210,22 @@ async function registerParticipantDemo(
 		throw new QuotaFullError(competition?.name ?? "tersebut");
 	}
 	const seq = regs.length + 1;
+	// A1: lapak (BIB) berurutan per kompetisi, menyambung nilai numerik terbesar
+	// (seed + lokal) agar konsisten dgn RPC live.
+	const lapaks = [
+		...demoParticipants()
+			.filter((p) => p.competitionId === input.competitionId)
+			.map((p) => Number(p.lapakNumber)),
+		...regs
+			.filter((r) => r.competitionId === input.competitionId)
+			.map((r) => Number(r.lapakNumber)),
+	].filter((n) => Number.isFinite(n));
+	const lapak = String(lapaks.length ? Math.max(...lapaks) + 1 : 1);
 	const participant: Participant = {
 		id: crypto.randomUUID(),
 		competitionId: input.competitionId,
 		ticketNumber: nextTicketNumber(seq),
-		lapakNumber: null,
+		lapakNumber: lapak,
 		name: input.name.trim(),
 		phone,
 		status: "registered",
