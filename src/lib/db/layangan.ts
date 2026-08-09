@@ -13,7 +13,7 @@ import {
 
 const STORE = localStores.scoresLayangan;
 
-export type LayanganStatus = "menang" | "putus";
+export type LayanganStatus = "menang" | "putus" | "mudun" | "dq";
 
 export interface LayanganScoreRecord {
 	id: string;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Ban,
 		CheckCircle2,
 		Loader2,
 		Play,
@@ -48,7 +49,13 @@
 
 	const normalizeStatus = (
 		status: LayanganScoreRecord["status"],
-	): LayanganStatus => (status === "putus" ? "putus" : "menang");
+	): LayanganStatus => status;
+
+	const layanganLabel = (status: LayanganScoreRecord["status"]): string => {
+		if (status === "menang" || status === "mudun") return "MUDUN";
+		if (status === "dq") return "DQ";
+		return "PUTUS";
+	};
 
 	const resultByParticipant = $derived(
 		new Map(
@@ -166,7 +173,7 @@
 				flightDurationMs,
 				recordedBy,
 			});
-			const label = `${p.name} — ${status === "menang" ? "MUDUN" : "PUTUS"}`;
+			const label = `${p.name} — ${layanganLabel(status)}`;
 			undoable(
 				result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`,
 				{
@@ -328,7 +335,7 @@
 						type="button"
 						class="flex min-h-28 w-full min-w-0 flex-col items-start justify-between gap-3 rounded-lg border border-border/60 bg-background/30 p-3 text-left transition-colors hover:border-gold/70 hover:bg-gold/5 focus-visible:border-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
 						onclick={() => selectParticipant(p)}
-						aria-label={`${p.name}, ${status === "menang" ? "MUDUN" : status === "putus" ? "PUTUS" : "belum dinilai"}`}
+						aria-label={`${p.name}, ${status === undefined ? "belum dinilai" : layanganLabel(status).toLowerCase()}`}
 					>
 						<div
 							class="flex w-full min-w-0 items-start justify-between gap-3"
@@ -360,11 +367,9 @@
 											: "bg-muted text-muted-foreground"
 								}`}
 							>
-								{status === "menang"
-									? "MUDUN"
-									: status === "putus"
-										? "PUTUS"
-										: "BELUM DINILAI"}
+								{status === undefined
+								? "BELUM DINILAI"
+								: layanganLabel(status)}
 							</span>
 						</div>
 						<span class="text-[11px] text-muted-foreground"
@@ -433,9 +438,7 @@
 					/>
 					<p class="text-sm">
 						Hasil babak ini sudah tercatat sebagai <strong
-							>{selectedStatus === "menang"
-								? "MUDUN"
-								: "PUTUS"}</strong
+							>{layanganLabel(selectedStatus)}</strong
 						>.
 					</p>
 				</div>
@@ -517,6 +520,22 @@
 							<X class="h-4 w-4" aria-hidden="true" />
 						{/if}
 						Catat PUTUS
+					</button>
+					<button
+						type="button"
+						class="btn h-12 bg-slate-700 text-white hover:bg-slate-800"
+						onclick={() => submitSelected("dq")}
+						disabled={submittingId !== null || flightDurationMs === null}
+					>
+						{#if submittingId === selectedParticipant.id}
+							<Loader2
+								class="h-4 w-4 animate-spin"
+								aria-hidden="true"
+							/>
+						{:else}
+							<Ban class="h-4 w-4" aria-hidden="true" />
+						{/if}
+						Catat DQ
 					</button>
 				</div>
 			{/if}

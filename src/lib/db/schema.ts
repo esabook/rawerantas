@@ -30,7 +30,7 @@ export const participantStatus = [
 ] as const;
 export type ParticipantStatus = (typeof participantStatus)[number];
 
-export const layanganStatus = ["mudun", "putus", "menang"] as const;
+export const layanganStatus = ["mudun", "putus", "menang", "dq"] as const;
 export type LayanganStatus = (typeof layanganStatus)[number];
 
 export const competitions = pgTable("competitions", {

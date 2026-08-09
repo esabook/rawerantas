@@ -97,7 +97,7 @@ create table if not exists scores_layangan (
 	competition_id uuid not null references competitions(id),
 	participant_id uuid not null references participants(id),
 	round integer not null check (round >= 1),
-	status text not null check (status in ('mudun', 'putus', 'menang')),
+	status text not null check (status in ('mudun', 'putus', 'menang', 'dq')),
 	flight_duration_ms integer,
 	recorded_by text not null,
 	idempotency_key uuid not null unique,
