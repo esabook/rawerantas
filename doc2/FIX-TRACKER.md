@@ -4,6 +4,8 @@
 > **tidak pernah di context sesi**. Sesi baru melanjutkan dengan membaca file ini dulu (rekonsiliasi).
 > Temuan: `PESERTA-FLOW-REVIEW.md` (F1–F25) & `ADMIN-PANITIA-JURI-REVIEW.md` (A1–A41).
 > Eksekutor: skill `/rawe3`. Audit ulang (bila kode berubah): skill `/rawe2`.
+> **Review ulang R1 (2026-08-09):** hasil eksekusi diverifikasi pihak lain — 25 ✅ / 12 ⚠️ / 2 ❌,
+> temuan baru A42–A47; state & protokol resume di `doc2/REVIEW-TRACKER.md`.
 
 ---
 

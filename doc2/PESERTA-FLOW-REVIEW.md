@@ -1,8 +1,9 @@
 # Review End-to-End Alur Peserta — Temuan & Rekomendasi
 
-> Tanggal: 2026-08-08 · **Update v2: 2026-08-08** (audit penuh lanjutan) · Scope: alur peserta end to end
+> Tanggal: 2026-08-08 · **Update v2: 2026-08-08** (audit penuh lanjutan) · **Review ulang R1: 2026-08-09** (verifikasi hasil eksekusi rawe3) · Scope: alur peserta end to end
 > Tidak ada perubahan kode dari review ini — murni dokumen temuan & rekomendasi.
 > v2 menambahkan: temuan F14–F25, koreksi F3, matriks perjalanan peserta end-to-end (online/offline), perluasan desain penutupan (RPC, idempotensi, storage, realtime, flag demo), dan roadmap prioritas. Dokumen pendamping: `ADMIN-PANITIA-JURI-REVIEW.md`.
+> **R1 (2026-08-09):** semua temuan F1–F25 telah dieksekusi rawe3 dan diverifikasi ulang — status per-temuan di seksi "Status pasca-fix rawe3 (R1)" di bawah; matriks resumable di `doc2/REVIEW-TRACKER.md`.
 
 ## Ruang lingkup yang ditinjau
 
@@ -495,3 +496,41 @@ Dengan ini "belum dibayar" ditangani dua cara:
 13. Format tiket kanonik tunggal (F10).
 14. Kebijakan akses e-tiket: keputusan produk (F13) + mitigasi privasi ringan (F20).
 15. Hubungkan `checkDraftRestore` (F22); high-water/tombstone atau amandemen spesifikasi (F25).
+
+---
+
+## Status pasca-fix rawe3 (R1, 2026-08-09)
+
+Semua item eksekusi (rawe3) diverifikasi ulang terhadap kode & commit — matriks lengkap
+resumable di `doc2/REVIEW-TRACKER.md`.
+
+| Temuan | Status R1 | Catatan |
+|---|---|---|
+| F1 | TERTUTUP | kuota atomik RPC `register_participant` (menunggu apply SQL — A42) |
+| F2 | TERTUTUP | tiket sequence `participant_ticket_seq` |
+| F3 | TERTUTUP | unique `(competition_id, phone)` di rls + schema |
+| F4 | TERTUTUP (menunggu apply) | policy publik dicabut di file; artefak SQL rusak (A42) |
+| F5 | TERTUTUP | status di-recalc dari total terverifikasi dalam RPC |
+| F6 | TERTUTUP dgn risiko | sisa ditagih — **deadlock bila sisa < min_dp (lihat A43 dokumen admin)** |
+| F7 | TERTUTUP | check-in offline: optimistik lokal + RPC saat drain |
+| F8 | TERTUTUP | RPC `resubmit_payment` + tombol kirim ulang |
+| F9 | TERTUTUP | insert+status satu transaksi server |
+| F10 | TERTUTUP | format kanonik `T-xxxxxx` (catatan: stub demo `payment.ts:118` masih `Date.now()%1M`, kosmetik) |
+| F11 | TERTUTUP | `undoCheckIn` menghitung ulang status |
+| F12 | TERTUTUP | executor registrasi via RPC |
+| F13 | TERTUTUP (keputusan user) | tiket = bukti pendaftaran; hanya rejected diblokir |
+| F14 | TERTUTUP | `idempotency_key` unique + `ON CONFLICT DO NOTHING` |
+| F15 | TERTUTUP | gagal upload bukti fatal (live & executor) |
+| F16 | TERTUTUP | badge "menunggu sinkron" + skip load() saat queued |
+| F17 | TERTUTUP | teks kirim-ulang kini nyata |
+| F18 | TERTUTUP | mode lunas tak lagi menimpa nominal dgn fee penuh |
+| F19 | TERTUTUP | label "Sudah masuk — sisa Rp X" |
+| F20 | TERTUTUP | disclaimer privasi di halaman tiket |
+| F21 | TERTUTUP | sesi guest dipertahankan saat gagal jaringan |
+| F22 | TERTUTUP via amandemen | `checkDraftRestore` tetap dead code; deviasi diterima (ARCHITECTURE §5) |
+| F23 | TERTUTUP | banner MODE DEMO + guard build |
+| F24 | TERTUTUP | idempotensi end-to-end (kunci antrean = UUID DB) |
+| F25 | TERTUTUP via amandemen | utilitas §5 teruji-tak-terhubung didokumentasikan sbg deviasi |
+
+**Tidak ada temuan baru sisi peserta pada R1.** Risiko lintas-sisi (pelunasan sisa)
+tercatat sebagai A43 di `ADMIN-PANITIA-JURI-REVIEW.md`.

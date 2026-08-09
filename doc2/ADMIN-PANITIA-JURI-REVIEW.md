@@ -1,8 +1,9 @@
 # Review End-to-End Sisi Admin, Panitia & Juri — Temuan & Edge Case
 
-> Tanggal: 2026-08-08 · **Update v2: 2026-08-08** (audit penuh lanjutan) · Scope: alur admin, panitia (check-in), juri (mancing/aduan/hias), display/leaderboard, offline sync, RLS/keamanan, deployment
+> Tanggal: 2026-08-08 · **Update v2: 2026-08-08** (audit penuh lanjutan) · **Review ulang R1: 2026-08-09** (verifikasi hasil eksekusi rawe3) · Scope: alur admin, panitia (check-in), juri (mancing/aduan/hias), display/leaderboard, offline sync, RLS/keamanan, deployment
 > Dokumen pelengkap dari `PESERTA-FLOW-REVIEW.md`. Tidak ada perubahan kode — murni temuan & rekomendasi.
 > v2 menambahkan: temuan A17–A41, audit alur end-to-end per peran, cross-check spesifikasi ARCHITECTURE vs implementasi, rekomendasi berprioritas P0/P1/P2, dan checklist pra-acara.
+> **R1 (2026-08-09):** verifikasi 39 item FIX-TRACKER pasca-eksekusi rawe3 → temuan baru A42–A47; status re-verifikasi tiap temuan lama di `doc2/REVIEW-TRACKER.md` (sumber kebenaran review, resumable).
 
 ## Ruang lingkup yang ditinjau
 
@@ -67,6 +68,31 @@
 | A39 | 🟡 Low | Import CSV: kuota hanya saat preview, tanpa audit, tanpa decrement | `participantImport.ts:356-381,403-490` |
 | A40 | ℹ️ Info | Dead code §5: tombstone recompute, `checkDraftRestore`, high-water, `reportFetch*` | `sync.ts`, `reconcile.ts`, `networkStore.ts` |
 | A41 | ℹ️ Info | `PUBLIC_ENABLE_DEMO_MODE` terkunci build-time tanpa toggle UI — risiko produksi-demo senyap | `demo/store.ts:4`, `.env` |
+| A42 | 🔴 High | **R1:** `rls.sql` invalid — statement `create policy proof_images anon insert` terpotong blok data-lock (B1-8); apply gagal, `data_lock` tak terbuat → semua RPC tulis error runtime | `supabase/rls.sql:1023-1025,1097` |
+| A43 | 🟠 Medium | **R1:** Aturan `submit_payment` (amount ≠ fee → ≥ min_dp & kelipatan 500) deadlock dgn alur tagih sisa bila sisa < min_dp | `rls.sql:525-535`, `payment.ts:339-395` |
+| A44 | 🟠 Medium | **R1:** Undo hias LIVE mati senyap — endpoint executor `/rest/scores/layangan-hias/delete` tak ada & RPC `delete_score` tanpa whitelist hias | `hias.ts:250-268`, `executor.ts`, `rls.sql:985` |
+| A45 | 🟡 Low | **R1:** `bun run lint` repo EXIT 1 (4 file; 2 terakhir disentuh rawe3 B4) — klaim "lint 0" state akhir tak akurat | `AdminPanel.test.ts`, `queries.ts`, `package.json`, `manifest.webmanifest` |
+| A46 | 🟡 Low | **R1:** B2-4 perubahan perilaku tanpa test baru (tdd-guard) + klaim FILES commit tak akurat | commit `ebdfb94` |
+| A47 | 🟡 Low | **R1:** Seed demo masih acak `mudun` (tak dihitung win engine) — sisi A27 belum tuntas | `src/lib/demo/generator.ts:282` |
+
+---
+
+## Koreksi & catatan review R1 (2026-08-09) — status temuan lama pasca-eksekusi rawe3
+
+Verifikasi penuh 39 item + 66 temuan: lihat `doc2/REVIEW-TRACKER.md` (matriks resumable).
+Perubahan status penting pada temuan lama:
+
+- **A1 → tetap PARSIAL.** BIB aktual selesai (B3-3), tetapi `register_participant` TIDAK meng-assign
+  `lapak_number` padahal FILES B1-4 menyebut "assign lapak". Peserta live tetap tanpa lapak.
+- **A21 → PARSIAL.** Check-in kini diaudit server (RPC `check_in`, B1-5), tetapi `undoCheckIn`
+  masih tanpa `audit()` di jalur apa pun — dan ini TIDAK tercatat sebagai carryover di tracker.
+- **A27 → PARSIAL.** Tombol dq + semantik menang/mudun selesai (B3-5), tetapi seed demo masih
+  acak `mudun` → lihat temuan baru **A47**.
+- **A32 → PARSIAL (live rusak).** Undo demo nyata; undo LIVE mati senyap → lihat **A44**.
+- **A18 → tetap PARSIAL** sesuai catatan tracker (sponsors CRUD, config UPDATE, undo hias dsb. carryover).
+- Temuan lain: status per-temuan (TERTUTUP/PARSIAL/via amandemen) di tabel re-verifikasi REVIEW-TRACKER.
+
+Tambahan antrean perbaikan (detail di bagian Detail temuan): **A42, A43, A44 (P0)**, **A45, A46, A47 (P2)**.
 
 ---
 
@@ -564,6 +590,78 @@
 
 ---
 
+### A42 — 🔴 `rls.sql` invalid — artefak deployment Batch 1 rusak (review R1)
+
+**Lokasi:** `supabase/rls.sql:1023-1025` (`create policy "proof_images anon insert" on storage.objects for insert to anon` — tanpa `with check`, langsung disambung blok seksi 7) dan `:1097` (`with check (bucket_id = 'proof-images');` yatim setelah `revoke delete`).
+
+**Deskripsi:** Commit B1-8 (`0de0cdc`) menyisipkan blok data-lock pasca-acara di TENGAH statement `create policy` storage.objects yang utuh sejak `ebb616d`. Akibatnya file berisi satu statement gabungan `create policy ... for insert to anon create table if not exists data_lock ...` yang gagal parse; tabel `data_lock` tak pernah terbuat; `insert into data_lock` gagal; fungsi `data_lock_is_locked()` (dipanggil semua RPC tulis: submit/resubmit/verify/reject/register/check_in/delete_score/set_data_lock) melempar `relation "data_lock" does not exist` saat runtime. Dalam transaksi tunggal (dashboard) seluruh apply rollback; dalam psql default sebagian jalan — dua-duanya rusak.
+
+**Dampak:** Human queue "apply rls.sql" (semua item B1-*, B3-7, B4-3) tidak bisa dijalankan aman; bila dipaksa, mode live mati total (semua tulis RPC gagal) atau kebijakan keamanan tak terpasang.
+
+**Rekomendasi:** (1) Tutup statement policy dengan `with check (bucket_id = 'proof-images');` SEBELUM blok data-lock (pindahkan fragmen yatim baris 1097 ke bawah `for insert to anon`); (2) validasi file dengan parser SQL sebelum diserahkan ke human queue; (3) tambah langkah "apply rls.sql di proyek uji" ke checklist pra-acara.
+
+---
+
+### A43 — 🟠 `submit_payment` menolak pelunasan "sisa < min_dp" — deadlock tagih sisa (review R1)
+
+**Lokasi:** `supabase/rls.sql:525-535` (guard `p_amount <> v_fee → wajib >= v_min_dp dan kelipatan 500`), `src/lib/db/payment.ts:339-395` (`submitCashPayment` menghitung `remaining` lalu via RPC yang sama), `src/lib/components/RegistrantProfile.svelte:281-285` (blokir overpayment di client).
+
+**Deskripsi:** B2-1/A31 membuat alur "lanjut lunas menagih sisa" dan B2-5 mengizinkan pelunasan `checked_in` di gerbang. Tapi RPC `submit_payment` menolak setiap nominal yang bukan fee penuh bila `< min_dp`. Contoh nyata: fee 100rb, min_dp 50rb, peserta DP terverifikasi 60rb → sisa 40rb. Jalur buntu semua: bayar sisa 40rb ditolak server (`below_min_dp`); bayar fee 100rb diblokir client (melebihi sisa); bayar tunai gerbang memakai RPC yang sama → juga ditolak. Peserta tak bisa lunas tanpa intervensi manual DB.
+
+**Dampak:** Alur uang peserta macet pada kondisi yang cukup umum (DP dibayar lebih dari `fee - min_dp`); panitia harus menolak-lalu-catat-ulang manual.
+
+**Rekomendasi:** Khususkan guard di RPC: izinkan `p_amount` berapa pun bila peserta sudah punya pembayaran terverifikasi DAN `p_amount <= fee - total_verified` (pelunasan sisa), tetap tolak di atasnya; atau tambah parameter `p_is_settlement` dari client yang diverifikasi server. Uji: kasus sisa < min_dp di `payment.test.ts`.
+
+---
+
+### A44 — 🟠 Undo skor hias LIVE mati senyap — endpoint executor & whitelist RPC tak ada (review R1)
+
+**Lokasi:** `src/lib/db/hias.ts:250-268` (`removeHiasScore` enqueue `/rest/scores/layangan-hias/delete`), `src/lib/offline/executor.ts` (default case → `"error"`), `supabase/rls.sql:985` (whitelist `delete_score` hanya `scores_mancing`, `scores_layangan`).
+
+**Deskripsi:** B4-8 mengaitkan undo nyata HiasPanel: demo menghapus lokal (jalan), live men-enqueue tombstone delete. Tapi (a) executor tidak punya case `/rest/scores/layangan-hias/delete` — op mengembalikan `"error"`, retry sampai `RETRIES_CAP` lalu dead; dan (b) seandainya case ditambahkan meniru mancing/layangan, RPC `delete_score` menolak tabel hias (whitelist). Komentar `hias.ts` mengakui ("executor belum punya endpoint delete hias — catat utk lanjutan") tetapi FIX-TRACKER B4-8 tidak mencatatnya sebagai carryover — status DONE diberikan untuk jalur live yang tidak berfungsi. Toast "Skor hias dibatalkan" tetap tampil.
+
+**Dampak:** Juri hias yang meng-undo skor di mode live melihat sukses palsu; papan skor mempertahankan nilai yang dikira sudah dibatalkan (ghost score kebalikan A25).
+
+**Rekomendasi:** Tambah case `/rest/scores/layangan-hias/delete` di executor + perluas whitelist `delete_score` ke `scores_layangan_hias`, lalu uji tombstone hias di `executor.test.ts`; ATAU tandai B4-8 live = carryover eksplisit sampai keduanya ada.
+
+---
+
+### A45 — 🟡 Gate lint repo merah; 2 file terakhir disentuh rawe3 Batch 4 (review R1)
+
+**Lokasi:** `bun run lint` EXIT 1 pada `package.json`, `static/manifest.webmanifest` (utang lama, terakhir disentuh `ebb616d`/sebelumnya) dan `src/lib/components/__tests__/AdminPanel.test.ts` (terakhir `7090b20` B4-1), `src/lib/db/queries.ts` (terakhir `c42a9b7` B4-3).
+
+**Deskripsi:** Tracker mengklaim "lint 0" per batch, tetapi konvensi gate adalah lint *scoped*; pada state akhir HEAD, lint repo penuh gagal format di 4 file — 2 di antaranya file yang terakhir diubah commit rawe3 Batch 4. Berarti perubahan Batch 4 meninggalkan drift format yang tak tertangkap (kemungkinan lint scoped dijalankan sebelum edit terakhir, atau file di luar path scoped).
+
+**Dampak:** Gate kualitas merah di HEAD; `bun run lint` gagal; preseden buruk untuk disiplin gate.
+
+**Rekomendasi:** `bunx biome check --write` pada keempat file (sekali jalan), lalu pertahankan `bun run lint` repo-penuh sebagai gate akhir batch (bukan hanya scoped).
+
+---
+
+### A46 — 🟡 B2-4 tanpa test perilaku baru + klaim FILES tak akurat (review R1)
+
+**Lokasi:** commit `ebdfb94` (item B2-4).
+
+**Deskripsi:** B2-4 mengubah perilaku publik: `checkInParticipant` kini mengembalikan `queued?: boolean` dan `ParticipantDetailCard` menampilkan badge "Menunggu sinkron". Commit tidak menyentuh satu pun file test (grep `queued` di `checkin.test.ts` & `ParticipantDetailCard.test.ts` = 0 hasil) — melanggar aturan 11 tracker ("perubahan perilaku = test baru/update", konvensi tdd-guard). Selain itu baris FILES item menyebut `payment.ts`, `AdminPanel.svelte`, dan "test" padahal commit hanya mengubah `checkin.ts` + `ParticipantDetailCard.svelte` (scope tercatat lebih luas dari nyata — arah yang kurang berbahaya, tapi tetap tidak akurat untuk audit).
+
+**Dampak:** Regresi pada jalur queued/optimistik tidak terdeteksi suite; jejak audit scope meleset.
+
+**Rekomendasi:** Tambah test: (a) `checkInParticipant` offline mengembalikan `queued:true` + record lokal; (b) badge tampil saat `submitCashPayment` queued; perbarui disiplin FILES (hanya file yang benar-benar disentuh).
+
+---
+
+### A47 — 🟡 Seed demo layangan masih acak `mudun` — undercount menang di demo (review R1)
+
+**Lokasi:** `src/lib/demo/generator.ts:282` (`status: pick(["mudun", "putus", "menang"])`).
+
+**Deskripsi:** Keputusan produk B3-5 (A27) menetapkan engine menghitung win hanya dari `status === "menang"`; UI live menulis `menang` (tombol MUDUN), `putus`, dan `dq`. Tetapi seed demo masih menabur nilai `mudun` acak, yang tidak dihitung menang oleh engine — persis inkonsistensi demo yang disebut A27 ("seed demo berhenti memakai nilai acak"). B3-5 tidak menyentuh generator.
+
+**Dampak:** Leaderboard demo undercount kemenangan aduan; gladi resik/demo hari-H menampilkan semantik yang salah.
+
+**Rekomendasi:** Ganti seed ke `pick(["menang", "putus", "dq"])` (atau bobot sesuai skenario gladi) di `generator.ts`, jalankan ulang test engine/leaderboard.
+
+---
+
 ## Audit alur end-to-end per peran (v2)
 
 Checklist edge case hasil penelusuran penuh tiap peran. Kolom "Status" merujuk temuan; ✅ = perilaku sudah benar/diverifikasi saat audit.
@@ -663,6 +761,9 @@ Checklist edge case hasil penelusuran penuh tiap peran. Kolom "Status" merujuk t
 4. `flight_duration_ms` di executor layangan (A26) — satu baris, dampak tie-break nyata.
 5. Fix tombstone undo queued (pemetaan kunci → UUID / delete by idempotency_key) (A25).
 6. Realtime publication + fallback polling leaderboard (A35).
+7. **R1: Perbaiki `rls.sql` invalid (A42) SEBELUM human apply — tanpa ini semua item SQL di atas tak terpasang aman.**
+8. **R1: Atasi deadlock pelunasan sisa < min_dp di `submit_payment` (A43).**
+9. **R1: Endpoint undo hias live — executor case + whitelist RPC (A44).**
 
 **P1 — selama acara (kebingungan / salah skor):**
 7. Panel juri offline-safe: cache peserta lokal, refetch pasca-submit opsional, jackpot offline lolos (A23, A24).

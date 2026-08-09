@@ -516,3 +516,25 @@ Format entri:
   tiket/lapak server utk import (B1-4/B4-7), N+1 hias & jendela edit (B4-8), PIN hash-only & peran berbeda (B4-5),
   guard kuota onsite (B2-5), opsi privat storage signed URL (B4-4) — semua kandidat /rawe2 pasca-acara.
   referensi file:baris baru di-spot-check terhadap source.
+
+## 2026-08-09 (malam) — Review ulang R1 hasil rawe3 (verifikasi independen)
+
+- Review ulang 39 item FIX-TRACKER (klaim SELESAI 39/39) + re-verifikasi 66 temuan F1–F25/A1–A41.
+  Hasil: 25 ✅ / 12 ⚠️ / 2 ❌. Sumber kebenaran review: `doc2/REVIEW-TRACKER.md` (baru, resumable —
+  protokol resume + matriks + gate; diminta user agar checkpoint review tersimpan).
+- Gate (dijalankan ulang, bukan klaim): `bun run test` 275/275 (40 file) exit 0 · `bun run check`
+  0 error 0 warning · `bun run lint` repo EXIT 1 (4 file format; 2 terakhir disentuh Batch 4).
+- ❌ B1-8 (`0de0cdc`): menyisip blok data-lock di tengah statement `create policy proof_images anon
+  insert` → `supabase/rls.sql` INVALID (temuan A42, 🔴): apply human queue gagal; bila dipaksa,
+  semua RPC tulis gagal runtime (data_lock tak terbuat). WAJIB diperbaiki sebelum apply.
+- ❌ B4-8 (`5f0a82a`): undo hias jalur LIVE mati senyap — executor tanpa case
+  `/rest/scores/layangan-hias/delete` & RPC `delete_score` tanpa whitelist hias (temuan A44).
+- Temuan baru lain: A43 🟠 deadlock pelunasan sisa < min_dp di `submit_payment` × alur B2-1/A31;
+  A45 🟡 lint repo merah (2 file rawe3 B4); A46 🟡 B2-4 tanpa test + klaim FILES tak akurat;
+  A47 🟡 seed demo masih acak `mudun` (sisi A27 belum tuntas).
+- Re-verifikasi temuan lama: A1 (lapak tak di-assign RPC padahal FILES B1-4 menyebut), A21
+  (undoCheckIn masih tanpa audit, tak tercatat carryover), A27, A32 → PARSIAL; sisanya sesuai
+  klaim tracker. Carryover lama 9 butir semua tercatat utuh + 6 butir baru (REVIEW-TRACKER).
+- Keputusan review: tidak ada perubahan kode (disiplin rawe2 — rekomendasi saja); commit checkpoint
+  bertahap untuk resumability (deviasi sadar aturan satu-commit, diminta user).
+- Human queue diperbarui: TAHAN apply `rls.sql` sampai A42 diperbaiki.
