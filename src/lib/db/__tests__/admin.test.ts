@@ -311,6 +311,9 @@ describe("admin domain", () => {
 		const rejected = all.find((p) => p.id === must(pending).id);
 		expect(rejected?.isVerified).toBe(false);
 		expect(rejected?.rejectReason).toBe("Bukti tidak terbaca");
+		expect(rejected?.participantName.length ?? 0).toBeGreaterThan(0);
+		expect(rejected?.participantPhone.length ?? 0).toBeGreaterThan(0);
+		expect(rejected?.participantTicket.length ?? 0).toBeGreaterThan(0);
 		const audits = await demoAuditLogs();
 		expect(audits[0]?.action).toBe("reject_payment");
 		expect(audits[0]?.payload?.reason).toBe("Bukti tidak terbaca");

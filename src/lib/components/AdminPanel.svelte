@@ -150,6 +150,24 @@
 			width: "16%",
 		},
 		{
+			key: "ticket",
+			label: "Tiket",
+			getValue: (row) => row.participantTicket,
+			sortable: true,
+			wrap: true,
+			hidden: true,
+			width: "10%",
+		},
+		{
+			key: "phone",
+			label: "No. WA",
+			getValue: (row) => row.participantPhone,
+			sortable: true,
+			wrap: true,
+			hidden: true,
+			width: "12%",
+		},
+		{
 			key: "amount",
 			label: "Nominal",
 			getValue: (row) => Number(row.amount),
@@ -1024,6 +1042,14 @@
 					{:else if column.key === "competition"}
 						<span class="text-muted-foreground"
 							>{row.competitionName}</span
+						>
+					{:else if column.key === "ticket"}
+						<span class="font-mono text-xs text-muted-foreground"
+							>{row.participantTicket}</span
+						>
+					{:else if column.key === "phone"}
+						<span class="font-mono text-xs text-muted-foreground"
+							>{row.participantPhone}</span
 						>
 					{:else if column.key === "amount"}
 						<span class="font-mono tabular-nums"

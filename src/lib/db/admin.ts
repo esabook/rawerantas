@@ -35,6 +35,8 @@ export interface AuditRecord {
 export interface PaymentWithMeta extends ParticipantPayment {
 	participantName: string;
 	competitionName: string;
+	participantPhone: string;
+	participantTicket: string;
 }
 
 /** Override kompetisi dari penyimpanan lokal admin (demo). */
@@ -271,6 +273,8 @@ export async function getMergedPayments(): Promise<PaymentWithMeta[]> {
 				competitionName:
 					competitions.find((c) => c.id === participant?.competitionId)?.name ??
 					"-",
+				participantPhone: participant?.phone ?? "",
+				participantTicket: participant?.ticketNumber ?? "",
 			};
 		});
 	}
@@ -305,6 +309,8 @@ export async function getMergedPayments(): Promise<PaymentWithMeta[]> {
 			competitionName:
 				competitions.find((c) => c.id === participant?.competitionId)?.name ??
 				"—",
+			participantPhone: participant?.phone ?? "",
+			participantTicket: participant?.ticketNumber ?? "",
 		};
 	});
 }
