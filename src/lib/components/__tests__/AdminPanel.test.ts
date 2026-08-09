@@ -107,9 +107,9 @@ describe("AdminPanel", () => {
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("belum dinilai");
 		});
-		const forceConfirm = Array.from(
-			container.querySelectorAll("button"),
-		).find((b) => (b.textContent ?? "").includes("Ya, mulai babak"));
+		const forceConfirm = Array.from(container.querySelectorAll("button")).find(
+			(b) => (b.textContent ?? "").includes("Ya, mulai babak"),
+		);
 		fireEvent.click(must(forceConfirm));
 		await waitFor(
 			() => {

@@ -124,13 +124,11 @@ describe("ParticipantDetailCard", () => {
 		type CheckinResult = Awaited<
 			ReturnType<(typeof checkin)["checkInParticipant"]>
 		>;
-		const spy = vi
-			.spyOn(checkin, "checkInParticipant")
-			.mockResolvedValue({
-				eligibility: "ok",
-				queued: true,
-				summary: undefined,
-			} as unknown as CheckinResult);
+		const spy = vi.spyOn(checkin, "checkInParticipant").mockResolvedValue({
+			eligibility: "ok",
+			queued: true,
+			summary: undefined,
+		} as unknown as CheckinResult);
 		try {
 			const { container } = render(ParticipantDetailCard, {
 				participantId: dpPaid.id,

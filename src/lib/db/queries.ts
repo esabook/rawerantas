@@ -188,9 +188,7 @@ export async function getPaymentConfigs(
 	if (error) {
 		throw new Error(`getPaymentConfigs: ${error.message}`);
 	}
-	return ((data ?? []) as DbRow[]).map((row) =>
-		normalizePaymentConfigRow(row),
-	);
+	return ((data ?? []) as DbRow[]).map((row) => normalizePaymentConfigRow(row));
 }
 
 export async function getParticipants(

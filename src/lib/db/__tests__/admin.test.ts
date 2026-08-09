@@ -504,8 +504,7 @@ describe("verify/reject live via RPC (B1-3)", () => {
 				expect(
 					logs.some(
 						(l) =>
-							l.action === "undo_check_in" &&
-							l.entityId === res.participantId,
+							l.action === "undo_check_in" && l.entityId === res.participantId,
 					),
 				).toBe(true);
 			});

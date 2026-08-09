@@ -43,13 +43,13 @@ async function deleteScoreRpc(
 						p_participant_id: payload.participantId,
 						p_competition_id: payload.competitionId,
 						p_actor_hash: payload.actorHash ?? null,
-				  }
+					}
 				: {
 						p_table: table,
 						p_score_id: payload.scoreId ?? null,
 						p_idempotency_key: payload.idempotencyKey ?? null,
 						p_actor_hash: payload.actorHash ?? null,
-				  };
+					};
 		rpcResponse = await supabase.rpc("delete_score", args);
 	} catch {
 		return "error";

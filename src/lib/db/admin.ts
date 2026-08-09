@@ -395,7 +395,13 @@ export async function undoCheckIn(
 		const { localDelete, localStores } = await import("./localStore");
 		await localDelete(localStores.checkins, participantId);
 		// A21: undo check-in tidak boleh tanpa jejak — audit demo.
-		await audit("undo_check_in", "participants", participantId, actorHash, null);
+		await audit(
+			"undo_check_in",
+			"participants",
+			participantId,
+			actorHash,
+			null,
+		);
 		return;
 	}
 	// B2-6/F11/A9: jangan hardcode dp_paid — hitung ulang status dari total
