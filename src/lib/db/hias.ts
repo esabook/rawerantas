@@ -247,9 +247,8 @@ export async function submitHiasScore(
 }
 
 /**
- * B4-8/A32: undo skor hias. Demo: hapus record lokal. Live: enqueue delete
- * (executor belum punya endpoint delete hias — catat utk lanjutan; undo
- * langsung hanya berlaku utk data lokal).
+ * B4-8/A32 + A44: undo skor hias. Demo: hapus record lokal. Live: enqueue delete
+ * (dieksekusi executor via RPC `delete_score` utk baris unique kompetisi+peserta).
  */
 export async function removeHiasScore(
 	competitionId: string,

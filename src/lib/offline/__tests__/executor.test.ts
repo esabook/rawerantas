@@ -196,6 +196,34 @@ describe("executor offline — delete skor via RPC (B1-7/A18)", () => {
 		});
 	});
 
+	it("tombstone hias → RPC delete_score pakai participant+competition (A44)", async () => {
+		const result = await executeQueueEntry(
+			deleteEntry("/rest/scores/layangan-hias/delete", {
+				competitionId: "comp-hias-1",
+				participantId: "p-hias-9",
+			}),
+		);
+		expect(result).toBe("ok");
+		expect(captured.rpcs.at(-1)?.fn).toBe("delete_score");
+		expect(captured.rpcs.at(-1)?.args).toMatchObject({
+			p_table: "scores_layangan_hias",
+			p_participant_id: "p-hias-9",
+			p_competition_id: "comp-hias-1",
+		});
+		expect(captured.rpcs.at(-1)?.args).not.toHaveProperty("p_score_id");
+	});
+
+	it("tombstone hias → RPC tolak (invalid_table) → conflict (A44)", async () => {
+		captured.rpcResult = { ok: false, reason: "invalid_table" };
+		const result = await executeQueueEntry(
+			deleteEntry("/rest/scores/layangan-hias/delete", {
+				competitionId: "comp-hias-1",
+				participantId: "p-hias-9",
+			}),
+		);
+		expect(result).toBe("conflict");
+	});
+
 	it("RPC tolak (invalid_table) → conflict", async () => {
 		captured.rpcResult = { ok: false, reason: "invalid_table" };
 		const result = await executeQueueEntry(

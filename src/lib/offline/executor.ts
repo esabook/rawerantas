@@ -23,24 +23,34 @@ async function toResult(
 type SupabaseClient = typeof import("$lib/db/supabaseClient")["supabase"];
 
 /**
- * B1-7/A18: undo skor via RPC `delete_score` (ber-audit) alih-alih DELETE
- * publik. Payload tombstone bisa membawa `idempotencyKey` (undo jalur antrean
- * pasca-drain) atau `scoreId` (UUID baris). Error → retry; penolakan bisnis →
- * conflict.
+ * B1-7/A18 + A44: undo skor via RPC `delete_score` (ber-audit) alih-alih DELETE
+ * publik. Payload tombstone membawa `idempotencyKey` (undo jalur antrean
+ * pasca-drain), `scoreId` (UUID baris), atau — khusus hias (A44) — pasangan
+ * `participantId`+`competitionId` (baris unique per kompetisi+peserta). Error →
+ * retry; penolakan bisnis → conflict.
  */
 async function deleteScoreRpc(
 	supabase: SupabaseClient,
 	payload: Record<string, unknown>,
-	table: "scores_mancing" | "scores_layangan",
+	table: "scores_mancing" | "scores_layangan" | "scores_layangan_hias",
 ): Promise<SyncResult> {
 	let rpcResponse: { data: unknown; error: unknown };
 	try {
-		rpcResponse = await supabase.rpc("delete_score", {
-			p_table: table,
-			p_score_id: payload.scoreId ?? null,
-			p_idempotency_key: payload.idempotencyKey ?? null,
-			p_actor_hash: payload.actorHash ?? null,
-		});
+		const args =
+			table === "scores_layangan_hias"
+				? {
+						p_table: table,
+						p_participant_id: payload.participantId,
+						p_competition_id: payload.competitionId,
+						p_actor_hash: payload.actorHash ?? null,
+				  }
+				: {
+						p_table: table,
+						p_score_id: payload.scoreId ?? null,
+						p_idempotency_key: payload.idempotencyKey ?? null,
+						p_actor_hash: payload.actorHash ?? null,
+				  };
+		rpcResponse = await supabase.rpc("delete_score", args);
 	} catch {
 		return "error";
 	}
@@ -116,6 +126,12 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 		case "/rest/scores/layangan/delete": {
 			// B1-7/A18: undo layangan via RPC delete_score (ber-audit).
 			return deleteScoreRpc(supabase, payload, "scores_layangan");
+		}
+
+		case "/rest/scores/layangan-hias/delete": {
+			// A44: undo hias via RPC delete_score — baris unique per
+			// (kompetisi, peserta); payload membawa participantId+competitionId.
+			return deleteScoreRpc(supabase, payload, "scores_layangan_hias");
 		}
 
 		case "/rest/scores/layangan-hias":
