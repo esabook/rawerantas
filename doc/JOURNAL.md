@@ -493,4 +493,26 @@ Format entri:
 - **PENTING human queue**: rls.sql kini punya publication realtime (B3-7) + status dq (B3-5) + unique index
   layangan (B3-4). WAJIB di-apply utk realtime & constraint aktif.
 - Next: Batch 4 (Penguatan, P2) — B4-1..B4-11.
+## 2026-08-09 (sore) — Batch 4 TUNTAS (11/11) — FIX-TRACKER SELESAI via /rawe3
+
+- **B4-1** (A15) — `7090b20`: guard advance round (blokir bila peserta belum dinilai + opsi paksa).
+- **B4-2** (A5) — `6c45f76`: min_dp editable & persist.
+- **B4-3** (A30) — `c42a9b7`: RPC get_payment_configs (baca non-aktif).
+- **B4-4** (A38) — `d99be3f`: path bukti UUID penuh (tak tertebak).
+- **B4-5** (A37) — `98ca2af`: peringatan fallback DEMO_PIN + build warning PIN kosong.
+- **B4-6** (A14) — `6b0c2ff`: identitas petugas saat entry PIN utk audit.
+- **B4-7** (A39,A7) — `54f8ce4`: audit batch import.
+- **B4-8** (A32) — `5f0a82a`: undo hias nyata.
+- **B4-9** (A40,F22,F25) — `61b1851`: amandemen ARCHITECTURE §5 (deviasi diterima).
+- **B4-10** (F10) — `80362fa`: format tiket kanonik T-xxxxxx.
+- **B4-11** (F13,F20) — `fc9fbd4`: KEPUTUSAN user — tiket = bukti pendaftaran (tetap bisa dibuka tanpa bayar,
+  hanya blokir bila ditolak); disclaimer privasi ditambahkan.
+- **FINAL** — SELURUH tracker selesai: Batch 0 6/6, Batch 1 8/8, Batch 2 7/7, Batch 3 7/7, Batch 4 11/11 =
+  39/39 item · nol-limbo. Gate penuh terakhir: suite 275/275 · check 0.
+- **PENTING human queue**: `supabase/rls.sql` berisi SEMUA RPC + migrasi + publication realtime + data_lock +
+  penarikan policy. WAJIB di-apply via Supabase Dashboard (urutan: schema → RPC → publication → data_lock →
+  cabut policy TERAKHIR) sebelum hari-H. Checklist pra-acara = gate rilis.
+- CARRYOVER tercatat: cache peserta IDB (B3-1), remaining utk op queued (B2-4), pencarian tiket/nama (B3-3),
+  tiket/lapak server utk import (B1-4/B4-7), N+1 hias & jendela edit (B4-8), PIN hash-only & peran berbeda (B4-5),
+  guard kuota onsite (B2-5), opsi privat storage signed URL (B4-4) — semua kandidat /rawe2 pasca-acara.
   referensi file:baris baru di-spot-check terhadap source.

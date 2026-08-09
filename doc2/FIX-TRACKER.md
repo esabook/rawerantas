@@ -371,7 +371,11 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
   - Bukti: suite 275/275 · check 0 · lint 0
   - Keputusan: format kanonik T-xxxxxx (seed demo + placeholder CheckinScanner diseragamkan; konsisten dgn RPC).
   - Commit: `80362fa`
-- [ ] **B4-11** — Kebijakan akses e-tiket & privasi guest — Temuan: F13, F20 — FILES: `tiket/[id]/+page.svelte`, `daftar/+page.svelte` (+keputusan produk)
+- [x] **B4-11** — Kebijakan akses e-tiket & privasi guest — Temuan: F13, F20 — FILES: `tiket/[id]/+page.svelte`, `daftar/+page.svelte` (+keputusan produk)
+  - Keputusan [user]: tiket = bukti pendaftaran, tetap bisa dibuka tanpa bayar (hanya blokir bila ditolak);
+    risiko privasi diterima sbg UX gate + disclaimer ditambahkan di halaman tiket.
+  - Bukti: suite 275/275 · check 0
+  - Commit: `fc9fbd4`
 
 ---
 
