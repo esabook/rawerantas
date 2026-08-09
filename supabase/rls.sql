@@ -522,15 +522,30 @@ begin
 		return jsonb_build_object('ok', false, 'reason', 'competition_not_found');
 	end if;
 
+	-- A43: total pembayaran TERVERIFIKASI — dipakai utk (a) guard pelunasan sisa
+	-- di bawah, dan (b) recalc status di blok setelah insert (dihitung ulang lagi
+	-- utk menyertakan baris tunai yang dibuat transaksi ini).
+	select coalesce(sum(amount), 0) into v_verified_total
+	from participant_payments
+	where participant_id = p_participant_id
+		and is_verified = true
+		and (reject_reason is null or trim(reject_reason) = '');
+
 	if p_amount is null or p_amount <= 0 then
 		return jsonb_build_object('ok', false, 'reason', 'invalid_amount');
 	end if;
 	if p_amount <> v_fee then
-		if p_amount < v_min_dp then
-			return jsonb_build_object('ok', false, 'reason', 'below_min_dp');
-		end if;
-		if p_amount % 500 <> 0 then
-			return jsonb_build_object('ok', false, 'reason', 'bad_increment');
+		-- A43: pelunasan sisa diizinkan (alur B2-1/A31) — peserta sudah punya
+		-- pembayaran terverifikasi dan nominal TIDAK melebihi sisa tagihan
+		-- (fee - terverifikasi). Menutup deadlock "sisa < min_dp" tanpa membuka
+		-- overpayment. Di luar itu: aturan lama (>= min_dp & kelipatan 500).
+		if not (v_verified_total > 0 and p_amount <= greatest(v_fee - v_verified_total, 0)) then
+			if p_amount < v_min_dp then
+				return jsonb_build_object('ok', false, 'reason', 'below_min_dp');
+			end if;
+			if p_amount % 500 <> 0 then
+				return jsonb_build_object('ok', false, 'reason', 'bad_increment');
+			end if;
 		end if;
 	end if;
 
