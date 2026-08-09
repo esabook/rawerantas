@@ -199,7 +199,7 @@ Daftar CARRYOVER dari keputusan tracker — diverifikasi tetap tercatat & tidak 
 - [x] **BARU (R1)** Assign `lapak_number` di RPC `register_participant` (A1) → **FIXED `2703986`** (R5-8)
 - [x] **BARU (R1)** Seed demo layangan berhenti acak `mudun` (A47) → **FIXED `bb65b59`** (R5-5)
 - [x] **BARU (R1)** Perbaiki `rls.sql` invalid (A42) — P0 → **FIXED `0c22b91`** (R5-1)
-- [ ] **BARU (R1)** Aturan sisa<min_dp di `submit_payment` (A43) → **FIXED `e3be4e9`** (R5-2)
+- [x] **BARU (R1)** Aturan sisa<min_dp di `submit_payment` (A43) → **FIXED `e3be4e9`** (R5-2)
 
 ## Hasil perbaikan Batch 5 (R1-fix, 2026-08-09)
 

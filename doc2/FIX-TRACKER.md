@@ -422,5 +422,3 @@ Gate penutup Batch 5 (dijalankan reviewer): `bun run test` **279/279 (40 file)**
 ## Jurnal
 
 Tulis `doc/JOURNAL.md` per item/batch: keputusan, deviasi, BLOCKED + perintah/detik (format rawe1).
-  - FILES: `supabase/rls.sql` (alter publication — human queue), `leaderboard/+page.svelte`
-  - Plan: polling 30 dtk + indikator "last updated" sebagai fallback bila realtime mati.
