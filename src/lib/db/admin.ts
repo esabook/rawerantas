@@ -94,6 +94,7 @@ export async function saveCompetition(
 		.update({
 			name: competition.name,
 			fee: competition.fee,
+			min_dp: competition.minDp,
 			total_quota: competition.totalQuota,
 			scoring_mode: competition.scoringMode,
 			is_active: competition.isActive,

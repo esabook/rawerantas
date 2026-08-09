@@ -982,6 +982,10 @@
 								<input type="number" class="input min-w-0" value={c.fee} onchange={(e) => (c.fee = Number(e.currentTarget.value))} />
 							</label>
 							<label class="flex min-w-0 flex-col gap-1">
+								<span class="text-xs text-muted-foreground">DP minimal (Rp)</span>
+								<input type="number" class="input min-w-0" value={c.minDp} onchange={(e) => (c.minDp = Number(e.currentTarget.value))} />
+							</label>
+							<label class="flex min-w-0 flex-col gap-1">
 								<span class="text-xs text-muted-foreground">Kuota peserta</span>
 								<input type="number" class="input min-w-0" value={c.totalQuota} onchange={(e) => (c.totalQuota = Number(e.currentTarget.value))} />
 								<span class="text-[11px] text-muted-foreground">Jumlah orang, bukan tim.</span>
