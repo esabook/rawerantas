@@ -173,7 +173,7 @@ async function executePayment(
 		const ext =
 			mime === "image/webp" ? "webp" : mime === "image/png" ? "png" : "jpg";
 		const blob = new Blob([proof], { type: mime });
-		const path = `proofs/${payload.participantId}/${Date.now()}.${ext}`;
+		const path = `proofs/${payload.participantId}/${crypto.randomUUID()}.${ext}`;
 		const { error: uploadError } = await supabase.storage
 			.from(PROOF_IMAGES_BUCKET)
 			.upload(path, blob, { contentType: mime });

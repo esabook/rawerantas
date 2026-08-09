@@ -151,7 +151,7 @@ async function persistPayment(
 						: "image/jpeg";
 			const ext =
 				mime === "image/webp" ? "webp" : mime === "image/png" ? "png" : "jpg";
-			const path = `proofs/${input.participantId}/${Date.now()}.${ext}`;
+			const path = `proofs/${input.participantId}/${crypto.randomUUID()}.${ext}`;
 			const { error: uploadError } = await sb.storage
 				.from(PROOF_IMAGES_BUCKET)
 				.upload(path, input.proofBlob, { contentType: mime });
@@ -283,7 +283,7 @@ export async function resubmitPayment(
 						: "image/jpeg";
 			const ext =
 				mime === "image/webp" ? "webp" : mime === "image/png" ? "png" : "jpg";
-			const path = `proofs/${input.participantId}/${Date.now()}.${ext}`;
+			const path = `proofs/${input.participantId}/${crypto.randomUUID()}.${ext}`;
 			const { error: uploadError } = await sb.storage
 				.from(PROOF_IMAGES_BUCKET)
 				.upload(path, input.proofBlob, { contentType: mime });
