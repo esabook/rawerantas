@@ -155,6 +155,16 @@ Komponen:
   op tombstone (`DELETE`/`REVERT`) + recompute `running_total`. Skor ghost
   dilarang.
 
+> **Amandemen (B4-9/A40/F22/F25):** implementasi saat ini menyederhanakan
+> sebagian §5. High-water reconcile, tombstone-with-recompute, draft-restore,
+> dan fetch-report (online-recovery) TERSEDIA sebagai utilitas teruji unit
+> (`reconcile.ts`, `sync.ts`, `networkStore.ts`) tetapi BELUM terhubung ke
+> jalur produksi. Papan baca selalu full-fetch; undo pasca-sync melewati
+> tombstone delete (RPC `delete_score`); status online memakai event
+> `navigator.onLine`. Ini diterima sebagai deviasi dokumentasi — tidak ada bug
+> langsung, dan menghubungkannya penuh (delta re-sync, recompute berbasis
+> tombstone) adalah peningkatan berprioritas rendah pasca-acara.
+
 ## 6. Model Keamanan (keputusan eksplisit)
 
 **PIN = UX gate, BUKAN keamanan sungguhan.** SPA statis + `adapter-static`
