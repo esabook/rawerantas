@@ -38,6 +38,9 @@ vi.mock("$lib/db/supabaseClient", () => ({
 				eq: () => ({
 					maybeSingle: async () => ({ data: sb.proofRow, error: null }),
 				}),
+				limit: () => ({
+					maybeSingle: async () => ({ data: sb.lockRow, error: null }),
+				}),
 				single: async () => ({ data: sb.lockRow, error: null }),
 			}),
 		}),
@@ -454,6 +457,15 @@ describe("verify/reject live via RPC (B1-3)", () => {
 			expect(sb.rpcs.at(-1)?.fn).toBe("set_data_lock");
 			expect(sb.rpcs.at(-1)?.args).toMatchObject({ p_locked: true });
 			expect(locked.locked).toBe(true);
+		});
+
+		it("live: getDataLock tabel kosong → unlocked default, tidak error", async () => {
+			await setDemoMode(false);
+			sb.lockRow = null;
+			const state = await getDataLock();
+			expect(state.locked).toBe(false);
+			expect(state.lockedAt).toBeNull();
+			expect(state.lockedBy).toBeNull();
 		});
 		describe("undoCheckIn recalc status (B2-6/F11/A9)", () => {
 			beforeEach(async () => {

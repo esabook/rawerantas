@@ -665,7 +665,8 @@ export async function getDataLock(): Promise<DataLockState> {
 	const { data, error } = await supabase
 		.from("data_lock")
 		.select("is_locked, locked_at, locked_by")
-		.single();
+		.limit(1)
+		.maybeSingle();
 	if (error) {
 		throw new Error(`getDataLock: ${error.message}`);
 	}
