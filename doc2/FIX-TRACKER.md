@@ -381,6 +381,37 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
 
 ---
 
+## Batch 5 — Perbaikan temuan review ulang R1 (2026-08-09)
+
+Item perbaikan hasil review ulang (A42–A47 + gap tak-tercatat A21/A1). Satu item satu commit.
+
+- [x] **R5-1** — `rls.sql` invalid: tutup statement policy storage + hapus fragmen yatim — Temuan: A42 — Commit: `0c22b91`
+  - FILES: `supabase/rls.sql`
+  - VERIFY: struktur klausa policy lengkap (grep `with check`/`using`); apply = human queue (SQL tak di-compile di CI — mock supabase).
+- [x] **R5-2** — `submit_payment` izinkan pelunasan sisa < min_dp — Temuan: A43 — Commit: `e3be4e9`
+  - FILES: `supabase/rls.sql`
+  - VERIFY: guard pelunasan sisa (nominal ≤ fee − terverifikasi) tanpa buka overpayment; apply = human queue.
+- [x] **R5-3** — Undo hias live: executor case + RPC whitelist hias — Temuan: A44 — Commit: `e976a78`
+  - FILES: `supabase/rls.sql`, `executor.ts`, `hias.ts`, `executor.test.ts`
+  - Bukti: executor.test.ts 20/20 (+2 tombstone hias) · check 0 · lint 0.
+- [x] **R5-4** — Test perilaku queued B2-4 (tdd-guard) — Temuan: A46 — Commit: `94bdfef`
+  - FILES: `checkin.test.ts`, `ParticipantDetailCard.test.ts`
+  - Bukti: checkin 13/13 (assert queued:true) + badge test; 18/18 (2 file).
+- [x] **R5-5** — Seed layangan tanpa `mudun` acak — Temuan: A47 — Commit: `bb65b59`
+  - FILES: `generator.ts`
+  - Bukti: 43/43 (7 file engine/leaderboard/demo/panel).
+- [x] **R5-6** — Audit undo check-in + terima actorHash — Temuan: A21 (gap R1) — Commit: `17001cd`
+  - FILES: `admin.ts`, `AdminPanel.svelte`, `admin.test.ts`
+  - Bukti: admin.test.ts 20/20 (+assert audit undo_check_in).
+- [x] **R5-7** — Biome format drift lint (incl. 4 file utang lama) — Temuan: A45 — Commit: `ff6ec28`
+  - FILES: 8 (package.json, manifest, 2 file lain + drift edit R5-3/4/6)
+  - Bukti: `bun run lint` repo penuh EXIT 0 (98 file).
+- [x] **R5-8** — Assign lapak otomatis di RPC `register_participant` + demo — Temuan: A1 (gap R1) — Commit: `2703986`
+  - FILES: `rls.sql`, `register.ts`, `participant.test.ts`
+  - Bukti: participant.test.ts 8/8 (+test lapak berurutan); apply = human queue untuk RPC.
+
+Gate penutup Batch 5 (dijalankan reviewer): `bun run test` **279/279 (40 file)** · `bun run check` **0 error/0 warning** · `bun run lint` **0 error** · `bun run build` **exit 0**.
+
 ## Keputusan & human queue (jangan diasumsikan)
 
 1. Apply `rls.sql` hasil Batch 1 ke Supabase (dashboard) — semua item B1-*.

@@ -194,12 +194,38 @@ Daftar CARRYOVER dari keputusan tracker — diverifikasi tetap tercatat & tidak 
 - [x] rejected murni tak terdeteksi tab Panitia (sisa QW-4) — tercatat ✅
 - [x] Storage privat + signed URL (sisa B4-4) — tercatat ✅
 - [x] N+1 hias + jendela edit berbasis waktu input (sisa B4-8) — tercatat ✅
-- [ ] **BARU (R1)** Endpoint executor `/rest/scores/layangan-hias/delete` + whitelist RPC hias (A44) — BELUM tercatat di tracker
-- [ ] **BARU (R1)** Audit `undo_check_in` (A21 sisi undo) — BELUM tercatat di tracker
-- [ ] **BARU (R1)** Assign `lapak_number` di RPC `register_participant` (A1) — FILES B1-4 menyebut, implementasi tak ada
-- [ ] **BARU (R1)** Seed demo layangan berhenti acak `mudun` (A47)
-- [ ] **BARU (R1)** Perbaiki `rls.sql` invalid (A42) — P0 sebelum human apply
-- [ ] **BARU (R1)** Aturan sisa<min_dp di `submit_payment` (A43)
+- [x] **BARU (R1)** Endpoint executor `/rest/scores/layangan-hias/delete` + whitelist RPC hias (A44) → **FIXED `e976a78`** (R5-3)
+- [x] **BARU (R1)** Audit `undo_check_in` (A21 sisi undo) → **FIXED `17001cd`** (R5-6)
+- [x] **BARU (R1)** Assign `lapak_number` di RPC `register_participant` (A1) → **FIXED `2703986`** (R5-8)
+- [x] **BARU (R1)** Seed demo layangan berhenti acak `mudun` (A47) → **FIXED `bb65b59`** (R5-5)
+- [x] **BARU (R1)** Perbaiki `rls.sql` invalid (A42) — P0 → **FIXED `0c22b91`** (R5-1)
+- [ ] **BARU (R1)** Aturan sisa<min_dp di `submit_payment` (A43) → **FIXED `e3be4e9`** (R5-2)
+
+## Hasil perbaikan Batch 5 (R1-fix, 2026-08-09)
+
+Semua temuan R1 + gap tak-tercatat dieksekusi (rawe3/Batch 5 `0c22b91`..`2703986`):
+
+| Temuan | Status | Commit |
+|---|---|---|
+| A42 `rls.sql` invalid | ✅ DIPERBAIKI (statement policy ditutup; fragmen yatim dihapus) | `0c22b91` |
+| A43 deadlock sisa < min_dp | ✅ DIPERBAIKI (guard pelunasan sisa) | `e3be4e9` |
+| A44 undo hias live | ✅ DIPERBAIKI (executor case + whitelist RPC) | `e976a78` |
+| A46 queued tanpa test | ✅ DIPERBAIKI (test checkin + badge) | `94bdfef` |
+| A47 seed mudun acak | ✅ DIPERBAIKI (ganti dq) | `bb65b59` |
+| A21 undo tanpa audit | ✅ DIPERBAIKI (audit undo_check_in + actorHash) | `17001cd` |
+| A45 lint repo merah | ✅ DIPERBAIKI (biome format 8 file) | `ff6ec28` |
+| A1 lapak tak di-assign | ✅ DIPERBAIKI (RPC + demo assign berurutan) | `2703986` |
+
+Catatan: R5-1/R5-2/R5-8 = SQL-only — tervalidasi struktural + menunggu human apply; tidak tercompile di CI (mock supabase).
+
+## Gate pasca-perbaikan (R5, dijalankan ulang)
+
+| Perintah | Hasil |
+|---|---|
+| `bun run test` | ✅ **279/279 (40 file)** exit 0 |
+| `bun run check` | ✅ 0 error / 0 warning |
+| `bun run lint` (repo penuh) | ✅ 0 error (98 file) |
+| `bun run build` | ✅ exit 0 |
 
 ## Gate R1 (dijalankan reviewer, bukan klaim)
 

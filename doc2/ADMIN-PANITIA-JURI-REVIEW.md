@@ -94,6 +94,14 @@ Perubahan status penting pada temuan lama:
 
 Tambahan antrean perbaikan (detail di bagian Detail temuan): **A42, A43, A44 (P0)**, **A45, A46, A47 (P2)**.
 
+### Status eksekusi perbaikan (R1-fix, 2026-08-09 — Batch 5)
+Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, lihat `doc2/FIX-TRACKER.md` §Batch 5):
+- **A42** `rls.sql` invalid → `0c22b91` · **A43** deadlock sisa < min_dp → `e3be4e9` · **A44** undo hias live → `e976a78`
+- **A45** lint repo → `ff6ec28` (kini `bun run lint` 0) · **A46** test queued B2-4 → `94bdfef` · **A47** seed mudun → `bb65b59`
+- **A21** audit undo check-in → `17001cd` · **A1** assign lapak → `2703986`
+- Gate pasca-fix: `bun run test` 279/279 · check 0/0 · lint 0 · build exit 0.
+- Catatan: perbaikan SQL (A42/A43/R5-8-lapak) bersifat struktural + menunggu human apply (CI pakai mock supabase, tak mem-parse SQL).
+
 ---
 
 ## Detail temuan

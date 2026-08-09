@@ -538,3 +538,18 @@ Format entri:
 - Keputusan review: tidak ada perubahan kode (disiplin rawe2 — rekomendasi saja); commit checkpoint
   bertahap untuk resumability (deviasi sadar aturan satu-commit, diminta user).
 - Human queue diperbarui: TAHAN apply `rls.sql` sampai A42 diperbaiki.
+
+## 2026-08-09 (malam 2) — Perbaikan temuan review R1 (BATCH 5) via eksekusi
+
+- Perbaiki SEMUA temuan review ulang R1 + gap tak-tercatat, satu item satu commit:
+  - `0c22b91` A42 — tutup statement `create policy proof_images anon insert` (fragmen `with check` yatim dipindahkan ke tempat; hapus fragmen baris 1097). Kini SUPERSEDE himbauan TAHAN di entri review R1 (A42 selesai).
+  - `e3be4e9` A43 — `submit_payment`: izinkan pelunasan sisa (nominal <= fee - terverifikasi) utk peserta dgn pembayaran terverifikasi; menutup deadlock sisa < min_dp.
+  - `e976a78` A44 — undo hias live: case executor `/rest/scores/layangan-hias/delete` + perluas whitelist/param `delete_score` (peserta+kompetisi); drop fungsi lama; +2 test executor.
+  - `94bdfef` A46 — test perilaku queued B2-4 (checkin assert queued:true + badge menunggu sinkron).
+  - `bb65b59` A47 — seed layangan ganti `mudun` -> `dq` (semantik A27: MUDUN = menang; mudun mati).
+  - `17001cd` A21 — `undoCheckIn` terima actorHash + tulis audit `undo_check_in` demo & live (gap tak-tercatat).
+  - `ff6ec28` A45 — biome format 8 file lint merah (incl. 4 file utang lama): `bun run lint` repo kini 0.
+  - `2703986` A1 — `register_participant` + demo assign `lapak_number` berurutan per kompetisi (gap tak-tercatat).
+- Gate penutup Batch 5 (dijalankan ulang, bukan klaim): `bun run test` 279/279 (40 file) · `bun run check` 0/0 · `bun run lint` 0 (98 file) · `bun run build` exit 0.
+- Deviasi/luas: A42/A43/A1 di `supabase/rls.sql` tdk bisa diverifikasi parser di CI (mock supabase) — validasi struktural + antrean human apply; dicatat di REVIEW-TRACKER & FIX-TRACKER Batch 5.
+- Sisa antrean produksi/keputusan (BUKAN bagian perbaiki-semua Batch 5): apply rls.sql kini valid + publication (human); guard kuota onsite (A31), PIN per peran/hash-only (A37), storage privat (A38), import tiket/lapak server (A7/A39), cache IDB peserta (A23), N+1 hias & jendela edit (A32), rejects murni tab Panitia (A10), ON CONFLICT layangan (B3-4), high-water §5 (F25).
