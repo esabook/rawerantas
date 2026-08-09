@@ -45,3 +45,12 @@ if (!dev && PUBLIC_ENABLE_DEMO_MODE === "true") {
 		"[env] PUBLIC_ENABLE_DEMO_MODE=true pada build non-dev — registrasi/pembayaran/skor hanya tersimpan lokal per perangkat dan TIDAK masuk Supabase. Set false untuk produksi (QW-3/A41/F23).",
 	);
 }
+
+// B4-5/A37: cegah fallback senyap ke DEMO_PIN di produksi.
+if (!dev && (PUBLIC_ADMIN_PIN || PUBLIC_PANITIA_PIN || PUBLIC_JURI_PIN)) {
+	if (!PUBLIC_ADMIN_PIN || !PUBLIC_PANITIA_PIN || !PUBLIC_JURI_PIN) {
+		console.warn(
+			"[env] Ada PIN peran yang kosong pada build non-dev — peran itu akan jatuh ke DEMO_PIN default. Isi semua PUBLIC_*_PIN untuk produksi (A37).",
+		);
+	}
+}

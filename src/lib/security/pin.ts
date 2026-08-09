@@ -166,6 +166,12 @@ export async function verifyPin(
 	const expectedHash = configured
 		? await sha256Hex(configured)
 		: await demoPinHash();
+	if (!configured) {
+		// B4-5/A37: fallback ke DEMO_PIN bukan diam-diam — peringatkan.
+		console.warn(
+			`[pin] PIN ${kind} tidak dikonfigurasi — memakai DEMO_PIN default. Set PUBLIC_${kind.toUpperCase()}_PIN untuk produksi.`,
+		);
+	}
 	const actualHash = await sha256Hex(pin);
 	if (actualHash !== expectedHash) {
 		const next = await recordFailedAttempt(kind);
