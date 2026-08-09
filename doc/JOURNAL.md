@@ -461,4 +461,21 @@ Format entri:
   reject sudah audit di transaksi RPC (B1-3).
 - **Batch 2 gate**: suite 274/274 · check 0 · lint 0. Nol-limbo: 7/7 DONE.
 - Next: Batch 3 (Juri & papan skor) — B3-1..B3-7.
+## 2026-08-09 (siang) — Batch 3: B3-1..B3-4 + blokir keputusan B3-5
+
+- **B3-1** (A23,A24) — `18a14c9`: panel offline-safe (load catch, refetch
+  opsional) + jackpot tidak terblokir offline. Cache peserta IDB = CARRYOVER.
+- **B3-2** (A29,A3) — `f6997cc`: selektor kompetisi + filter aktif + polling
+  deteksi perubahan round di 3 halaman juri.
+- **B3-3** (A36,A13,A1 sebagian) — `ce4e2a6`: BIB dari peserta aktual +
+  polling refresh peserta. Pencarian tiket/nama = CARRYOVER.
+- **B3-4** (A6) — `9e11070`: unique (competition_id, participant_id, round)
+  layangan + guard hasResult. Apply SQL = human queue.
+- **STOP di B3-5 (A27, A28)** — butuh KEPUTUSAN PRODUK (tidak boleh
+  diasumsikan): semantik kanonik `mudun` (menang vs mudun vs putus) dan mode
+  papan aduan (per-babak vs kumulatif). Berhenti bersih per protokol; item
+  ditandai "(+keputusan)" di tracker & antrean "Keputusan".
+- Status: Batch 0 6/6, Batch 1 8/8, Batch 2 7/7, Batch 3 4/7 (B3-5..B3-7
+  tertunda — B3-5 menunggu keputusan). Suite 274/274 hijau saat checkpoint.
+- Next: setelah keputusan mudun → B3-5; lalu B3-6, B3-7, Batch 4.
   referensi file:baris baru di-spot-check terhadap source.
