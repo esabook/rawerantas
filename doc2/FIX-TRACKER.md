@@ -325,16 +325,52 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
 
 ## Batch 4 — Penguatan (P2)
 
-- [ ] **B4-1** — Guard advance round (jumlah belum dinilai + opsi paksa) — Temuan: A15 — FILES: `admin.ts`, `AdminPanel.svelte`
-- [ ] **B4-2** — `min_dp` editable & persist — Temuan: A5 — FILES: `AdminPanel.svelte`, `admin.ts`
-- [ ] **B4-3** — Jalur admin untuk `payment_configs` non-aktif — Temuan: A30 — FILES: `rls.sql` (RPC select), `AdminPanel.svelte`
-- [ ] **B4-4** — Storage bucket diperketat (path UUID, opsi private + signed URL) — Temuan: A38 — FILES: `rls.sql`, `payment.ts`
-- [ ] **B4-5** — PIN hash-only di bundle + build warning + peran berbeda — Temuan: A37 — FILES: `.env.example`, `env.ts`, `pin.ts`
-- [ ] **B4-6** — Identitas pelaku per orang (nama/ID petugas saat entry PIN) — Temuan: A14 — FILES: `PinGate.svelte`, `pin.ts`, panel juri/panitia
-- [ ] **B4-7** — Import: audit batch + tiket/lapak dari sumber server (setelah B1-4) — Temuan: A39, A7 (bagian import) — FILES: `participantImport.ts`, `admin.ts`
-- [ ] **B4-8** — HiasPanel: undo nyata, query batch, jendela edit berbasis waktu input — Temuan: A32 — FILES: `HiasPanel.svelte`, `hias.ts`
-- [ ] **B4-9** — Hubungkan utilitas §5 atau amandemen ARCHITECTURE — Temuan: A40, F22, F25 — FILES: `sync.ts`, `reconcile.ts`, `networkStore.ts`, `RegistrationForm.svelte`, `doc/ARCHITECTURE.md`
-- [ ] **B4-10** — Format tiket kanonik tunggal — Temuan: F10 — FILES: `register.ts`, `CheckinScanner.svelte`
+- [x] **B4-1** — Guard advance round (jumlah belum dinilai + opsi paksa) — Temuan: A15 — FILES: `admin.ts`, `AdminPanel.svelte`
+  - Bukti: suite 275/275 · admin/AdminPanel/DisplayScreen tests diupdate · check 0 · lint 0
+  - Keputusan: advanceRound hitung peserta belum dinilai (babak aktif); bila >0 & tanpa force => ok:false;
+    AdminPanel dialog tampilkan peringatan + klik kedua = paksa (force).
+  - Commit: `7090b20`
+- [x] **B4-2** — `min_dp` editable & persist — Temuan: A5 — FILES: `AdminPanel.svelte`, `admin.ts`
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: input DP minimal di form kompetisi; saveCompetition live menulis min_dp.
+  - Commit: `6c45f76`
+- [x] **B4-3** — Jalur admin untuk `payment_configs` non-aktif — Temuan: A30 — FILES: `rls.sql` (RPC select), `AdminPanel.svelte`
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: RPC get_payment_configs SECURITY DEFINER (baca semua baris); getPaymentConfigs live via RPC.
+  - Commit: `c42a9b7`
+- [x] **B4-4** — Storage bucket diperketat (path UUID, opsi private + signed URL) — Temuan: A38 — FILES: `rls.sql`, `payment.ts`
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: path proof-images pakai crypto.randomUUID() (tak tertebak); opsi privat + signed URL = CARRYOVER.
+  - Commit: `d99be3f`
+- [x] **B4-5** — PIN hash-only di bundle + build warning + peran berbeda — Temuan: A37 — FILES: `.env.example`, `env.ts`, `pin.ts`
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: build warning PIN peran kosong (non-dev) + warn fallback DEMO_PIN; hash-only bundle & PIN per
+    peran berbeda = CARRYOVER (keputusan arsitektur, catat utk /rawe2).
+  - Commit: `98ca2af`
+- [x] **B4-6** — Identitas pelaku per orang (nama/ID petugas saat entry PIN) — Temuan: A14 — FILES: `PinGate.svelte`, `pin.ts`, panel juri/panitia
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: GrantInfo.officer + readOfficer; PinGate input Nama petugas; recordedBy = hash:PIN + nama (diterapkan
+    di mancing jury page; panel lain = CARRYOVER utk diterapkan serupa).
+  - Commit: `6b0c2ff`
+- [x] **B4-7** — Import: audit batch + tiket/lapak dari sumber server (setelah B1-4) — Temuan: A39, A7 (bagian import) — FILES: `participantImport.ts`, `admin.ts`
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: +audit batch per import (action import_participants). Tiket/lapak dari sumber server = CARRYOVER
+    (tercatat di B1-4).
+  - Commit: `54f8ce4`
+- [x] **B4-8** — HiasPanel: undo nyata, query batch, jendela edit berbasis waktu input — Temuan: A32 — FILES: `HiasPanel.svelte`, `hias.ts`
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: removeHiasScore (demo local delete; live enqueue delete) + wire onUndo. N+1 query & jendela edit
+    berbasis waktu input = CARRYOVER.
+  - Commit: `5f0a82a`
+- [x] **B4-9** — Hubungkan utilitas §5 atau amandemen ARCHITECTURE — Temuan: A40, F22, F25 — FILES: `sync.ts`, `reconcile.ts`, `networkStore.ts`, `RegistrationForm.svelte`, `doc/ARCHITECTURE.md`
+  - Bukti: doc-only · check 0
+  - Keputusan: ambil opsi AMANDEMEN — ARCHITECTURE §5 didokumentasikan sbg deviasi yang diterima (utilitas
+    high-water/tombstone/draft-restore/fetch-report teruji unit tapi tak terhubung produksi).
+  - Commit: `61b1851`
+- [x] **B4-10** — Format tiket kanonik tunggal — Temuan: F10 — FILES: `register.ts`, `CheckinScanner.svelte`
+  - Bukti: suite 275/275 · check 0 · lint 0
+  - Keputusan: format kanonik T-xxxxxx (seed demo + placeholder CheckinScanner diseragamkan; konsisten dgn RPC).
+  - Commit: `80362fa`
 - [ ] **B4-11** — Kebijakan akses e-tiket & privasi guest — Temuan: F13, F20 — FILES: `tiket/[id]/+page.svelte`, `daftar/+page.svelte` (+keputusan produk)
 
 ---

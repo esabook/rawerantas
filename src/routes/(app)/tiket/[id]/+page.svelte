@@ -112,5 +112,14 @@
 		</div>
 	{:else}
 		<TicketCard {participant} {competition} {printWidth} />
+		<p
+			class="mx-auto mt-4 max-w-md text-center text-[11px] leading-relaxed text-muted-foreground"
+			role="note"
+		>
+			E-tiket ini adalah bukti pendaftaran. Data ditampilkan sebagai bentuk
+			kemudahan (login guest berbasis nomor WA) dan bukan jaminan keamanan
+			ketat — jangan bagikan link tiket ke pihak lain. (Keputusan produk:
+			risiko privasi diterima sebagai UX gate.)
+		</p>
 	{/if}
 </div>
