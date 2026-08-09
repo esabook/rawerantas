@@ -540,7 +540,7 @@
 		<fieldset class="flex min-w-0 flex-col gap-2 text-sm">
 			<legend class="font-medium">Pilih lomba</legend>
 			<div
-				class="no-scrollbar mt-2 flex min-w-0 w-full max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [touch-action:pan-x]"
+				class="no-scrollbar mt-2 flex min-w-0 w-full max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2"
 				role="radiogroup"
 				aria-label="Pilihan lomba"
 			>
