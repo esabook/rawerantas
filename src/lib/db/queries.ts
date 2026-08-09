@@ -274,6 +274,7 @@ export async function getPayments(
 export async function getLeaderboard(
 	competitionId: string,
 	table: "scores_mancing" | "scores_layangan" | "scores_layangan_hias",
+	round?: number,
 ): Promise<LeaderboardRow[]> {
 	if (get(demoMode)) {
 		const participantsMap = new Map(demoParticipants().map((p) => [p.id, p]));
@@ -282,6 +283,7 @@ export async function getLeaderboard(
 			receivedAt: Date | string;
 			competitionId: string;
 			participantId: string;
+			round?: number;
 		}> =
 			table === "scores_mancing"
 				? demoMancingScores()
@@ -290,6 +292,7 @@ export async function getLeaderboard(
 					: demoHiasScores();
 		return rows
 			.filter((r) => r.competitionId === competitionId)
+			.filter((r) => round === undefined || r.round === round)
 			.map((r) => {
 				const participant = participantsMap.get(r.participantId);
 				return {
@@ -301,11 +304,14 @@ export async function getLeaderboard(
 			});
 	}
 	const { supabase } = await getSupabase();
-	const { data, error } = await supabase
+	let query = supabase
 		.from(table)
 		.select("*, participants(name, lapak_number)")
-		.eq("competition_id", competitionId)
-		.order("received_at", { ascending: true });
+		.eq("competition_id", competitionId);
+	if (round !== undefined) {
+		query = query.eq("round", round);
+	}
+	const { data, error } = await query.order("received_at", { ascending: true });
 	if (error) {
 		throw new Error(`getLeaderboard: ${error.message}`);
 	}

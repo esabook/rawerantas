@@ -13,6 +13,7 @@ import type { ScoringMode } from "./schema";
 export async function getLeaderboardRows(
 	competitionId: string,
 	mode: ScoringMode,
+	round?: number,
 ): Promise<LeaderboardRow[]> {
 	if (!get(demoMode)) {
 		const table =
@@ -21,7 +22,11 @@ export async function getLeaderboardRows(
 				: mode === "layangan_aduan"
 					? "scores_layangan"
 					: "scores_mancing";
-		return getLeaderboard(competitionId, table);
+		return getLeaderboard(
+			competitionId,
+			table,
+			mode === "layangan_aduan" ? round : undefined,
+		);
 	}
 	const participantsMap = new Map(demoParticipants().map((p) => [p.id, p]));
 	const rows: LeaderboardRow[] = [];
@@ -55,6 +60,8 @@ export async function getLeaderboardRows(
 	} else if (mode === "layangan_aduan") {
 		const { getAllLayanganScores } = await import("./layangan");
 		for (const s of await getAllLayanganScores(competitionId)) {
+			// A28: filter per-babak bila diminta.
+			if (round !== undefined && s.round !== round) continue;
 			push({
 				id: s.id,
 				competitionId: s.competitionId,

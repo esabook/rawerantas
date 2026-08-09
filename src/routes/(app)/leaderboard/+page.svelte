@@ -34,6 +34,9 @@
 			const next = await getLeaderboardRows(
 				competition.id,
 				competition.scoringMode,
+				competition.scoringMode === "layangan_aduan"
+					? competition.currentRound
+					: undefined,
 			);
 			rows = next;
 			lastKnown = next;

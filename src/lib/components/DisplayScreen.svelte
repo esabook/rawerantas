@@ -143,7 +143,13 @@
 			return;
 		}
 		try {
-			const next = await getLeaderboardRows(comp.id, comp.scoringMode);
+			const next = await getLeaderboardRows(
+				comp.id,
+				comp.scoringMode,
+				comp.scoringMode === "layangan_aduan"
+					? comp.currentRound
+					: undefined,
+			);
 			rows = next;
 			lastKnown = next;
 			error = "";
