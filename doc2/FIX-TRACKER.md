@@ -303,11 +303,25 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
   - Keputusan: unique index (competition_id, participant_id, round) di rls.sql + schema.ts; submitLayanganResult
     live guard hasResult sebelum insert (cegah dobel-win multi-device). ON CONFLICT terkontrol = catat utk lanjutan.
   - Commit: `9e11070`
-- [ ] **B3-5** — Papan aduan per-babak + semantik `mudun` — Temuan: A28, A27 (+keputusan)
+- [x] **B3-5** — Papan aduan per-babak + semantik `mudun` — Temuan: A28, A27 (+keputusan)
   - FILES: `engine.ts`, `leaderboard.ts`, `LeaderboardBoard.svelte`, `DisplayScreen.svelte`, `layangan.ts`, `generator.ts`
-- [ ] **B3-6** — Jackpot kategori terpisah + pembulatan hias konsisten — Temuan: A4, A12
+  - Bukti: suite 274/274 · check 0 · lint 0
+  - Keputusan [user]: status = menang | mudun | putus | dq; win hanya menang. A27 — dq ditambah (disqualified),
+    MUDUN button = menang (win), tombol DQ baru; schema/rls tambah dq. A28 — filter round di
+    getLeaderboardRows/getLeaderboard; DisplayScreen & leaderboard pass currentRound utk aduan (per-babak).
+  - Commit: `9c7084b` (A27) · `661eab5` (A28)
+- [x] **B3-6** — Jackpot kategori terpisah + pembulatan hias konsisten — Temuan: A4, A12
   - FILES: `engine.ts`, `LeaderboardBoard.svelte`, `DisplayScreen.svelte`, `hias.ts`, test
-- [ ] **B3-7** — Realtime publication + polling fallback leaderboard — Temuan: A35
+  - Bukti: suite 274/274 · engine.test.ts diperbarui · check 0 · lint 0
+  - Keputusan: A4 — engine jackpot_pita dirangking oleh berat (bukan otomatis score=1); badge Jackpot di
+    LeaderboardBoard; subScore menandai jackpot. A12 — computeHiasTotal kembalikan real (seragam engine/DB).
+  - Commit: `fe8cbfe`
+- [x] **B3-7** — Realtime publication + polling fallback leaderboard — Temuan: A35
+  - FILES: `supabase/rls.sql` (alter publication — human queue), `leaderboard/+page.svelte`
+  - Bukti: suite 274/274 · check 0
+  - Keputusan: rls.sql tambah alter publication supabase_realtime (scores/hias/participants/competitions) sebagai
+    langkah deployment wajib; leaderboard page tambah polling fallback 30 dtk + cleanup. Apply SQL = human queue.
+  - Commit: `ba21558`
 
 ## Batch 4 — Penguatan (P2)
 

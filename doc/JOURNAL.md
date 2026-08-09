@@ -478,4 +478,19 @@ Format entri:
 - Status: Batch 0 6/6, Batch 1 8/8, Batch 2 7/7, Batch 3 4/7 (B3-5..B3-7
   tertunda — B3-5 menunggu keputusan). Suite 274/274 hijau saat checkpoint.
 - Next: setelah keputusan mudun → B3-5; lalu B3-6, B3-7, Batch 4.
+## 2026-08-09 (siang 2) — Batch 3 TUNTAS (7/7) via /rawe3
+
+- **B3-1** (A23,A24) — `18a14c9`: panel offline-safe + jackpot tak terblokir offline.
+- **B3-2** (A29,A3) — `f6997cc`: selektor kompetisi + filter aktif + polling round di halaman juri.
+- **B3-3** (A36,A13,A1 sebagian) — `ce4e2a6`: BIB dari peserta aktual + polling refresh.
+- **B3-4** (A6) — `9e11070`: unique (competition_id, participant_id, round) layangan + guard hasResult.
+- **B3-5** (A28,A27 +keputusan) — `9c7084b` + `661eab5`: KEPUTUSAN user — status = menang|mudun|putus|dq
+  (dq baru utk disqualified; win hanya menang); tombol DQ di panel; schema/rls tambah dq; papan aduan per-babak
+  (filter round di getLeaderboardRows/getLeaderboard, DisplayScreen & leaderboard pass currentRound).
+- **B3-6** (A4,A12) — `fe8cbfe`: jackpot dirangking berat (bukan otomatis #1) + badge; computeHiasTotal real.
+- **B3-7** (A35) — `ba21558`: alter publication supabase_realtime di rls.sql; polling fallback leaderboard 30 dtk.
+- **Batch 3 gate**: suite 274/274 · check 0 · lint 0. Nol-limbo: 7/7 DONE.
+- **PENTING human queue**: rls.sql kini punya publication realtime (B3-7) + status dq (B3-5) + unique index
+  layangan (B3-4). WAJIB di-apply utk realtime & constraint aktif.
+- Next: Batch 4 (Penguatan, P2) — B4-1..B4-11.
   referensi file:baris baru di-spot-check terhadap source.
