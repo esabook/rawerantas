@@ -180,18 +180,17 @@ export async function getPaymentConfigs(
 		return getMergedPaymentConfigs(activeOnly);
 	}
 	const { supabase } = await getSupabase();
-	let query = supabase
-		.from("payment_configs")
-		.select("*")
-		.order("created_at", { ascending: true });
-	if (activeOnly) {
-		query = query.eq("is_active", true);
-	}
-	const { data, error } = await query;
+	// B4-3/A30: lewat RPC SECURITY DEFINER agar admin bisa membaca metode
+	// non-aktif (RLS select hanya is_active=true).
+	const { data, error } = await supabase.rpc("get_payment_configs", {
+		p_active_only: activeOnly,
+	});
 	if (error) {
 		throw new Error(`getPaymentConfigs: ${error.message}`);
 	}
-	return (data ?? []).map((row) => normalizePaymentConfigRow(row as DbRow));
+	return ((data ?? []) as DbRow[]).map((row) =>
+		normalizePaymentConfigRow(row),
+	);
 }
 
 export async function getParticipants(

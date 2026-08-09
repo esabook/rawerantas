@@ -1096,6 +1096,40 @@ revoke delete on scores_mancing, scores_layangan
 	from anon, authenticated;
 	with check (bucket_id = 'proof-images');
 
+-- B4-3/A30: jalur admin membaca SEMUA payment_configs (termasuk non-aktif)
+-- melewati RLS select is_active=true — SECURITY DEFINER.
+create or replace function get_payment_configs(p_active_only boolean default true)
+returns table (
+	id uuid,
+	method text,
+	account_name text,
+	account_number text,
+	qris_image_url text,
+	instructions text,
+	is_active boolean,
+	created_at timestamptz
+)
+language plpgsql security definer set search_path = public
+as $$
+begin
+	if p_active_only then
+		return query
+			select pc.id, pc.method, pc.account_name, pc.account_number,
+				   pc.qris_image_url, pc.instructions, pc.is_active, pc.created_at
+			from payment_configs pc
+			where pc.is_active = true
+			order by pc.created_at asc;
+	else
+		return query
+			select pc.id, pc.method, pc.account_name, pc.account_number,
+				   pc.qris_image_url, pc.instructions, pc.is_active, pc.created_at
+			from payment_configs pc
+			order by pc.created_at asc;
+	end if;
+end;
+$$;
+
+grant execute on function get_payment_configs(boolean) to anon, authenticated;
 -- ============================================================
 -- 8. Realtime publication (B3-7/A35) — langkah deployment wajib
 --    Tanpa ini postgres_changes di display/leaderboard tak pernah menyala.
