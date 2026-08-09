@@ -11,6 +11,7 @@
 		Lock,
 		Pencil,
 		Plus,
+		RefreshCw,
 		Save,
 		ShieldCheck,
 		Trash2,
@@ -63,7 +64,7 @@
 
 	const PAGE_SIZE = 8;
 	const paymentMethodLabels: Record<string, string> = {
-		bank_transfer: "Transfer bank",
+		bank_transfer: "TF-bank",
 		ewallet: "E-wallet",
 		qris: "QRIS",
 		cash: "Tunai",
@@ -957,6 +958,22 @@
 							pembayaran.
 						</p>
 					</div>
+					<button
+						type="button"
+						class="btn btn-sm shrink-0"
+						onclick={() => void load()}
+						disabled={loading}
+					>
+						{#if loading}
+							<Loader2
+								class="h-4 w-4 animate-spin"
+								aria-hidden="true"
+							/>
+						{:else}
+							<RefreshCw class="h-4 w-4" aria-hidden="true" />
+						{/if}
+						Muat ulang
+					</button>
 				</div>
 
 				<div class="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
