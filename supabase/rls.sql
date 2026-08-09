@@ -1095,3 +1095,14 @@ drop policy if exists "scores_layangan undo delete" on scores_layangan;
 revoke delete on scores_mancing, scores_layangan
 	from anon, authenticated;
 	with check (bucket_id = 'proof-images');
+
+-- ============================================================
+-- 8. Realtime publication (B3-7/A35) — langkah deployment wajib
+--    Tanpa ini postgres_changes di display/leaderboard tak pernah menyala.
+-- ============================================================
+alter publication supabase_realtime add table
+	scores_mancing,
+	scores_layangan,
+	scores_layangan_hias,
+	participants,
+	competitions;

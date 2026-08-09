@@ -65,6 +65,7 @@
 
 	let channel: unknown;
 	let unsubscribeOnline: (() => void) | null = null;
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	onMount(() => {
 		void getCompetitions(false)
@@ -81,6 +82,8 @@
 				void refresh();
 			}
 		});
+		// B3-7/A35: polling fallback 30 dtk bila realtime tidak menyala.
+		pollTimer = setInterval(() => void refresh(), 30_000);
 		if (!demo) {
 			void import("$lib/db/queries").then(async ({ getSupabase }) => {
 				const { supabase } = await getSupabase();
@@ -120,6 +123,9 @@
 
 	onDestroy(() => {
 		unsubscribeOnline?.();
+		if (pollTimer !== null) {
+			clearInterval(pollTimer);
+		}
 		if (channel) {
 			void import("$lib/db/queries").then(async ({ getSupabase }) => {
 				const { supabase } = await getSupabase();
