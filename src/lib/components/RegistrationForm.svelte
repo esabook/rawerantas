@@ -73,7 +73,7 @@
 	let paymentQueued = $state(false);
 	let paymentProcessing = $state(false);
 	let proofFile = $state<File | null>(null);
-	let showTerms = $state(false);
+	let termsCompetition = $state<Competition | null>(null);
 
 	const prizesFor = (competition: Competition): string[] => {
 		const prizes = [
@@ -645,7 +645,7 @@
 						<button
 							type="button"
 							class="flex items-center justify-between gap-2 border-t border-slate-800 px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-cyan-200 transition-colors hover:bg-cyan-300/10"
-							onclick={() => (showTerms = true)}
+							onclick={() => (termsCompetition = c)}
 						>
 							<span>Lihat Ketentuan & Persyaratan</span>
 							<ExternalLink
@@ -759,7 +759,8 @@
 {/if}
 
 <TermsDialog
-	open={showTerms}
+	open={termsCompetition !== null}
 	title="Syarat & Ketentuan"
-	onclose={() => (showTerms = false)}
+	competition={termsCompetition}
+	onclose={() => (termsCompetition = null)}
 />

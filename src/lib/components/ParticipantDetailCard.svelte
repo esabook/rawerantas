@@ -331,5 +331,13 @@
 <TermsDialog
 	open={showTerms}
 	title="Syarat & Ketentuan"
+	competition={
+		summary
+			? {
+					id: summary.participant.competitionId,
+					name: summary.competitionName ?? "",
+				}
+			: null
+	}
 	onclose={() => (showTerms = false)}
 />

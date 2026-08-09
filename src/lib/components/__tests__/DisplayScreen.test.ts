@@ -13,6 +13,7 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ADMIN_PIN: "123456",
 	PUBLIC_PANITIA_PIN: "123456",
 	PUBLIC_JURI_PIN: "123456",
+	PUBLIC_TERMS_URL: "",
 }));
 
 const h = vi.hoisted(() => ({ spoken: [] as string[] }));

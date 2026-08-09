@@ -9,7 +9,6 @@
 	} from "@lucide/svelte";
 	import type { Component } from "svelte";
 	import TermsDialog from "$lib/components/TermsDialog.svelte";
-	import { env } from "$lib/env";
 	import type { Competition } from "$lib/db/queries";
 	import type { ScoringMode } from "$lib/db/schema";
 
@@ -73,7 +72,7 @@
 	const metaFor = (competition: Competition): CompetitionMeta =>
 		metaByMode[competition.scoringMode] ?? metaByMode.terberat;
 
-	let showTerms = $state(false);
+	let termsCompetition = $state<Competition | null>(null);
 </script>
 
 <section class="w-full bg-[#05070d] py-10 sm:py-12" aria-label="Arena lomba">
@@ -218,7 +217,7 @@
 								<button
 									type="button"
 									class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/5 px-2 py-2.5 text-[10px] font-bold uppercase tracking-widest text-cyan-200 transition-colors hover:border-cyan-200/60 hover:bg-cyan-300/10"
-									onclick={() => (showTerms = true)}
+									onclick={() => (termsCompetition = c)}
 								>
 									Lihat ketentuan dan syarat
 									<ExternalLink
@@ -246,8 +245,8 @@
 </section>
 
 <TermsDialog
-	open={showTerms}
+	open={termsCompetition !== null}
 	title="Syarat & Ketentuan"
-	subtitle={env.appName}
-	onclose={() => (showTerms = false)}
+	competition={termsCompetition}
+	onclose={() => (termsCompetition = null)}
 />

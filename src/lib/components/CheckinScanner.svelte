@@ -34,6 +34,14 @@
 	let statsLoadToken = 0;
 	let showTerms = $state(false);
 
+	const termsCompetition = $derived(
+		selectedCompetitionId
+			? (competitions.find(
+					(c) => c.id === selectedCompetitionId,
+				) ?? null)
+			: null,
+	);
+
 	let scanner: unknown = null;
 	let stopScanning: (() => Promise<void>) | null = null;
 	let videoEl: HTMLVideoElement | null = null;
@@ -426,5 +434,6 @@
 <TermsDialog
 	open={showTerms}
 	title="Syarat & Ketentuan"
+	competition={termsCompetition}
 	onclose={() => (showTerms = false)}
 />

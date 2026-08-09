@@ -10,6 +10,7 @@ import {
 	PUBLIC_PANITIA_PIN,
 	PUBLIC_SUPABASE_ANON_KEY,
 	PUBLIC_SUPABASE_URL,
+	PUBLIC_TERMS_URL,
 } from "$env/static/public";
 
 export const env = {
@@ -23,6 +24,7 @@ export const env = {
 	panitiaPin: PUBLIC_PANITIA_PIN,
 	adminPin: PUBLIC_ADMIN_PIN,
 	enableDemoMode: PUBLIC_ENABLE_DEMO_MODE,
+	termsUrl: PUBLIC_TERMS_URL,
 } as const;
 
 if (

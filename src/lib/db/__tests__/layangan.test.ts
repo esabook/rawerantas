@@ -12,6 +12,7 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ADMIN_PIN: "123456",
 	PUBLIC_PANITIA_PIN: "123456",
 	PUBLIC_JURI_PIN: "123456",
+	PUBLIC_TERMS_URL: "",
 }));
 
 /** Supabase tiruan untuk jalur live (QW-2/A25) — lihat catatan scores.test.ts. */

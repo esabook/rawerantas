@@ -18,6 +18,7 @@ vi.mock("$env/static/public", () => ({
 	PUBLIC_ADMIN_PIN: "",
 	PUBLIC_PANITIA_PIN: "",
 	PUBLIC_JURI_PIN: "",
+	PUBLIC_TERMS_URL: "",
 }));
 
 import {

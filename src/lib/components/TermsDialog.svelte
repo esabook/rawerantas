@@ -1,18 +1,86 @@
 <script lang="ts">
 	import { Scale, X } from "@lucide/svelte";
-	import termsMd from "$lib/content/terms.md?raw";
+	import genericTermsMd from "$lib/content/terms.md?raw";
+	import { env } from "$lib/env";
+
+	const termsFiles = import.meta.glob("../content/terms-*.md", {
+		eager: true,
+		query: "?raw",
+		import: "default",
+	}) as Record<string, string>;
 
 	let {
 		open,
 		title = "Syarat & Ketentuan",
 		subtitle = "",
 		onclose,
+		competition = null,
 	}: {
 		open: boolean;
 		title?: string;
 		subtitle?: string;
 		onclose: () => void;
+		competition?: { id: string; name: string } | null;
 	} = $props();
+
+	const slugify = (s: string): string =>
+		s
+			.toLowerCase()
+			.trim()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-+|-+$/g, "");
+
+	const localTerms = (c: { id: string; name: string } | null): string => {
+		if (c) {
+			const slug = slugify(c.name);
+			for (const [path, text] of Object.entries(termsFiles)) {
+				if (path.endsWith(`terms-${slug}.md`)) return text;
+			}
+		}
+		return genericTermsMd;
+	};
+
+	const remoteTermsUrl = (c: { id: string; name: string } | null): string | null => {
+		if (!env.termsUrl) return null;
+		const hasPlaceholder = env.termsUrl.includes("{slug}") || env.termsUrl.includes("{id}");
+		if (hasPlaceholder && !c) return null;
+		return env.termsUrl
+			.replaceAll("{slug}", slugify(c?.name ?? ""))
+			.replaceAll("{id}", c?.id ?? "");
+	};
+
+	const remoteCache = new Map<string, string>();
+	let md = $state<string>(genericTermsMd);
+	let loading = $state(false);
+
+	const load = async (c: { id: string; name: string } | null): Promise<void> => {
+		const url = remoteTermsUrl(c);
+		if (url) {
+			const cached = remoteCache.get(url);
+			if (cached) {
+				md = cached;
+				return;
+			}
+			loading = true;
+			try {
+				const res = await fetch(url, { cache: "no-store" });
+				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+				const text = await res.text();
+				remoteCache.set(url, text);
+				md = text;
+			} catch {
+				md = localTerms(c);
+			} finally {
+				loading = false;
+			}
+		} else {
+			md = localTerms(c);
+		}
+	};
+
+	$effect(() => {
+		if (open) void load(competition);
+	});
 
 	interface InlineNode {
 		kind: "text" | "bold" | "link";
@@ -82,7 +150,8 @@
 		return blocks;
 	}
 
-	const blocks = $derived(parseBlocks(termsMd));
+	const blocks = $derived(parseBlocks(md));
+	const dialogSubtitle = $derived(competition?.name ?? subtitle);
 
 	$effect(() => {
 		if (!open) return;
@@ -131,11 +200,11 @@
 						>
 							{title}
 						</p>
-						{#if subtitle}
+						{#if dialogSubtitle}
 							<h2
 								class="font-display mt-0.5 break-words text-lg font-extrabold uppercase leading-tight text-slate-100"
 							>
-								{subtitle}
+								{dialogSubtitle}
 							</h2>
 						{/if}
 					</div>
@@ -152,7 +221,10 @@
 			<div
 				class="min-h-0 overflow-y-auto overscroll-contain p-4 [touch-action:pan-y]"
 			>
-				{#each blocks as block}
+				{#if loading}
+					<p class="text-sm text-slate-400">Memuat ketentuan…</p>
+				{:else}
+					{#each blocks as block}
 					{#if block.kind === "h2"}
 						<h3
 							class="font-display mt-4 text-sm font-bold uppercase tracking-wider text-cyan-200 first:mt-0"
@@ -215,7 +287,8 @@
 							{/each}
 						</ol>
 					{/if}
-				{/each}
+					{/each}
+				{/if}
 			</div>
 		</div>
 	</div>
