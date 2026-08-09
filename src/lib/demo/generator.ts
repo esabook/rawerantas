@@ -279,7 +279,7 @@ export const mockLayanganScores: MockLayangan[] = mockParticipants
 		competitionId: p.competitionId,
 		participantId: p.id,
 		round: 1,
-		status: pick(["mudun", "putus", "menang"] as const),
+		status: pick(["menang", "putus", "dq"] as const),
 		flightDurationMs: int(30_000, 600_000),
 		recordedBy: PIN_HASH,
 		idempotencyKey: uuid(50_000 + i),
