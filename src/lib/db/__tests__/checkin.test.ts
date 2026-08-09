@@ -283,13 +283,14 @@ describe("checkInParticipant live via RPC (B1-5)", () => {
 		);
 	});
 
-	it("offline → catat optimistik lokal + antrean (F7)", async () => {
+	it("offline → catat optimistik lokal + antrean, kembalikan queued:true (F7, B2-4)", async () => {
 		sb.rpcError = new TypeError("Failed to fetch");
-		const { eligibility } = await checkInParticipant(
+		const { eligibility, queued } = await checkInParticipant(
 			LIVE_OK_ID,
 			"hash-panitia",
 		);
 		expect(eligibility).toBe("ok");
+		expect(queued).toBe(true);
 		// record lokal optimistik
 		const { localGetAll, localStores } = await import("$lib/db/localStore");
 		const checkins = await localGetAll<{ participantId: string }>(

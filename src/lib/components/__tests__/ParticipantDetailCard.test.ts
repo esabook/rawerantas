@@ -118,4 +118,40 @@ describe("ParticipantDetailCard", () => {
 		);
 		expect(buttons.length).toBe(0);
 	});
+
+	it("check-in offline (queued) → badge menunggu sinkron (B2-4/F16)", async () => {
+		const checkin = await import("$lib/db/checkin");
+		type CheckinResult = Awaited<
+			ReturnType<(typeof checkin)["checkInParticipant"]>
+		>;
+		const spy = vi
+			.spyOn(checkin, "checkInParticipant")
+			.mockResolvedValue({
+				eligibility: "ok",
+				queued: true,
+				summary: undefined,
+			} as unknown as CheckinResult);
+		try {
+			const { container } = render(ParticipantDetailCard, {
+				participantId: dpPaid.id,
+				onDone: () => {},
+			});
+			await waitFor(() => {
+				expect(container.textContent ?? "").toContain("Check-in Peserta");
+			});
+			fireEvent.click(
+				Array.from(container.querySelectorAll("button")).find((b) =>
+					(b.textContent ?? "").includes("Check-in"),
+				) as Element,
+			);
+			await waitFor(
+				() => {
+					expect(container.textContent ?? "").toContain("Menunggu sinkron");
+				},
+				{ timeout: 5000 },
+			);
+		} finally {
+			spy.mockRestore();
+		}
+	});
 });
