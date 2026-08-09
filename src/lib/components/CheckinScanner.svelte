@@ -371,7 +371,7 @@
 					<input
 						type="text"
 						class="input flex-1"
-						placeholder="RA-2026-001"
+						placeholder="T-000001"
 						bind:value={manualTicket}
 						onkeydown={(e) => {
 							if (e.key === "Enter") {

@@ -120,7 +120,7 @@ describe("checkin domain", () => {
 		const summary = await getCheckinSummary(fullyPaid.id);
 		expect(summary.status).toBe("fully_paid");
 		expect(summary.remaining).toBeGreaterThanOrEqual(0);
-		expect(summary.participant.ticketNumber).toMatch(/^RA-2026-/);
+		expect(summary.participant.ticketNumber).toMatch(/^T-/);
 		expect(summary.competitionName).toBeTruthy();
 	});
 

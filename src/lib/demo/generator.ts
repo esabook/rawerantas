@@ -135,7 +135,7 @@ export const mockParticipants: MockParticipant[] = Array.from(
 		return {
 			id: uuid(100 + idx),
 			competitionId: uuid(1 + (idx % 3)),
-			ticketNumber: `RA-2026-${idx.toString().padStart(3, "0")}`,
+			ticketNumber: `T-${idx.toString().padStart(6, "0")}`,
 			lapakNumber: idx.toString(),
 			name: `${FIRST_NAMES[idx % FIRST_NAMES.length]} ${LAST_NAMES[(idx * 7) % LAST_NAMES.length]}`,
 			phone: `+6281${int(100000000, 999999999)}`,
