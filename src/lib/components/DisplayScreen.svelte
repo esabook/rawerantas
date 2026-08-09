@@ -47,7 +47,9 @@
 				aesthetic: Number(row.aesthetic ?? 0),
 				stability: Number(row.stability ?? 0),
 				creativity: Number(row.creativity ?? 0),
-				totalWeighted: Number(row.totalWeighted ?? row.total_weighted ?? 0),
+				totalWeighted: Number(
+					row.totalWeighted ?? row.total_weighted ?? 0,
+				),
 			};
 		}
 		if (competition?.scoringMode === "layangan_aduan") {
@@ -67,7 +69,10 @@
 	};
 
 	const ranking = $derived(
-		computeRanking(rows.map(toScoreRow), competition?.scoringMode ?? "terberat"),
+		computeRanking(
+			rows.map(toScoreRow),
+			competition?.scoringMode ?? "terberat",
+		),
 	);
 	const byParticipant = $derived(
 		new Map(rows.map((r) => [r.participantId, r])),
@@ -301,7 +306,9 @@
 								name?: string;
 							};
 							if (p.status === "checked_in") {
-								announce(`${p.name ?? "Peserta"} sudah check-in`);
+								announce(
+									`${p.name ?? "Peserta"} sudah check-in`,
+								);
 								void refresh(false);
 							}
 						},
@@ -314,7 +321,9 @@
 							table: "competitions",
 						},
 						() => {
-							void refreshCompetitions().then(() => refresh(false));
+							void refreshCompetitions().then(() =>
+								refresh(false),
+							);
 						},
 					)
 					.subscribe();
@@ -345,7 +354,9 @@
 </script>
 
 <div class="flex min-h-dvh w-full flex-col bg-background text-foreground">
-	<header class="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-4">
+	<header
+		class="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-4"
+	>
 		<div class="min-w-0">
 			<p class="text-2xl font-black uppercase tracking-widest">
 				{env.appName}
@@ -372,7 +383,7 @@
 	<main class="flex flex-1 flex-col justify-center gap-4 overflow-hidden p-4">
 		{#if loading}
 			<p class="animate-pulse text-center text-2xl text-muted-foreground">
-				Memuat papan skor…
+				Memuat leaderboard…
 			</p>
 		{:else if !competition}
 			<p class="text-center text-2xl text-muted-foreground">
@@ -387,14 +398,18 @@
 				{#each ranking.slice(0, 3) as entry (entry.key)}
 					{@const row = byParticipant.get(entry.key)}
 					<div
-						class="rounded-2xl border px-4 py-5 text-center {entry.rank === 1
+						class="rounded-2xl border px-4 py-5 text-center {entry.rank ===
+						1
 							? 'order-2 border-gold bg-gold/10 pb-8'
 							: entry.rank === 2
 								? 'order-1'
 								: 'order-3'}"
 					>
 						{#if entry.rank === 1}
-							<Crown class="mx-auto mb-2 h-10 w-10 text-gold" aria-hidden="true" />
+							<Crown
+								class="mx-auto mb-2 h-10 w-10 text-gold"
+								aria-hidden="true"
+							/>
 						{/if}
 						<p class="truncate text-3xl font-black">
 							{row ? nameOf(row) : "Peserta"}
@@ -402,14 +417,15 @@
 						<p class="mt-1 text-sm text-muted-foreground">
 							{row && lapakOf(row) ? `BIB ${lapakOf(row)}` : ""}
 						</p>
-						<p class="mt-2 font-mono text-4xl font-bold tabular-nums">
+						<p
+							class="mt-2 font-mono text-4xl font-bold tabular-nums"
+						>
 							{formatScore(entry.score, entry.subScore)}
 						</p>
 						{#if competition?.scoringMode === "layangan_aduan"}
 							<p class="mt-1 text-xs text-muted-foreground">
-								Total {formatDuration(entry.subScore)} · Terlama {formatDuration(
-									maxDuration(entry.entries),
-								)}
+								Total {formatDuration(entry.subScore)} · Terlama
+								{formatDuration(maxDuration(entry.entries))}
 							</p>
 						{/if}
 					</div>
@@ -420,9 +436,13 @@
 				<ol class="w-full space-y-2">
 					{#each ranking.slice(3, 10) as entry (entry.key)}
 						{@const row = byParticipant.get(entry.key)}
-						<li class="flex items-center justify-between gap-3 border-b border-border/30 px-2 py-2">
+						<li
+							class="flex items-center justify-between gap-3 border-b border-border/30 px-2 py-2"
+						>
 							<div class="flex min-w-0 items-center gap-4">
-								<span class="w-8 text-center font-mono text-xl font-bold text-muted-foreground">
+								<span
+									class="w-8 text-center font-mono text-xl font-bold text-muted-foreground"
+								>
 									{entry.rank}
 								</span>
 								<div class="min-w-0">
@@ -430,19 +450,26 @@
 										{row ? nameOf(row) : "Peserta"}
 									</p>
 									<p class="text-sm text-muted-foreground">
-										{row && lapakOf(row) ? `BIB ${lapakOf(row)}` : ""}
+										{row && lapakOf(row)
+											? `BIB ${lapakOf(row)}`
+											: ""}
 										{#if entry.entries.length > 1}
 											· {entry.entries.length} skor
 										{/if}
 									</p>
 								</div>
 							</div>
-							<span class="shrink-0 text-right font-mono text-3xl font-bold tabular-nums">
+							<span
+								class="shrink-0 text-right font-mono text-3xl font-bold tabular-nums"
+							>
 								{formatScore(entry.score, entry.subScore)}
 								{#if competition?.scoringMode === "layangan_aduan"}
 									<br />
-									<span class="text-xs font-normal text-muted-foreground">
-										Total {formatDuration(entry.subScore)} · Terlama {formatDuration(
+									<span
+										class="text-xs font-normal text-muted-foreground"
+									>
+										Total {formatDuration(entry.subScore)} ·
+										Terlama {formatDuration(
 											maxDuration(entry.entries),
 										)}
 									</span>
@@ -456,8 +483,12 @@
 			<div class="flex items-center justify-center gap-2">
 				{#each competitions as c, i (c.id)}
 					<span
-						class="h-2.5 rounded-full {i === index ? 'w-6 bg-gold' : 'w-2.5 bg-border'}"
-						aria-label={i === index ? `Menampilkan ${c.name}` : c.name}
+						class="h-2.5 rounded-full {i === index
+							? 'w-6 bg-gold'
+							: 'w-2.5 bg-border'}"
+						aria-label={i === index
+							? `Menampilkan ${c.name}`
+							: c.name}
 					></span>
 				{/each}
 			</div>

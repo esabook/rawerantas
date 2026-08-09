@@ -43,7 +43,7 @@ describe("PaymentMethodSelector", () => {
 		const { container } = render(PaymentMethodSelector, { configs, value: "" });
 		const radios = container.querySelectorAll('input[name="payment-method"]');
 		expect(radios).toHaveLength(2);
-		expect(container.textContent ?? "").toContain("Transfer Bank");
+		expect(container.textContent ?? "").toContain("TF-bank");
 		expect(container.textContent ?? "").not.toContain("Tunai");
 	});
 

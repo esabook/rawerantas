@@ -148,7 +148,7 @@ Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, liha
 
 **Deskripsi:** ARCHITECTURE §7 menyatakan "peserta jackpot menang kategori terpisah, tidak ikut urutan biasa." Namun `computeRanking` memberi `score=1` untuk semua peserta jackpot dan `score=0` untuk yang bukan, lalu mengurutkan menurun. Akibatnya **semua peserta jackpot menempati peringkat teratas** papan utama, bercampur dengan urutan berat.
 
-**Dampak:** Papan skor utama menampilkan jackpot sebagai juara umum, bukan kategori terpisah — tidak sesuai spesifikasi.
+**Dampak:** Leaderboard utama menampilkan jackpot sebagai juara umum, bukan kategori terpisah — tidak sesuai spesifikasi.
 
 **Rekomendasi:** Pisahkan peserta jackpot ke kategori tersendiri di leaderboard/display; jangan set `score=1` di peringkat umum.
 
@@ -172,7 +172,7 @@ Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, liha
 
 **Deskripsi:** Dua device juri men-submit hasil untuk peserta yang sama pada babak yang sama → dua baris `scores_layangan`. `computeRanking` `layangan_aduan` menghitung `wins.length` → kemenangan ter-inflasi. ARCHITECTURE menyadari "konflik tidak dicek", tapi tanpa constraint, kesalahan ganda tidak pernah terdeteksi.
 
-**Dampak:** Perhitungan menang bisa ganda/salah di papan skor.
+**Dampak:** Perhitungan menang bisa ganda/salah di leaderboard.
 
 **Tambahan v2:** `hasResult()` (`layangan.ts:122-129`) sebenarnya tersedia, tetapi `LayanganPanel` tidak pernah memanggilnya — guard hanya dari state lokal hasil `load()` awal (`LayanganPanel.svelte:82-93,146-148`), sehingga dua device yang sama-sama fresh tetap lolos berdua. Jalur undo-nya pun bermasalah bila entri antrean sudah tersinkron (lihat A25).
 
@@ -244,7 +244,7 @@ Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, liha
 
 **Deskripsi:** Panel menampilkan total berbobot yang **dibulatkan** (`Math.round`), sedangkan leaderboard/ranking memakai `total_weighted` DB (real, ditampilkan 1 desimal). Contoh: `83*0.4+82*0.4+84*0.2 = 82.8` → panel "83", papan "82.8".
 
-**Dampak:** Juri melihat angka berbeda dari papan skor; bisa membingungkan.
+**Dampak:** Juri melihat angka berbeda dari leaderboard; bisa membingungkan.
 
 **Rekomendasi:** Seragamkan pembulatan (pakai `total_weighted` real di panel, atau bulatkan di engine).
 
@@ -316,7 +316,7 @@ Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, liha
 
 **Deskripsi:** Anon (kunci yang juga di-bundle publik) mendapat hak DELETE penuh atas `scores_mancing` dan `scores_layangan`, serta INSERT/UPDATE/DELETE atas `sponsors`. Siapa pun dapat menghapus skor peserta mana pun atau mengganti banner sponsor landing tanpa PIN apa pun — melampaui pengakuan "RLS lemah" §6, karena ini aksi destruktif satu arah.
 
-**Dampak:** Sabotase papan skor (hapus skor unggulan) dan vandalisme landing sangat mudah dilakukan.
+**Dampak:** Sabotase leaderboard (hapus skor unggulan) dan vandalisme landing sangat mudah dilakukan.
 
 **Rekomendasi:** Cabut grant/policy DELETE anon; undo skor semestinya lewat RPC ber-audit (atau soft-delete); write sponsor hanya via jalur admin ber-PIN (RPC), bukan policy publik.
 
@@ -400,7 +400,7 @@ Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, liha
 
 **Deskripsi:** Untuk submit yang queued, `result.id` = **kunci antrean** (mis. `score-mancing:{comp}:{peserta}:{ts}`), bukan UUID DB. Bila entri ter-drain sebelum undo (interval 15 detik, atau drain langsung saat event `online`), `removePending(id)` mengembalikan false → kode men-enqueue tombstone `score-delete:{kunci}` dengan `payload.scoreId` = kunci antrean tadi → executor menjalankan `.delete().eq("id", kunci)` → tidak ada baris UUID yang cocok → **0 baris terhapus**. Toast "Skor dibatalkan" tetap tampil.
 
-**Dampak:** Ghost score yang tidak bisa dibatalkan dari UI; papan skor salah tanpa disadari.
+**Dampak:** Ghost score yang tidak bisa dibatalkan dari UI; leaderboardr salah tanpa disadari.
 
 **Rekomendasi:** Simpan pemetaan kunci antrean → UUID (return id saat insert sukses di executor), atau delete via `idempotency_key` (kolom itu ada di tabel skor); toast undo harus memverifikasi hasil tombstone.
 
@@ -520,7 +520,7 @@ Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, liha
 
 **Deskripsi:** Display dan leaderboard publik bergantung pada Supabase Realtime, tetapi tabel-tabel skor/peserta/kompetisi tidak pernah dimasukkan ke publication `supabase_realtime` — tanpa langkah manual itu, event tidak akan pernah menyala. Fallback: display masih refresh lewat siklus 30 detik (`DISPLAY_CYCLE_MS`), tetapi leaderboard publik **tidak punya polling sama sekali** (hanya tombol manual + flap `online`).
 
-**Dampak:** Papan skor "live" bisa diam-diam basi di hari-H; penonton melihat data lama tanpa indikator.
+**Dampak:** Leaderboard "live" bisa diam-diam basi di hari-H; penonton melihat data lama tanpa indikator.
 
 **Rekomendasi:** Tambahkan `alter publication` ke `rls.sql`/README sebagai langkah deployment wajib (lihat desain §8 dokumen peserta); beri leaderboard fallback polling (mis. 30 detik) dan indikator "last updated".
 
@@ -628,7 +628,7 @@ Semua temuan R1 + gap tak-tercatat sudah diperbaiki (satu item satu commit, liha
 
 **Deskripsi:** B4-8 mengaitkan undo nyata HiasPanel: demo menghapus lokal (jalan), live men-enqueue tombstone delete. Tapi (a) executor tidak punya case `/rest/scores/layangan-hias/delete` — op mengembalikan `"error"`, retry sampai `RETRIES_CAP` lalu dead; dan (b) seandainya case ditambahkan meniru mancing/layangan, RPC `delete_score` menolak tabel hias (whitelist). Komentar `hias.ts` mengakui ("executor belum punya endpoint delete hias — catat utk lanjutan") tetapi FIX-TRACKER B4-8 tidak mencatatnya sebagai carryover — status DONE diberikan untuk jalur live yang tidak berfungsi. Toast "Skor hias dibatalkan" tetap tampil.
 
-**Dampak:** Juri hias yang meng-undo skor di mode live melihat sukses palsu; papan skor mempertahankan nilai yang dikira sudah dibatalkan (ghost score kebalikan A25).
+**Dampak:** Juri hias yang meng-undo skor di mode live melihat sukses palsu; leaderboard mempertahankan nilai yang dikira sudah dibatalkan (ghost score kebalikan A25).
 
 **Rekomendasi:** Tambah case `/rest/scores/layangan-hias/delete` di executor + perluas whitelist `delete_score` ke `scores_layangan_hias`, lalu uji tombstone hias di `executor.test.ts`; ATAU tandai B4-8 live = carryover eksplisit sampai keduanya ada.
 

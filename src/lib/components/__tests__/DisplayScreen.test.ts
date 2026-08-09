@@ -55,7 +55,7 @@ describe("DisplayScreen", () => {
 		cleanup();
 	});
 
-	it("render header (nama kompetisi, jam, ronde) + papan skor", async () => {
+	it("render header (nama kompetisi, jam, ronde) + leaderboard", async () => {
 		const { container } = render(DisplayScreen);
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("Mancing Lele");

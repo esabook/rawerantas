@@ -14,7 +14,7 @@
 	const configsActive = $derived(configs.filter((c) => c.isActive));
 
 	const labels: Record<string, string> = {
-		bank_transfer: "Transfer Bank",
+		bank_transfer: "TF-bank",
 		ewallet: "E-Wallet",
 		qris: "QRIS",
 		cash: "Tunai",
@@ -22,7 +22,8 @@
 
 	const qrisWithoutImage = $derived(
 		value === "qris" &&
-			configsActive.find((c) => c.method === "qris")?.qrisImageUrl == null,
+			configsActive.find((c) => c.method === "qris")?.qrisImageUrl ==
+				null,
 	);
 </script>
 
@@ -30,7 +31,9 @@
 	<legend class="font-medium">Metode pembayaran</legend>
 
 	{#each configsActive as c}
-		<label class="flex items-center gap-2 rounded-lg border border-border/60 px-2 py-2">
+		<label
+			class="flex items-center gap-2 rounded-lg border border-border/60 px-2 py-2"
+		>
 			<input
 				type="radio"
 				name="payment-method"
@@ -43,7 +46,9 @@
 				<span class="font-medium">{labels[c.method] ?? c.method}</span>
 				{#if c.accountName}
 					<span class="block text-xs text-muted-foreground">
-						{c.accountName}{c.accountNumber ? ` — ${c.accountNumber}` : ""}
+						{c.accountName}{c.accountNumber
+							? ` — ${c.accountNumber}`
+							: ""}
 					</span>
 				{/if}
 			</span>
@@ -57,7 +62,10 @@
 	{/if}
 
 	{#if value && qrisWithoutImage}
-		<p class="rounded-lg bg-muted p-2 text-xs text-muted-foreground" role="note">
+		<p
+			class="rounded-lg bg-muted p-2 text-xs text-muted-foreground"
+			role="note"
+		>
 			QRIS belum tersedia — ikuti instruksi berikut.
 		</p>
 	{/if}

@@ -309,7 +309,7 @@ Tidak ada opsi untuk memperbaiki bukti / mengirim ulang. Ini membuat peserta yan
 
 **Dampak:** Sisa pembayaran tidak tertagih; laporan keuangan tidak akurat; panitia mengira sudah lunas.
 
-**Rekomendasi:** Derive label dari `totalVerified vs fee`; untuk `checked_in` dengan sisa tampilkan "Sudah masuk — sisa Rp X".
+**Rekomendasi:** Derive label dari `totalVerified vs fee`; untuk `checked_in` dengan sisa tampilkan "Sudah masuk: kurang bayar Rp X".
 
 ---
 
@@ -524,7 +524,7 @@ resumable di `doc2/REVIEW-TRACKER.md`.
 | F16 | TERTUTUP | badge "menunggu sinkron" + skip load() saat queued |
 | F17 | TERTUTUP | teks kirim-ulang kini nyata |
 | F18 | TERTUTUP | mode lunas tak lagi menimpa nominal dgn fee penuh |
-| F19 | TERTUTUP | label "Sudah masuk — sisa Rp X" |
+| F19 | TERTUTUP | label "Sudah masuk: kurang bayar Rp X" |
 | F20 | TERTUTUP | disclaimer privasi di halaman tiket |
 | F21 | TERTUTUP | sesi guest dipertahankan saat gagal jaringan |
 | F22 | TERTUTUP via amandemen | `checkDraftRestore` tetap dead code; deviasi diterima (ARCHITECTURE §5) |

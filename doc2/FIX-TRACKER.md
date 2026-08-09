@@ -236,7 +236,7 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     utk penyempurnaan bila perlu.
   - Commit: `01554aa`
 - [x] **B2-2** — Label `checked_in` menampilkan sisa bayar — Temuan: F19 — FILES: `RegistrantProfile.svelte`, `TicketCard.svelte`, test
-  - Plan: derive label dari `totalVerified vs fee`; untuk `checked_in` dengan sisa tampilkan "Sudah masuk — sisa Rp X".
+  - Plan: derive label dari `totalVerified vs fee`; untuk `checked_in` dengan sisa tampilkan "Sudah masuk: kurang bayar Rp X".
   - Bukti: suite 271/271 · check 0 (UI svelte, tak di-lint biome)
   - Keputusan: paymentStateFor/badge RegistrantProfile + TicketCard (prop remaining) menampilkan sisa untuk checked_in;
     fully_paid tetap "Lunas"/"Siap bertanding". Pass remaining dari RegistrantProfile.
@@ -277,7 +277,7 @@ Kena timeout = `BLOCKED` + catat di JOURNAL, jangan menaikkan timeout diam-diam.
     (saveCompetition/savePaymentConfig/advanceRound); verify/reject sudah audit di transaksi RPC (B1-3).
   - Commit: `581faa5`
 
-## Batch 3 — Juri & papan skor (P1)
+## Batch 3 — Juri & Leaderboard (P1)
 
 - [x] **B3-1** — Panel juri offline-safe — Temuan: A23, A24
   - FILES: `MancingPanel.svelte`, `LayanganPanel.svelte`, `HiasPanel.svelte`, cache peserta (IDB/high-water), test

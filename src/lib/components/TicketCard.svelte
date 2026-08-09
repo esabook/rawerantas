@@ -148,7 +148,9 @@
 		<p class="no-print mt-3 flex items-center gap-1 text-xs text-gold">
 			<BadgeCheck class="h-3.5 w-3.5" aria-hidden="true" />
 			{#if participant.status === "checked_in" && (remaining ?? 0) > 0}
-				Sudah masuk — sisa Rp {(remaining ?? 0).toLocaleString("id-ID")}
+				Sudah masuk: kurang bayar Rp{(remaining ?? 0).toLocaleString(
+					"id-ID",
+				)}
 			{:else if participant.status === "checked_in"}
 				Sudah check-in.
 			{:else}

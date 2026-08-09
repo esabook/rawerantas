@@ -72,7 +72,7 @@ describe("AdminPanel", () => {
 		expect(container.textContent ?? "").toContain(mancing.name);
 		await clickTab(container, "Metode Pembayaran");
 		await waitFor(() => {
-			expect(container.textContent ?? "").toContain("Transfer bank");
+			expect(container.textContent ?? "").toContain("TF-bank");
 		});
 		expect(container.textContent ?? "").toContain("QRIS");
 	});

@@ -73,14 +73,14 @@ Status awal `⏳`; diisi per batch. Kolom Cek = apa yang diverifikasi (commit/sc
 | Item | Commit klaim | Status | Cek | Catatan |
 |---|---|---|---|---|
 | B2-1 lanjut lunas menagih sisa | 01554aa | ⚠️ | validateAmount full pakai nominal terkirim (`payment.ts:78-84`); sisa + blokir overpay (`RegistrantProfile.svelte:281,328`) | **deadlock bila sisa < min_dp** — aturan RPC menolak (A43) |
-| B2-2 label checked_in menampilkan sisa | ce82735 | ✅ | `RegistrantProfile.svelte:365-371` + `TicketCard.svelte:150` "Sudah masuk — sisa Rp X" | |
+| B2-2 label checked_in menampilkan sisa | ce82735 | ✅ | `RegistrantProfile.svelte:365-371` + `TicketCard.svelte:150` "Sudah masuk: kurang bayar Rp X" | |
 | B2-3 sesi guest tak dihapus saat offline | 2edd548 | ✅ | `daftar/+page.svelte:58-64` isOfflineError → pertahankan sesi + pesan | |
 | B2-4 state lokal optimistik check-in/tunai | ebdfb94 | ⚠️ | `queued:true` (`checkin.ts:271`); badge syncPending (`ParticipantDetailCard.svelte:249`) | **tanpa test baru** + FILES tak akurat (A46); sisa `remaining` summary tercatat |
 | B2-5 settle: warning pending + pasca-check-in | 4fc0a44 | ✅ | guard pending menutupi sisa (`payment.ts:377`); checked_in diizinkan (A31); warning modal (`AdminPanel.svelte:1306`) | guard kuota onsite = keputusan produk, antre |
 | B2-6 undoCheckIn recalc status | d6d2e81 | ✅ | recalc fee/minDp (`admin.ts:396-417`) + test lunas tetap fully_paid | audit undo masih absent → A21 PARSIAL |
 | B2-7 audit best-effort | 581faa5 | ✅ | `admin.ts:241` console.warn tanpa throw; verify/reject audit di RPC | |
 
-### Batch 3 — Juri & papan skor
+### Batch 3 — Juri & Leaderboard
 
 | Item | Commit klaim | Status | Cek | Catatan |
 |---|---|---|---|---|

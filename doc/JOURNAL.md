@@ -443,7 +443,7 @@ Format entri:
 - **B2-1** (F6,F18) — `01554aa`: validateAmount mode full memakai nominal yang
   dikirim (default sisa fee-paid); RegistrantProfile remainingFor + rincian
   "Sisa tagihan" + blokir overpayment.
-- **B2-2** (F19) — `ce82735`: label checked_in dgn sisa → "Sudah masuk — sisa
+- **B2-2** (F19) — `ce82735`: label checked_in dgn sisa → "Sudah masuk: kurang bayar
   Rp X" (paymentStateFor, badge, TicketCard via prop remaining).
 - **B2-3** (F21) — `2edd548`: loadProfile memakai isOfflineError — jangan
   hapus sesi guest saat jaringan gagal.
@@ -460,7 +460,7 @@ Format entri:
   tidak throw) utk saveCompetition/savePaymentConfig/advanceRound; verify/
   reject sudah audit di transaksi RPC (B1-3).
 - **Batch 2 gate**: suite 274/274 · check 0 · lint 0. Nol-limbo: 7/7 DONE.
-- Next: Batch 3 (Juri & papan skor) — B3-1..B3-7.
+- Next: Batch 3 (Juri & Leaderboard) — B3-1..B3-7.
 ## 2026-08-09 (siang) — Batch 3: B3-1..B3-4 + blokir keputusan B3-5
 
 - **B3-1** (A23,A24) — `18a14c9`: panel offline-safe (load catch, refetch

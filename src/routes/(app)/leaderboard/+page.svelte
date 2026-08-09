@@ -159,7 +159,7 @@
 	</div>
 
 	{#if loading}
-		<div class="flex flex-col gap-2" aria-label="memuat papan skor">
+		<div class="flex flex-col gap-2" aria-label="memuat leaderboard">
 			{#each [1, 2, 3, 4] as i}
 				<div
 					class="h-12 animate-pulse rounded-lg border border-border/60 bg-background/60"

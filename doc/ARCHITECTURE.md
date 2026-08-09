@@ -55,7 +55,7 @@ Aturan:
 | `/` | Landing: countdown, daftar lomba, ringkasan skor | Publik |
 | `/daftar` | Pendaftaran + pilih metode bayar + upload bukti | Publik |
 | `/tiket/[id]` | E-tiket digital (QR, print thermal, WA share) | Publik (via link tiket) |
-| `/leaderboard` | Layar penuh papan skor live | Publik |
+| `/leaderboard` | Layar penuh Leaderboard live | Publik |
 | `/panitia/checkin` | Scanner QR di pintu masuk | PIN Panitia |
 | `/juri/mancing` | Input timbangan | PIN Juri |
 | `/juri/layangan` | 1-tap mudun/putus | PIN Juri |

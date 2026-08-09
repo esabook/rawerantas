@@ -164,7 +164,7 @@
 		);
 		if (rejected) {
 			paymentNotice =
-				"Pembayaran ini ditolak panitia. Gunakan tombol \"Kirim ulang pembayaran\" untuk memperbaiki bukti.";
+				'Pembayaran ini ditolak panitia. Gunakan tombol "Kirim ulang pembayaran" untuk memperbaiki bukti.';
 			return;
 		}
 		paymentParticipant = participant;
@@ -186,7 +186,10 @@
 	};
 
 	/** B1-2 (F8/F17): buka modal utk perbaiki/kirim ulang baris yang ditolak. */
-	const openResubmit = (participant: Participant, payment: ParticipantPayment) => {
+	const openResubmit = (
+		participant: Participant,
+		payment: ParticipantPayment,
+	) => {
 		paymentParticipant = participant;
 		resubmitTarget = payment;
 		const competition = competitionFor(participant);
@@ -209,7 +212,9 @@
 				? participant
 					? remainingFor(participant)
 					: 0
-				: (paymentParticipant ? competitionFor(paymentParticipant)?.minDp ?? 0 : 0),
+				: paymentParticipant
+					? (competitionFor(paymentParticipant)?.minDp ?? 0)
+					: 0,
 		);
 		paymentSubmitError = "";
 	};
@@ -258,10 +263,11 @@
 				resubmitTarget = null;
 				paymentNotice = result.queued
 					? "Perbaikan masuk antrean dan akan dikirim otomatis saat koneksi pulih."
-					: "Pembayaran dikirim ulang dan menunggu verifikasi panitia.";
+					: "Pembayaran dikirim ulang dan menunggu verifikasi admin.";
 			} catch (error) {
 				paymentSubmitError =
-					error instanceof AmountBelowMinDpError || error instanceof Error
+					error instanceof AmountBelowMinDpError ||
+					error instanceof Error
 						? error.message
 						: "Gagal mengirim ulang pembayaran.";
 			} finally {
@@ -305,7 +311,7 @@
 			paymentParticipant = null;
 			paymentNotice = result.queued
 				? "Pembayaran masuk antrean dan akan dikirim otomatis saat koneksi pulih."
-				: "Pembayaran tercatat dan menunggu verifikasi panitia.";
+				: "Pembayaran tercatat dan menunggu verifikasi admin.";
 		} catch (error) {
 			paymentSubmitError =
 				error instanceof AmountBelowMinDpError || error instanceof Error
@@ -327,7 +333,10 @@
 	// B2-1/F6/F18: sisa tagihan utk "Lanjut lunas" = fee - total terverifikasi.
 	const remainingFor = (participant: Participant) => {
 		const competition = competitionFor(participant);
-		return Math.max(0, (competition?.fee ?? 0) - verifiedAmountFor(participant));
+		return Math.max(
+			0,
+			(competition?.fee ?? 0) - verifiedAmountFor(participant),
+		);
 	};
 
 	const pendingPaymentsFor = (participant: Participant) =>
@@ -367,8 +376,8 @@
 		if (participant.status === "checked_in") {
 			const remaining = remainingFor(participant);
 			return remaining > 0
-				? `Sudah masuk — sisa Rp ${remaining.toLocaleString("id-ID")}`
-				: "Sudah masuk — lunas";
+				? `Sudah masuk: kurang bayar Rp ${remaining.toLocaleString("id-ID")}`
+				: "Sudah masuk: lunas";
 		}
 		if (pending > 0) return "Menunggu verifikasi";
 		if (rejected > 0) return "Pembayaran ditolak";
@@ -450,7 +459,7 @@
 			<p
 				class="mt-2 font-display text-sm font-bold uppercase text-indigo-200"
 			>
-				Papan skor
+				Leaderboard
 			</p>
 			<p class="mt-1 text-xs text-slate-400">
 				Pantau posisi dan point lomba.
@@ -460,7 +469,7 @@
 			<p
 				class="text-[10px] font-bold uppercase tracking-widest text-slate-500"
 			>
-				Keanggotaan
+				Tiket/Kupon
 			</p>
 			<p
 				class="mt-2 font-display text-sm font-bold uppercase text-emerald-200"
@@ -468,7 +477,7 @@
 				{participants.length} arena diikuti
 			</p>
 			<p class="mt-1 text-xs text-slate-400">
-				Semua pendaftaran terhubung ke nomor WA ini.
+				Semua tiket pendaftaran milik nomor WA ini.
 			</p>
 		</div>
 	</div>
@@ -481,7 +490,7 @@
 				Keanggotaan arena
 			</p>
 			<h2 class="mt-1 text-xl font-bold text-white">
-				Status pendaftaran
+				Tiket/Kupon pendaftaran
 			</h2>
 		</div>
 		<button
@@ -579,6 +588,7 @@
 							>
 								Nomor tiket
 							</p>
+
 							<p
 								class="mt-1 font-mono text-xl font-bold tabular-nums text-white"
 							>
@@ -587,6 +597,11 @@
 							{#if participant.lapakNumber}
 								<p class="mt-1 text-xs text-slate-400">
 									BIB #{participant.lapakNumber}
+								</p>
+							{:else}
+								<p class="mt-1 text-xs text-slate-400">
+									Gunakan nomor tiket untuk check-in, untuk
+									klaim BIB (nomor peserta) di lokasi lomba.
 								</p>
 							{/if}
 						</div>
@@ -661,15 +676,15 @@
 						{/if}
 						{#if pendingPayments.length > 0}
 							<p class="mt-3 text-xs text-amber-200">
-								Bukti pembayaran sedang dicek panitia.
+								Bukti pembayaran sedang dicek panitia/admin.
 							</p>
 						{:else if rejectedPayments.length > 0}
 							<p
 								class="mt-3 text-xs leading-relaxed text-rose-200"
 							>
-								Pembayaran ditolak panitia. Periksa alasan di
-								atas lalu kirim ulang lewat tombol
-								"Kirim ulang pembayaran".
+								Pembayaran ditolak panitia/admin. Periksa alasan
+								di atas lalu kirim ulang lewat tombol "Kirim
+								ulang pembayaran".
 							</p>
 						{/if}
 					</div>
@@ -697,7 +712,10 @@
 								type="button"
 								class="btn btn-gold flex-1"
 								onclick={() =>
-									void openResubmit(participant, rejectedPayments[0])}
+									void openResubmit(
+										participant,
+										rejectedPayments[0],
+									)}
 							>
 								<RefreshCw class="h-4 w-4" aria-hidden="true" />
 								Kirim ulang pembayaran
@@ -730,7 +748,7 @@
 									aria-hidden="true"
 								/>{participant.status === "checked_in" &&
 								remainingFor(participant) > 0
-									? "Sudah masuk — tagihan sisa"
+									? "Sudah masuk: kurang bayar"
 									: "Siap bertanding"}</span
 							>
 						{/if}
@@ -814,7 +832,9 @@
 						id="continue-payment-title"
 						class="mt-1 text-xl font-bold text-white"
 					>
-						{resubmitTarget ? "Kirim ulang pembayaran" : "Lanjut bayar"}
+						{resubmitTarget
+							? "Kirim ulang pembayaran"
+							: "Lanjut bayar"}
 					</h2>
 					<p class="mt-1 text-xs text-slate-400">
 						{paymentCompetition?.name ?? "Lomba"} · {paymentParticipant.name}
@@ -845,13 +865,14 @@
 							: "Lunasi seluruh tagihan untuk menjadi lunas."}
 						{#if paymentParticipant}
 							<span class="mt-1 block font-semibold">
-								Sisa tagihan: Rp {remainingFor(paymentParticipant).toLocaleString(
-									"id-ID",
-								)}
+								Sisa tagihan: Rp {remainingFor(
+									paymentParticipant,
+								).toLocaleString("id-ID")}
 							</span>
 						{/if}
 					{:else}
-						Pendaftaran tercatat. Bayar minimal DP agar status dapat diproses panitia.
+						Pendaftaran tercatat. Bayar minimal DP agar status dapat
+						diproses panitia.
 					{/if}
 				</div>
 
