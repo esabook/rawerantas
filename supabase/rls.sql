@@ -1022,6 +1022,7 @@ grant execute on function delete_score(text, uuid, uuid, text) to anon, authenti
 
 create policy "proof_images anon insert" on storage.objects
 	for insert to anon
+	with check (bucket_id = 'proof-images');
 -- ============================================================
 -- 7. Data lock pasca-acara (B1-8) — A17
 -- Lock memblokir SEMUA tulis setelah acara selesai. Tabel single-row;
@@ -1094,7 +1095,6 @@ drop policy if exists "scores_mancing undo delete" on scores_mancing;
 drop policy if exists "scores_layangan undo delete" on scores_layangan;
 revoke delete on scores_mancing, scores_layangan
 	from anon, authenticated;
-	with check (bucket_id = 'proof-images');
 
 -- B4-3/A30: jalur admin membaca SEMUA payment_configs (termasuk non-aktif)
 -- melewati RLS select is_active=true — SECURITY DEFINER.
