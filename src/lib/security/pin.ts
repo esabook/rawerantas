@@ -16,6 +16,7 @@ export type PinKind = "juri" | "panitia" | "admin";
 export interface GrantInfo {
 	kind: PinKind;
 	at: number;
+	officer?: string;
 }
 
 const textEncoder = new TextEncoder();
@@ -73,12 +74,18 @@ export function readGrant(kind: PinKind): GrantInfo | null {
 	}
 }
 
-export function writeGrant(kind: PinKind): void {
+export function writeGrant(kind: PinKind, officer?: string): void {
 	if (typeof sessionStorage === "undefined") {
 		return;
 	}
-	const grant: GrantInfo = { kind, at: Date.now() };
+	const grant: GrantInfo = { kind, at: Date.now(), officer };
 	sessionStorage.setItem(grantStorageKey(kind), JSON.stringify(grant));
+}
+
+/** B4-6/A14: nama/ID petugas yang tercatat di grant (utk recordedBy). */
+export function readOfficer(kind: PinKind): string {
+	const grant = readGrant(kind);
+	return grant?.officer?.trim() ?? "";
 }
 
 export function clearGrant(kind: PinKind): void {
@@ -149,6 +156,7 @@ export async function recordFailedAttempt(kind: PinKind): Promise<PinState> {
 export async function verifyPin(
 	kind: PinKind,
 	pin: string,
+	officer?: string,
 ): Promise<GrantInfo> {
 	if (!isValidPin(pin)) {
 		throw new Error(`PIN harus ${PIN_LENGTH} digit.`);
@@ -180,8 +188,8 @@ export async function verifyPin(
 		}
 		throw new Error(`PIN salah (${next.attempts}/${MAX_ATTEMPTS}).`);
 	}
-	const grant: GrantInfo = { kind, at: Date.now() };
+	const grant: GrantInfo = { kind, at: Date.now(), officer };
 	writePinState(kind, { attempts: 0, lockedUntil: 0 });
-	writeGrant(kind);
+	writeGrant(kind, officer);
 	return grant;
 }

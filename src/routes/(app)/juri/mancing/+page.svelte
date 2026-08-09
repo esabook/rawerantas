@@ -6,7 +6,7 @@
 	import { getCompetitions } from "$lib/db/queries";
 	import type { Competition } from "$lib/db/queries";
 	import { env } from "$lib/env";
-	import { sha256Hex } from "$lib/security/pin";
+	import { readOfficer, sha256Hex } from "$lib/security/pin";
 
 	let competitions = $state<Competition[]>([]);
 	let loading = $state(true);
@@ -29,7 +29,9 @@
 	onMount(() => {
 		void sha256Hex(env.juriPin)
 			.then((hash) => {
-				recordedBy = hash;
+				// B4-6/A14: rekam identitas petugas + hash PIN di recordedBy.
+				const officer = readOfficer("juri");
+				recordedBy = officer ? `${hash}:${officer}` : hash;
 			})
 			.catch(() => {
 				recordedBy = "";

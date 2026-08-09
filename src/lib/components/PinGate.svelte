@@ -20,6 +20,7 @@
 	} = $props();
 
 	let pin = $state("");
+	let officer = $state("");
 	let locked = $state(false);
 	let lockMessage = $state("");
 	let error = $state("");
@@ -64,7 +65,7 @@
 		verifying = true;
 		error = "";
 		try {
-			await verifyPin(kind, pin);
+			await verifyPin(kind, pin, officer.trim() || undefined);
 			unlocked = true;
 			pin = "";
 			sfx.coin();
@@ -101,6 +102,17 @@
 		<p class="text-sm text-muted-foreground">
 			PIN {roleLabel} {PIN_LENGTH} digit
 		</p>
+
+		<label class="flex w-full max-w-xs flex-col gap-1 text-sm">
+			<span class="text-xs text-muted-foreground">Nama petugas (untuk audit)</span>
+			<input
+				type="text"
+				class="input"
+				placeholder="cth: Budi Panitia"
+				bind:value={officer}
+				autocomplete="off"
+			/>
+		</label>
 
 		{#if locked}
 			<div role="alert" class="w-full rounded-lg bg-destructive/15 p-4 text-center">
