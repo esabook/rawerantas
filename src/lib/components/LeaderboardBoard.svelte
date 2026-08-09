@@ -142,6 +142,12 @@
 						<div class="min-w-0">
 							<p class="truncate text-sm font-semibold">
 								{row ? nameOf(row) : "Peserta"}
+{#if competition.scoringMode === "jackpot_pita" && entry.entries.some((e) => e.isJackpot)}
+								<span
+									class="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-600"
+									>Jackpot</span
+								>
+							{/if}
 							</p>
 							<p class="text-xs text-muted-foreground">
 								{row && lapakOf(row)

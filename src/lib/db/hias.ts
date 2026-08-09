@@ -49,7 +49,9 @@ export function computeHiasTotal(
 	stability: number,
 	creativity: number,
 ): number {
-	return Math.round(aesthetic * 0.4 + stability * 0.4 + creativity * 0.2);
+	// B3-6/A12: seragamkan dgn engine/DB — kembalikan nilai real (bukan
+	// Math.round); papan menampilkan 1 desimal via toFixed(1).
+	return aesthetic * 0.4 + stability * 0.4 + creativity * 0.2;
 }
 
 /** true bila record masih bisa diedit dalam jendela 5 menit (dari edited_at / received_at). */

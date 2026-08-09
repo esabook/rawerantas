@@ -84,7 +84,7 @@ describe("engine — terberat", () => {
 });
 
 describe("engine — jackpot_pita", () => {
-	it("jackpot (pita) unggul walau berat lebih kecil", () => {
+	it("jackpot dirangking oleh berat (bukan otomatis #1); subScore menandai jackpot (A4)", () => {
 		const rows = [
 			row({
 				id: "a1",
@@ -101,10 +101,12 @@ describe("engine — jackpot_pita", () => {
 			}),
 		];
 		const ranking = computeRanking(rows, "jackpot_pita");
-		expect(ranking[0].key).toBe("A");
-		expect(ranking[0].score).toBe(1);
-		expect(ranking[0].subScore).toBe(5);
-		expect(ranking[1].key).toBe("B");
+		// B lebih berat → #1; A (jackpot) #2, ditandai subScore=1.
+		expect(ranking[0].key).toBe("B");
+		expect(ranking[0].score).toBe(8);
+		expect(ranking[1].key).toBe("A");
+		expect(ranking[1].score).toBe(5);
+		expect(ranking[1].subScore).toBe(1);
 	});
 
 	it("tanpa jackpot: berat terbesar, tie-break received_at", () => {

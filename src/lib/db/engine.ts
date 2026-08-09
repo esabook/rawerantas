@@ -102,9 +102,11 @@ const compute = (
 				}
 			}
 			const bestAt = jackpot ? toDate(jackpot.receivedAt) : weightAt;
+			// B3-6/A4: jackpot tidak lagi otomatis score=1 di papan umum — rangking
+			// memakai berat; jackpot ditandai kategori terpisah di UI.
 			return {
-				score: jackpot ? 1 : 0,
-				subScore: weight === -Infinity ? 0 : weight,
+				score: weight === -Infinity ? 0 : weight,
+				subScore: jackpot ? 1 : 0,
 				bestAt,
 			};
 		}
