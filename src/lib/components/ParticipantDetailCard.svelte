@@ -2,12 +2,14 @@
 	import {
 		Banknote,
 		CheckCircle2,
+		Info,
 		Loader2,
 		LogIn,
 		XCircle,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { sfx, vibrate } from "$lib/audio/sfx";
+	import TermsDialog from "$lib/components/TermsDialog.svelte";
 	import { undoable } from "$lib/components/toast/toastStore";
 	import {
 		CheckinError,
@@ -33,6 +35,7 @@
 	// B2-4/F7/F16: true bila ada op queued (check-in / bayar tunai offline)
 	// yang belum tersinkron — tampilkan badge "menunggu sinkron".
 	let syncPending = $state(false);
+	let showTerms = $state(false);
 
 	const statusLabel: Record<string, string> = {
 		registered: "Terdaftar",
@@ -184,21 +187,32 @@
 					BIB {summary.participant.lapakNumber}
 				</p>
 			</div>
-			<span
-				class="rounded-full px-2.5 py-1 text-xs font-semibold {summary.paymentRejected
-					? 'bg-rose-500/15 text-rose-600'
-					: summary.status === 'checked_in'
-						? 'bg-sky-500/15 text-sky-600'
-						: summary.status === 'disqualified'
-							? 'bg-destructive/15 text-destructive'
-							: summary.status === 'fully_paid'
-								? 'bg-emerald-500/15 text-emerald-600'
-								: 'bg-amber-500/15 text-amber-600'}"
-			>
-				{summary.paymentRejected
-					? "Pembayaran ditolak"
-					: (statusLabel[summary.status] ?? summary.status)}
-			</span>
+			<div class="flex shrink-0 items-center gap-1.5">
+				<button
+					type="button"
+					class="p-1 text-muted-foreground transition-colors hover:text-foreground"
+					title="Syarat & Ketentuan"
+					aria-label="Lihat Syarat & Ketentuan"
+					onclick={() => (showTerms = true)}
+				>
+					<Info class="h-4 w-4" aria-hidden="true" />
+				</button>
+				<span
+					class="rounded-full px-2.5 py-1 text-xs font-semibold {summary.paymentRejected
+						? 'bg-rose-500/15 text-rose-600'
+						: summary.status === 'checked_in'
+							? 'bg-sky-500/15 text-sky-600'
+							: summary.status === 'disqualified'
+								? 'bg-destructive/15 text-destructive'
+								: summary.status === 'fully_paid'
+									? 'bg-emerald-500/15 text-emerald-600'
+									: 'bg-amber-500/15 text-amber-600'}"
+				>
+					{summary.paymentRejected
+						? "Pembayaran ditolak"
+						: (statusLabel[summary.status] ?? summary.status)}
+				</span>
+			</div>
 		</div>
 
 		<div
@@ -218,8 +232,7 @@
 				<p class="font-semibold">
 					Pembayaran Rp {summary.pendingAmount.toLocaleString(
 						"id-ID",
-					)} menunggu verifikasi panitia
-					({summary.pendingCount} bukti).
+					)} menunggu verifikasi admin ({summary.pendingCount} bukti).
 				</p>
 				<p class="mt-1 text-xs">
 					Jangan tagih ulang full. Sisa bayar di atas menghitung hanya
@@ -314,3 +327,9 @@
 		{/if}
 	</div>
 {/if}
+
+<TermsDialog
+	open={showTerms}
+	title="Syarat & Ketentuan"
+	onclose={() => (showTerms = false)}
+/>

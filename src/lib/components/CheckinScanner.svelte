@@ -2,6 +2,7 @@
 	import {
 		Camera,
 		CameraOff,
+		Info,
 		ScanLine,
 		Ticket,
 		Users,
@@ -10,6 +11,7 @@
 	import { onDestroy, onMount, tick } from "svelte";
 	import ParticipantDetailCard from "$lib/components/ParticipantDetailCard.svelte";
 	import SoundToggle from "$lib/components/SoundToggle.svelte";
+	import TermsDialog from "$lib/components/TermsDialog.svelte";
 	import {
 		findParticipantByTicket,
 		getCheckinStats,
@@ -30,6 +32,7 @@
 	let selectedCompetitionId = $state("");
 	let competitionError = $state("");
 	let statsLoadToken = 0;
+	let showTerms = $state(false);
 
 	let scanner: unknown = null;
 	let stopScanning: (() => Promise<void>) | null = null;
@@ -273,9 +276,19 @@
 		</div>
 
 		<div class="flex flex-col gap-1.5">
-			<label for="checkin-competition" class="text-sm font-medium">
-				Filter lomba
-			</label>
+			<div class="flex items-center justify-between gap-2">
+				<label for="checkin-competition" class="text-sm font-medium">
+					Filter lomba
+				</label>
+				<button
+					type="button"
+					class="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+					onclick={() => (showTerms = true)}
+				>
+					<Info class="h-3.5 w-3.5" aria-hidden="true" />
+					Syarat & Ketentuan
+				</button>
+			</div>
 			<select
 				id="checkin-competition"
 				class="input h-11"
@@ -409,3 +422,9 @@
 		<p class="text-sm text-muted-foreground">Memuat peserta…</p>
 	{/if}
 </div>
+
+<TermsDialog
+	open={showTerms}
+	title="Syarat & Ketentuan"
+	onclose={() => (showTerms = false)}
+/>

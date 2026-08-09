@@ -3,13 +3,13 @@
 		ArrowUpRight,
 		ExternalLink,
 		Fish,
-		Gift,
 		Palette,
 		Trophy,
 		Wind,
-		X,
 	} from "@lucide/svelte";
 	import type { Component } from "svelte";
+	import TermsDialog from "$lib/components/TermsDialog.svelte";
+	import { env } from "$lib/env";
 	import type { Competition } from "$lib/db/queries";
 	import type { ScoringMode } from "$lib/db/schema";
 
@@ -73,54 +73,7 @@
 	const metaFor = (competition: Competition): CompetitionMeta =>
 		metaByMode[competition.scoringMode] ?? metaByMode.terberat;
 
-	let termsCompetition = $state<Competition | null>(null);
-
-	const scoringLabel = (competition: Competition): string => {
-		switch (competition.scoringMode) {
-			case "terberat":
-				return "ikan terberat";
-			case "kumulatif":
-				return "berat kumulatif";
-			case "jackpot_pita":
-				return "jackpot pita";
-			case "layangan_aduan":
-				return "aduan layangan";
-			case "layangan_hias":
-				return "penilaian layangan hias";
-		}
-	};
-
-	const prizesFor = (competition: Competition): string[] => {
-		const prizes = [
-			"Juara 1 — piala dan hadiah utama",
-			"Juara 2 — hadiah runner-up",
-			"Juara 3 — hadiah podium",
-		];
-		return competition.scoringMode === "jackpot_pita"
-			? [...prizes, "Bonus — hadiah jackpot pita"]
-			: prizes;
-	};
-
-	const termsFor = (competition: Competition): string[] => [
-		`Peserta wajib mengikuti arahan panitia dan membawa nomor tiket ${competition.name}.`,
-		`Penilaian menggunakan kategori ${scoringLabel(competition)} dan keputusan juri bersifat final.`,
-		`Kuota tersedia maksimal ${competition.totalQuota} peserta; pendaftaran ditutup saat kuota penuh.`,
-		`Tiket pendaftaran Rp ${competition.fee.toLocaleString("id-ID")} dan minimal DP Rp ${competition.minDp.toLocaleString("id-ID")}.`,
-		"Biaya pendaftaran yang sudah dibayar tidak dapat dikembalikan (no-refund).",
-	];
-
-	$effect(() => {
-		if (!termsCompetition) return;
-		const previousBodyOverflow = document.body.style.overflow;
-		const previousDocumentOverflow =
-			document.documentElement.style.overflow;
-		document.body.style.overflow = "hidden";
-		document.documentElement.style.overflow = "hidden";
-		return () => {
-			document.body.style.overflow = previousBodyOverflow;
-			document.documentElement.style.overflow = previousDocumentOverflow;
-		};
-	});
+	let showTerms = $state(false);
 </script>
 
 <section class="w-full bg-[#05070d] py-10 sm:py-12" aria-label="Arena lomba">
@@ -265,7 +218,7 @@
 								<button
 									type="button"
 									class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/5 px-2 py-2.5 text-[10px] font-bold uppercase tracking-widest text-cyan-200 transition-colors hover:border-cyan-200/60 hover:bg-cyan-300/10"
-									onclick={() => (termsCompetition = c)}
+									onclick={() => (showTerms = true)}
 								>
 									Lihat ketentuan dan syarat
 									<ExternalLink
@@ -292,74 +245,9 @@
 	</div>
 </section>
 
-{#if termsCompetition}
-	<div
-		class="fixed inset-0 z-50 flex overscroll-none items-center justify-center overflow-hidden bg-slate-950/80 px-2 py-4 backdrop-blur-sm"
-	>
-		<div
-			class="flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-cyan-300/30 bg-[#0a0f1c] shadow-[0_0_40px_rgba(34,211,238,0.16)]"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="landing-competition-terms-title"
-		>
-			<div
-				class="flex items-start justify-between gap-3 border-b border-slate-800 p-4"
-			>
-				<div>
-					<p
-						class="text-[10px] font-bold uppercase tracking-widest text-cyan-300"
-					>
-						Ketentuan lomba
-					</p>
-					<h2
-						id="landing-competition-terms-title"
-						class="font-display mt-1 break-words text-xl font-extrabold uppercase text-slate-100"
-					>
-						{termsCompetition.name}
-					</h2>
-				</div>
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm shrink-0"
-					aria-label="Tutup ketentuan"
-					onclick={() => (termsCompetition = null)}
-					><X class="h-4 w-4" aria-hidden="true" /></button
-				>
-			</div>
-			<div
-				class="min-h-0 overflow-y-auto overscroll-contain p-4 [touch-action:pan-y]"
-			>
-				<div
-					class="rounded-xl border border-indigo-300/15 bg-indigo-300/5 p-3"
-				>
-					<p
-						class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-200"
-					>
-						<Gift class="h-3.5 w-3.5" aria-hidden="true" />Hadiah
-					</p>
-					<ul
-						class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200"
-					>
-						{#each prizesFor(termsCompetition) as prize}<li
-								class="pl-1"
-							>
-								{prize}
-							</li>{/each}
-					</ul>
-				</div>
-				<h3
-					class="font-display mt-5 text-sm font-bold uppercase tracking-wider text-cyan-200"
-				>
-					Ketentuan dan persyaratan
-				</h3>
-				<ol
-					class="mt-2 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-300"
-				>
-					{#each termsFor(termsCompetition) as term}<li class="pl-1">
-							{term}
-						</li>{/each}
-				</ol>
-			</div>
-		</div>
-	</div>
-{/if}
+<TermsDialog
+	open={showTerms}
+	title="Syarat & Ketentuan"
+	subtitle={env.appName}
+	onclose={() => (showTerms = false)}
+/>

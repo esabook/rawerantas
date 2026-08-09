@@ -13,6 +13,7 @@
 		Plus,
 		RefreshCw,
 		Save,
+		Scale,
 		ShieldCheck,
 		Trash2,
 		Undo2,
@@ -20,6 +21,7 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { sfx, vibrate } from "$lib/audio/sfx";
+	import TermsDialog from "$lib/components/TermsDialog.svelte";
 	import { undoable } from "$lib/components/toast/toastStore";
 	import DataTable from "$lib/components/ui/datatable/DataTable.svelte";
 	import type { Column } from "$lib/components/ui/datatable/datatable.types";
@@ -92,14 +94,15 @@
 		layangan_aduan: "Aduan layangan",
 		layangan_hias: "Layangan hias",
 	};
-	let competitions = $state<Competition[]>([]);
-	let configs = $state<PaymentConfig[]>([]);
-	let sponsors = $state<Sponsor[]>([]);
-	let payments = $state<PaymentWithMeta[]>([]);
-	let panitiaParticipants = $state<PanitiaParticipant[]>([]);
-	let panitiaSaving = $state<string | null>(null);
-	let panitiaFilter = $state("all");
-	let loading = $state(true);
+let competitions = $state<Competition[]>([]);
+let configs = $state<PaymentConfig[]>([]);
+let sponsors = $state<Sponsor[]>([]);
+let payments = $state<PaymentWithMeta[]>([]);
+let panitiaParticipants = $state<PanitiaParticipant[]>([]);
+let panitiaSaving = $state<string | null>(null);
+let panitiaFilter = $state("all");
+let loading = $state(true);
+let showTerms = $state(false);
 	let error = $state("");
 	let tab = $state<AdminTab>("verify");
 	let savingId = $state<string | null>(null);
@@ -1165,9 +1168,21 @@
 				class="flex min-w-0 flex-col gap-3"
 				aria-labelledby="competition-title"
 			>
-				<h1 id="competition-title" class="text-lg font-bold">
-					Kompetisi dan babak
-				</h1>
+				<div
+					class="flex min-w-0 flex-wrap items-center justify-between gap-3"
+				>
+					<h1 id="competition-title" class="text-lg font-bold">
+						Kompetisi dan babak
+					</h1>
+					<button
+						type="button"
+						class="btn btn-sm shrink-0"
+						onclick={() => (showTerms = true)}
+					>
+						<Scale class="h-4 w-4" aria-hidden="true" />
+						Syarat & Ketentuan
+					</button>
+				</div>
 				{#each competitions as c (c.id)}
 					<div
 						class="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-background/60 p-4"
@@ -2505,6 +2520,12 @@
 		</div>
 	</div>
 {/if}
+
+<TermsDialog
+	open={showTerms}
+	title="Syarat & Ketentuan"
+	onclose={() => (showTerms = false)}
+/>
 
 {#if roundCompetition}
 	<div
