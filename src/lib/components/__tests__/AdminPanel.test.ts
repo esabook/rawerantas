@@ -102,6 +102,15 @@ describe("AdminPanel", () => {
 		);
 		expect(confirm).toBeDefined();
 		fireEvent.click(must(confirm));
+		// B4-1/A15: klik pertama diblokir — tampil peringatan peserta belum dinilai
+		// + opsi paksa; klik kedua (paksa) menaikkan babak.
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("belum dinilai");
+		});
+		const forceConfirm = Array.from(
+			container.querySelectorAll("button"),
+		).find((b) => (b.textContent ?? "").includes("Ya, mulai babak"));
+		fireEvent.click(must(forceConfirm));
 		await waitFor(
 			() => {
 				expect(

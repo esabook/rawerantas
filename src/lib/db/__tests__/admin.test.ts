@@ -344,10 +344,22 @@ describe("admin domain", () => {
 	it("advance round aduan → current_round +1 dan terlihat via getCompetitions", async () => {
 		const before = aduan.currentRound;
 		const hash = await adminActorHash();
-		const { round } = await advanceRound(aduan.id, hash);
+		const { round, ok } = await advanceRound(aduan.id, hash, { force: true });
+		expect(ok).toBe(true);
 		expect(round).toBe(before + 1);
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === aduan.id)?.currentRound).toBe(before + 1);
+	});
+
+	it("advance round diblokir bila masih ada peserta belum dinilai (B4-1/A15)", async () => {
+		const before = aduan.currentRound;
+		const hash = await adminActorHash();
+		const res = await advanceRound(aduan.id, hash);
+		expect(res.ok).toBe(false);
+		expect(res.unjudged).toBeGreaterThan(0);
+		// babak tidak berubah
+		const comps = await getCompetitions(false);
+		expect(comps.find((c) => c.id === aduan.id)?.currentRound).toBe(before);
 	});
 
 	it("reset membersihkan override", async () => {

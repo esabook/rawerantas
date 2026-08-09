@@ -110,6 +110,8 @@
 	let actionReason = $state("");
 	let rejectionTemplate = $state("");
 	let roundCompetition = $state<Competition | null>(null);
+	let forceAdvance = $state(false);
+	let unjudgedCount = $state(0);
 	let paymentPage = $state(1);
 	let paymentStatusFilter = $state<PaymentStatus>("all");
 	let paymentMethodFilter = $state("all");
@@ -760,14 +762,25 @@
 		advancing = c.id;
 		error = "";
 		try {
-			const { round } = await advanceRound(c.id, await adminActorHash());
-			undoable(`Babak ${c.name} sekarang memasuki ronde ${round}.`, {
+			const res = await advanceRound(c.id, await adminActorHash(), {
+				force: forceAdvance,
+			});
+			if (!res.ok) {
+				// B4-1/A15: masih ada peserta belum dinilai — minta konfirmasi paksa.
+				forceAdvance = true;
+				unjudgedCount = res.unjudged ?? 0;
+				error = `${res.unjudged ?? 0} peserta belum dinilai pada babak ini.`;
+				return;
+			}
+			undoable(`Babak ${c.name} sekarang memasuki ronde ${res.round}.`, {
 				onConfirm: () => {},
 			});
 			await load();
 			sfx.fanfare();
 			vibrate([80, 40, 120, 40, 80]);
 			roundCompetition = null;
+			forceAdvance = false;
+			unjudgedCount = 0;
 		} catch (e) {
 			sfx.error();
 			vibrate([120, 60, 120]);
@@ -1443,22 +1456,33 @@
 				</div>
 				<button type="button" class="btn px-2" aria-label="Tutup konfirmasi babak" onclick={closeRoundDialog} disabled={advancing !== null}><X class="h-4 w-4" aria-hidden="true" /></button>
 			</div>
-			<div class="space-y-3 px-4 py-4 text-sm sm:px-4">
-				<div class="rounded-xl border border-red-300/30 bg-red-500/10 p-3 text-red-100">
-					<p class="font-semibold">Apa yang akan terjadi?</p>
-					<p class="mt-1">{roundCompetition.name} akan berpindah dari babak {roundCompetition.currentRound} ke babak {roundCompetition.currentRound + 1}. Papan skor babak aduan yang sedang berjalan akan mulai membaca babak baru.</p>
-				</div>
-				<ul class="list-disc space-y-1 pl-5 text-muted-foreground">
-					<li>Pastikan semua skor babak saat ini sudah final.</li>
-					<li>Tindakan ini tidak memiliki undo otomatis.</li>
-					<li>Jika salah menekan, panitia perlu mengembalikan nomor babak melalui konfigurasi atau database.</li>
-				</ul>
-			</div>
+			{#if forceAdvance}
+	<div class="rounded-xl border border-red-300/30 bg-red-500/10 p-3 text-red-100">
+		<p class="font-semibold">
+			{unjudgedCount} peserta belum dinilai pada babak
+			{roundCompetition.currentRound}.
+		</p>
+		<p class="mt-1">
+			Lanjutkan tetap? Skor yang belum masuk akan tertinggal di babak lama.
+		</p>
+	</div>
+{:else}<div class="space-y-3 px-4 py-4 text-sm sm:px-4">
+	<div class="rounded-xl border border-red-300/30 bg-red-500/10 p-3 text-red-100">
+		<p class="font-semibold">Apa yang akan terjadi?</p>
+		<p class="mt-1">{roundCompetition.name} akan berpindah dari babak {roundCompetition.currentRound} ke babak {roundCompetition.currentRound + 1}. Papan skor babak aduan yang sedang berjalan akan mulai membaca babak baru.</p>
+	</div>
+	<ul class="list-disc space-y-1 pl-5 text-muted-foreground">
+		<li>Pastikan semua skor babak saat ini sudah final.</li>
+		<li>Tindakan ini tidak memiliki undo otomatis.</li>
+		<li>Jika salah menekan, panitia perlu mengembalikan nomor babak melalui konfigurasi atau database.</li>
+	</ul>
+</div>{/if}
 			<div class="flex flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-4">
 				<button type="button" class="btn" onclick={closeRoundDialog} disabled={advancing !== null}>Batal</button>
 				<button type="button" class="btn btn-destructive" onclick={() => void nextRound()} disabled={advancing !== null}>
 					{#if advancing !== null}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{/if}
 					Ya, mulai babak {roundCompetition.currentRound + 1}
+					{#if forceAdvance} (paksa){/if}
 				</button>
 			</div>
 		</div>

@@ -155,7 +155,8 @@ export async function savePaymentConfig(
 export async function advanceRound(
 	competitionId: string,
 	actorHash: string,
-): Promise<{ ok: boolean; round: number }> {
+	opts?: { force?: boolean },
+): Promise<{ ok: boolean; round: number; unjudged?: number }> {
 	const merged = await getMergedCompetitions(false);
 	const competition = merged.find((c) => c.id === competitionId);
 	if (!competition) {
@@ -164,12 +165,28 @@ export async function advanceRound(
 	if (competition.scoringMode !== "layangan_aduan") {
 		throw new Error("Advance round hanya untuk mode aduan layangan.");
 	}
+	// B4-1/A15: hitung peserta belum dinilai pada babak aktif.
+	const { getParticipants } = await import("./queries");
+	const { getAllLayanganScores } = await import("./layangan");
+	const [participants, scores] = await Promise.all([
+		getParticipants(competitionId),
+		getAllLayanganScores(competitionId),
+	]);
+	const scoredIds = new Set(
+		scores
+			.filter((s) => s.round === competition.currentRound)
+			.map((s) => s.participantId),
+	);
+	const unjudged = participants.filter((p) => !scoredIds.has(p.id)).length;
+	if (unjudged > 0 && !opts?.force) {
+		return { ok: false, round: competition.currentRound, unjudged };
+	}
 	const next = {
 		...competition,
 		currentRound: competition.currentRound + 1,
 	};
 	await saveCompetition(next, actorHash);
-	return { ok: true, round: next.currentRound };
+	return { ok: true, round: next.currentRound, unjudged };
 }
 
 export async function resetDemoAdminState(): Promise<void> {

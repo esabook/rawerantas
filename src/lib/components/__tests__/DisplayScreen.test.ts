@@ -151,6 +151,7 @@ describe("DisplayScreen", () => {
 		const { round } = await advanceRound(
 			demoCompetitions()[1].id,
 			"test-actor-hash",
+			{ force: true },
 		);
 		expect(round).toBe(2);
 		await vi.advanceTimersByTimeAsync(DISPLAY_POLL_MS + 100);
