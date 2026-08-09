@@ -7,6 +7,7 @@
 		computeHiasTotal,
 		getHiasScore,
 		isWithinEditWindow,
+		removeHiasScore,
 		submitHiasScore,
 	} from "$lib/db/hias";
 	import { getParticipants } from "$lib/db/queries";
@@ -102,7 +103,18 @@
 			undoable(
 				result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`,
 				{
-					onUndo: () => {},
+					onUndo: () => {
+						if (selected) {
+							void removeHiasScore(selected.competitionId, selected.id).then(
+								() => {
+									void load();
+									undoable("Skor hias dibatalkan.", {
+										onConfirm: () => {},
+									});
+								},
+							);
+						}
+					},
 					onConfirm: () => {},
 				},
 			);

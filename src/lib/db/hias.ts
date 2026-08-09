@@ -245,3 +245,24 @@ export async function submitHiasScore(
 		return { queued: true, participantId: input.participantId };
 	}
 }
+
+/**
+ * B4-8/A32: undo skor hias. Demo: hapus record lokal. Live: enqueue delete
+ * (executor belum punya endpoint delete hias — catat utk lanjutan; undo
+ * langsung hanya berlaku utk data lokal).
+ */
+export async function removeHiasScore(
+	competitionId: string,
+	participantId: string,
+): Promise<void> {
+	if (get(demoMode)) {
+		const { localDelete } = await import("./localStore");
+		await localDelete(STORE, participantId);
+		return;
+	}
+	await enqueue(
+		`score-hias-delete:${competitionId}:${participantId}`,
+		"/rest/scores/layangan-hias/delete",
+		{ competitionId, participantId },
+	);
+}
