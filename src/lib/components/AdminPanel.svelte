@@ -240,8 +240,10 @@
 		payments.filter((p) => {
 			const status = paymentStatus(p);
 			return (
-				(paymentStatusFilter === "all" || status === paymentStatusFilter) &&
-				(paymentMethodFilter === "all" || p.paymentMethod === paymentMethodFilter) &&
+				(paymentStatusFilter === "all" ||
+					status === paymentStatusFilter) &&
+				(paymentMethodFilter === "all" ||
+					p.paymentMethod === paymentMethodFilter) &&
 				(paymentCompetitionFilter === "all" ||
 					p.competitionName === paymentCompetitionFilter)
 			);
@@ -255,7 +257,8 @@
 		if (!p.isVerified) {
 			return p.rejectReason ? "ditolak" : "baru";
 		}
-		const fee = competitions.find((c) => c.name === p.competitionName)?.fee ?? 0;
+		const fee =
+			competitions.find((c) => c.name === p.competitionName)?.fee ?? 0;
 		const paid = payments
 			.filter(
 				(payment) =>
@@ -268,7 +271,8 @@
 	}
 
 	function remainingForParticipant(p: PaymentWithMeta): number {
-		const fee = competitions.find((c) => c.name === p.competitionName)?.fee ?? 0;
+		const fee =
+			competitions.find((c) => c.name === p.competitionName)?.fee ?? 0;
 		const paid = payments
 			.filter(
 				(payment) =>
@@ -281,7 +285,9 @@
 	}
 
 	function canSettlePayment(p: PaymentWithMeta): boolean {
-		return p.isVerified && !p.rejectReason && remainingForParticipant(p) > 0;
+		return (
+			p.isVerified && !p.rejectReason && remainingForParticipant(p) > 0
+		);
 	}
 
 	// B2-5/A8: true bila peserta punya pembayaran pending lain (selain yang
@@ -314,12 +320,15 @@
 	}
 
 	function methodTone(method: string): string {
-		return {
-			bank_transfer: "border-indigo-300/30 bg-indigo-300/10 text-indigo-200",
-			ewallet: "border-cyan-300/30 bg-cyan-300/10 text-cyan-200",
-			qris: "border-violet-300/30 bg-violet-300/10 text-violet-200",
-			cash: "border-slate-300/30 bg-slate-300/10 text-slate-200",
-		}[method] ?? "border-border bg-muted/40 text-muted-foreground";
+		return (
+			{
+				bank_transfer:
+					"border-indigo-300/30 bg-indigo-300/10 text-indigo-200",
+				ewallet: "border-cyan-300/30 bg-cyan-300/10 text-cyan-200",
+				qris: "border-violet-300/30 bg-violet-300/10 text-violet-200",
+				cash: "border-slate-300/30 bg-slate-300/10 text-slate-200",
+			}[method] ?? "border-border bg-muted/40 text-muted-foreground"
+		);
 	}
 
 	function formatDate(value: Date | string | null | undefined): string {
@@ -343,7 +352,9 @@
 		error = "";
 		try {
 			await saveCompetition(c, await adminActorHash());
-			undoable("Konfigurasi kompetisi tersimpan.", { onConfirm: () => {} });
+			undoable("Konfigurasi kompetisi tersimpan.", {
+				onConfirm: () => {},
+			});
 			await load();
 			sfx.confirm();
 		} catch (e) {
@@ -360,7 +371,9 @@
 		error = "";
 		try {
 			await savePaymentConfig(cfg, await adminActorHash());
-			undoable("Konfigurasi pembayaran tersimpan.", { onConfirm: () => {} });
+			undoable("Konfigurasi pembayaran tersimpan.", {
+				onConfirm: () => {},
+			});
 			await load();
 			sfx.confirm();
 		} catch (e) {
@@ -416,7 +429,8 @@
 	const saveSponsorEntry = async () => {
 		const url = sponsorForm.url.trim();
 		if (!isHttpUrl(url)) {
-			error = "URL tujuan sponsor harus menggunakan http:// atau https://.";
+			error =
+				"URL tujuan sponsor harus menggunakan http:// atau https://.";
 			return;
 		}
 		let imageUrl = sponsorForm.imageUrl.trim();
@@ -427,27 +441,38 @@
 				imageUrl = await uploadSponsorImage(sponsorImageFile);
 			} catch (e) {
 				sfx.error();
-				error = e instanceof Error ? e.message : "Gagal mengunggah gambar sponsor.";
+				error =
+					e instanceof Error
+						? e.message
+						: "Gagal mengunggah gambar sponsor.";
 				sponsorUploading = false;
 				return;
 			}
 			sponsorUploading = false;
 		}
 		if (!isHttpUrl(imageUrl)) {
-			error = "Pilih gambar banner atau berikan URL gambar yang valid (http:// atau https://).";
+			error =
+				"Pilih gambar banner atau berikan URL gambar yang valid (http:// atau https://).";
 			return;
 		}
 		sponsorSaving = true;
 		error = "";
 		try {
-			const existing = sponsors.find((sponsor) => sponsor.id === editingSponsorId);
+			const existing = sponsors.find(
+				(sponsor) => sponsor.id === editingSponsorId,
+			);
 			await saveSponsorRecord({
 				id: editingSponsorId ?? crypto.randomUUID(),
 				imageUrl,
 				url,
 				createdAt: existing?.createdAt ?? new Date(),
 			});
-			undoable(editingSponsorId ? "Sponsor diperbarui." : "Sponsor ditambahkan.", { onConfirm: () => {} });
+			undoable(
+				editingSponsorId
+					? "Sponsor diperbarui."
+					: "Sponsor ditambahkan.",
+				{ onConfirm: () => {} },
+			);
 			await load();
 			resetSponsorForm();
 			sfx.confirm();
@@ -461,7 +486,11 @@
 
 	const removeSponsor = async (sponsor: Sponsor) => {
 		if (deletingSponsorId !== null) return;
-		if (typeof window !== "undefined" && !window.confirm("Hapus sponsor ini dari landing?")) return;
+		if (
+			typeof window !== "undefined" &&
+			!window.confirm("Hapus sponsor ini dari landing?")
+		)
+			return;
 		deletingSponsorId = sponsor.id;
 		error = "";
 		try {
@@ -516,7 +545,8 @@
 			await load();
 		} catch (e) {
 			sfx.error();
-			error = e instanceof Error ? e.message : "Gagal membatalkan check-in.";
+			error =
+				e instanceof Error ? e.message : "Gagal membatalkan check-in.";
 		} finally {
 			panitiaSaving = null;
 		}
@@ -559,7 +589,8 @@
 			return;
 		}
 		if (!importFile.name.toLowerCase().endsWith(".csv")) {
-			importFileError = "File harus berekstensi .csv, bukan Excel (.xlsx).";
+			importFileError =
+				"File harus berekstensi .csv, bukan Excel (.xlsx).";
 			return;
 		}
 		if (importFile.size > 5 * 1024 * 1024) {
@@ -600,7 +631,10 @@
 		}
 	};
 
-	function openPaymentAction(p: PaymentWithMeta, action: PaymentAction): void {
+	function openPaymentAction(
+		p: PaymentWithMeta,
+		action: PaymentAction,
+	): void {
 		selectedPayment = p;
 		paymentAction = action;
 		paymentActionError = "";
@@ -636,7 +670,10 @@
 		lockSaving = true;
 		error = "";
 		try {
-			const next = await setDataLock(!dataLock.locked, await adminActorHash());
+			const next = await setDataLock(
+				!dataLock.locked,
+				await adminActorHash(),
+			);
 			dataLock = next;
 			undoable(
 				next.locked
@@ -647,7 +684,8 @@
 			sfx.confirm();
 		} catch (e) {
 			sfx.error();
-			error = e instanceof Error ? e.message : "Gagal mengubah data lock.";
+			error =
+				e instanceof Error ? e.message : "Gagal mengubah data lock.";
 		} finally {
 			lockSaving = false;
 		}
@@ -678,7 +716,10 @@
 		} catch (e) {
 			sfx.error();
 			vibrate([120, 60, 120]);
-			paymentActionError = e instanceof Error ? e.message : "Gagal memverifikasi pembayaran.";
+			paymentActionError =
+				e instanceof Error
+					? e.message
+					: "Gagal memverifikasi pembayaran.";
 		} finally {
 			actingPayment = null;
 		}
@@ -705,7 +746,8 @@
 			actingPayment = null;
 			closePaymentModal();
 		} catch (e) {
-			paymentActionError = e instanceof Error ? e.message : "Gagal menolak pembayaran.";
+			paymentActionError =
+				e instanceof Error ? e.message : "Gagal menolak pembayaran.";
 		} finally {
 			actingPayment = null;
 		}
@@ -713,7 +755,9 @@
 
 	const settle = async (p: PaymentWithMeta) => {
 		if (actingPayment !== null || !canSettlePayment(p)) return;
-		const competition = competitions.find((c) => c.name === p.competitionName);
+		const competition = competitions.find(
+			(c) => c.name === p.competitionName,
+		);
 		if (!competition) {
 			paymentActionError = "Kompetisi peserta tidak ditemukan.";
 			return;
@@ -784,7 +828,10 @@
 		} catch (e) {
 			sfx.error();
 			vibrate([120, 60, 120]);
-			error = e instanceof Error ? e.message : "Gagal memulai babak berikutnya.";
+			error =
+				e instanceof Error
+					? e.message
+					: "Gagal memulai babak berikutnya.";
 		} finally {
 			advancing = null;
 		}
@@ -805,9 +852,15 @@
 		<div class="flex min-w-0 flex-wrap items-center justify-between gap-3">
 			<div>
 				<p class="text-sm font-semibold">Data peserta</p>
-				<p class="text-xs text-muted-foreground">Tambah peserta secara massal dengan CSV tervalidasi.</p>
+				<p class="text-xs text-muted-foreground">
+					Tambah peserta secara massal dengan CSV tervalidasi.
+				</p>
 			</div>
-			<button type="button" class="btn btn-gold shrink-0" onclick={openImportDialog}>
+			<button
+				type="button"
+				class="btn btn-gold shrink-0"
+				onclick={openImportDialog}
+			>
 				<FileUp class="h-4 w-4" aria-hidden="true" />
 				Import peserta CSV
 			</button>
@@ -818,7 +871,10 @@
 		>
 			<button
 				type="button"
-				class="btn shrink-0 snap-start whitespace-nowrap {tab === 'verify' ? 'btn-gold' : ''}"
+				class="btn shrink-0 snap-start whitespace-nowrap {tab ===
+				'verify'
+					? 'btn-gold'
+					: ''}"
 				onclick={() => (tab = "verify")}
 			>
 				<ShieldCheck class="h-4 w-4" aria-hidden="true" />
@@ -826,28 +882,40 @@
 			</button>
 			<button
 				type="button"
-				class="btn shrink-0 snap-start whitespace-nowrap {tab === 'competition' ? 'btn-gold' : ''}"
+				class="btn shrink-0 snap-start whitespace-nowrap {tab ===
+				'competition'
+					? 'btn-gold'
+					: ''}"
 				onclick={() => (tab = "competition")}
 			>
 				Kompetisi
 			</button>
 			<button
 				type="button"
-				class="btn shrink-0 snap-start whitespace-nowrap {tab === 'config' ? 'btn-gold' : ''}"
+				class="btn shrink-0 snap-start whitespace-nowrap {tab ===
+				'config'
+					? 'btn-gold'
+					: ''}"
 				onclick={() => (tab = "config")}
 			>
 				Metode Pembayaran
 			</button>
 			<button
 				type="button"
-				class="btn shrink-0 snap-start whitespace-nowrap {tab === 'sponsor' ? 'btn-gold' : ''}"
+				class="btn shrink-0 snap-start whitespace-nowrap {tab ===
+				'sponsor'
+					? 'btn-gold'
+					: ''}"
 				onclick={() => (tab = "sponsor")}
 			>
 				Sponsor
 			</button>
 			<button
 				type="button"
-				class="btn shrink-0 snap-start whitespace-nowrap {tab === 'panitia' ? 'btn-gold' : ''}"
+				class="btn shrink-0 snap-start whitespace-nowrap {tab ===
+				'panitia'
+					? 'btn-gold'
+					: ''}"
 				onclick={() => (tab = "panitia")}
 			>
 				Panitia ({panitiaParticipants.length})
@@ -855,31 +923,46 @@
 		</nav>
 
 		{#if tab === "verify"}
-			<section class="flex min-w-0 flex-col gap-3" aria-labelledby="verification-title">
-				<div class="flex min-w-0 flex-wrap items-end justify-between gap-3">
+			<section
+				class="flex min-w-0 flex-col gap-3"
+				aria-labelledby="verification-title"
+			>
+				<div
+					class="flex min-w-0 flex-wrap items-end justify-between gap-3"
+				>
 					<div>
-						<h1 id="verification-title" class="text-lg font-bold">Verifikasi pembayaran</h1>
-						<p class="text-xs text-muted-foreground">Klik baris untuk melihat detail dan bukti pembayaran.</p>
+						<h1 id="verification-title" class="text-lg font-bold">
+							Verifikasi pembayaran
+						</h1>
+						<p class="text-xs text-muted-foreground">
+							Klik baris untuk melihat detail dan bukti
+							pembayaran.
+						</p>
 					</div>
 				</div>
 
 				<div class="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
-					<label class="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
+					<label
+						class="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground"
+					>
 						<span>Status pembayaran</span>
 						<select
 							class="input min-w-0"
 							value={paymentStatusFilter}
 							onchange={(event) => {
-								paymentStatusFilter = event.currentTarget.value as PaymentStatus;
+								paymentStatusFilter = event.currentTarget
+									.value as PaymentStatus;
 								paymentPage = 1;
 							}}
 						>
 							{#each Object.entries(paymentStatusLabels) as [value, label]}
-								<option value={value}>{label}</option>
+								<option {value}>{label}</option>
 							{/each}
 						</select>
 					</label>
-					<label class="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
+					<label
+						class="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground"
+					>
 						<span>Metode pembayaran</span>
 						<select
 							class="input min-w-0"
@@ -891,59 +974,130 @@
 						>
 							<option value="all">Semua metode</option>
 							{#each paymentMethods as method}
-								<option value={method}>{methodLabel(method)}</option>
+								<option value={method}
+									>{methodLabel(method)}</option
+								>
 							{/each}
 						</select>
 					</label>
-					<label class="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
+					<label
+						class="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground"
+					>
 						<span>Lomba</span>
 						<select
 							class="input min-w-0"
 							value={paymentCompetitionFilter}
 							onchange={(event) => {
-								paymentCompetitionFilter = event.currentTarget.value;
+								paymentCompetitionFilter =
+									event.currentTarget.value;
 								paymentPage = 1;
 							}}
 						>
 							<option value="all">Semua lomba</option>
 							{#each competitions as competition}
-								<option value={competition.name}>{competition.name}</option>
+								<option value={competition.name}
+									>{competition.name}</option
+								>
 							{/each}
 						</select>
 					</label>
 				</div>
 
-				{#snippet paymentCell({ column, row }: { column: Column<PaymentWithMeta>; row: PaymentWithMeta })}
+				{#snippet paymentCell({
+					column,
+					row,
+				}: {
+					column: Column<PaymentWithMeta>;
+					row: PaymentWithMeta;
+				})}
 					{#if column.key === "participant"}
-						<button type="button" class="text-left font-semibold hover:text-gold" onclick={(event) => { event.stopPropagation(); openPayment(row); }}>
+						<button
+							type="button"
+							class="text-left font-semibold hover:text-gold"
+							onclick={(event) => {
+								event.stopPropagation();
+								openPayment(row);
+							}}
+						>
 							{row.participantName}
 						</button>
 					{:else if column.key === "competition"}
-						<span class="text-muted-foreground">{row.competitionName}</span>
+						<span class="text-muted-foreground"
+							>{row.competitionName}</span
+						>
 					{:else if column.key === "amount"}
-						<span class="font-mono tabular-nums">Rp {Number(row.amount).toLocaleString("id-ID")}</span>
+						<span class="font-mono tabular-nums"
+							>Rp {Number(row.amount).toLocaleString(
+								"id-ID",
+							)}</span
+						>
 					{:else if column.key === "method"}
-						<span class="inline-flex rounded-full border px-2 py-1 text-xs {methodTone(row.paymentMethod)}">{methodLabel(row.paymentMethod)}</span>
+						<span
+							class="inline-flex rounded-full border px-2 py-1 text-xs {methodTone(
+								row.paymentMethod,
+							)}">{methodLabel(row.paymentMethod)}</span
+						>
 					{:else if column.key === "status"}
-						<span class="inline-flex rounded-full border px-2 py-1 text-xs {statusTone(row)}">{statusLabel(row)}</span>
+						<span
+							class="inline-flex rounded-full border px-2 py-1 text-xs {statusTone(
+								row,
+							)}">{statusLabel(row)}</span
+						>
 					{:else if column.key === "proof"}
-						<span class="text-muted-foreground">{hasProof(row) ? "Tersedia" : "Belum ada"}</span>
+						<span class="text-muted-foreground"
+							>{hasProof(row) ? "Tersedia" : "Belum ada"}</span
+						>
 					{:else if column.key === "createdAt"}
-						<span class="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
+						<span class="text-xs text-muted-foreground"
+							>{formatDate(row.createdAt)}</span
+						>
 					{:else if column.key === "actions"}
 						<div class="flex flex-wrap gap-2">
 							{#if !row.isVerified}
-								<button type="button" class="btn px-2 py-1 text-xs" onclick={(event) => { event.stopPropagation(); openPaymentAction(row, "reject"); }} disabled={actingPayment !== null}>
-									<Ban class="h-3.5 w-3.5" aria-hidden="true" />
+								<button
+									type="button"
+									class="btn px-2 py-1 text-xs"
+									onclick={(event) => {
+										event.stopPropagation();
+										openPaymentAction(row, "reject");
+									}}
+									disabled={actingPayment !== null}
+								>
+									<Ban
+										class="h-3.5 w-3.5"
+										aria-hidden="true"
+									/>
 									Tolak
 								</button>
-								<button type="button" class="btn btn-gold px-2 py-1 text-xs" onclick={(event) => { event.stopPropagation(); openPaymentAction(row, "verify"); }} disabled={actingPayment !== null}>
-									<BadgeCheck class="h-3.5 w-3.5" aria-hidden="true" />
+								<button
+									type="button"
+									class="btn btn-gold px-2 py-1 text-xs"
+									onclick={(event) => {
+										event.stopPropagation();
+										openPaymentAction(row, "verify");
+									}}
+									disabled={actingPayment !== null}
+								>
+									<BadgeCheck
+										class="h-3.5 w-3.5"
+										aria-hidden="true"
+									/>
 									Verifikasi
 								</button>
 							{:else if canSettlePayment(row)}
-								<button type="button" class="btn btn-gold px-2 py-1 text-xs" onclick={(event) => { event.stopPropagation(); openPaymentAction(row, "settle"); }} disabled={actingPayment !== null}>
-									<Banknote class="h-3.5 w-3.5" aria-hidden="true" />
+								<button
+									type="button"
+									class="btn btn-gold px-2 py-1 text-xs"
+									onclick={(event) => {
+										event.stopPropagation();
+										openPaymentAction(row, "settle");
+									}}
+									disabled={actingPayment !== null}
+								>
+									<Banknote
+										class="h-3.5 w-3.5"
+										aria-hidden="true"
+									/>
 									Lunas
 								</button>
 							{/if}
@@ -964,49 +1118,142 @@
 				/>
 			</section>
 		{:else if tab === "competition"}
-			<section class="flex min-w-0 flex-col gap-3" aria-labelledby="competition-title">
-				<h1 id="competition-title" class="text-lg font-bold">Kompetisi dan babak</h1>
+			<section
+				class="flex min-w-0 flex-col gap-3"
+				aria-labelledby="competition-title"
+			>
+				<h1 id="competition-title" class="text-lg font-bold">
+					Kompetisi dan babak
+				</h1>
 				{#each competitions as c (c.id)}
-					<div class="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-background/60 p-4">
-						<div class="flex min-w-0 flex-wrap items-center justify-between gap-2">
-							<label class="flex min-w-0 items-center gap-2 text-sm font-semibold">
-								<input type="checkbox" checked={c.isActive} onchange={(e) => (c.isActive = e.currentTarget.checked)} class="h-4 w-4 accent-gold" />
+					<div
+						class="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-background/60 p-4"
+					>
+						<div
+							class="flex min-w-0 flex-wrap items-center justify-between gap-2"
+						>
+							<label
+								class="flex min-w-0 items-center gap-2 text-sm font-semibold"
+							>
+								<input
+									type="checkbox"
+									checked={c.isActive}
+									onchange={(e) =>
+										(c.isActive = e.currentTarget.checked)}
+									class="h-4 w-4 accent-gold"
+								/>
 								<span class="break-words">{c.name}</span>
-								<span class="shrink-0 rounded-full bg-border/50 px-2 py-0.5 text-xs font-normal">{scoringModeLabels[c.scoringMode] ?? c.scoringMode}</span>
+								<span
+									class="shrink-0 rounded-full bg-border/50 px-2 py-0.5 text-xs font-normal"
+									>{scoringModeLabels[c.scoringMode] ??
+										c.scoringMode}</span
+								>
 							</label>
-							<span class="shrink-0 text-xs text-muted-foreground">Babak {c.currentRound}</span>
+							<span class="shrink-0 text-xs text-muted-foreground"
+								>Babak {c.currentRound}</span
+							>
 						</div>
-						<div class="grid min-w-0 grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+						<div
+							class="grid min-w-0 grid-cols-1 gap-2 text-sm sm:grid-cols-3"
+						>
 							<label class="flex min-w-0 flex-col gap-1">
-								<span class="text-xs text-muted-foreground">Biaya pendaftaran (Rp)</span>
-								<input type="number" class="input min-w-0" value={c.fee} onchange={(e) => (c.fee = Number(e.currentTarget.value))} />
+								<span class="text-xs text-muted-foreground"
+									>Biaya pendaftaran (Rp)</span
+								>
+								<input
+									type="number"
+									class="input min-w-0"
+									value={c.fee}
+									onchange={(e) =>
+										(c.fee = Number(e.currentTarget.value))}
+								/>
 							</label>
 							<label class="flex min-w-0 flex-col gap-1">
-								<span class="text-xs text-muted-foreground">DP minimal (Rp)</span>
-								<input type="number" class="input min-w-0" value={c.minDp} onchange={(e) => (c.minDp = Number(e.currentTarget.value))} />
+								<span class="text-xs text-muted-foreground"
+									>DP minimal (Rp)</span
+								>
+								<input
+									type="number"
+									class="input min-w-0"
+									value={c.minDp}
+									onchange={(e) =>
+										(c.minDp = Number(
+											e.currentTarget.value,
+										))}
+								/>
 							</label>
 							<label class="flex min-w-0 flex-col gap-1">
-								<span class="text-xs text-muted-foreground">Kuota peserta</span>
-								<input type="number" class="input min-w-0" value={c.totalQuota} onchange={(e) => (c.totalQuota = Number(e.currentTarget.value))} />
-								<span class="text-[11px] text-muted-foreground">Jumlah orang, bukan tim.</span>
+								<span class="text-xs text-muted-foreground"
+									>Kuota peserta</span
+								>
+								<input
+									type="number"
+									class="input min-w-0"
+									value={c.totalQuota}
+									onchange={(e) =>
+										(c.totalQuota = Number(
+											e.currentTarget.value,
+										))}
+								/>
+								<span class="text-[11px] text-muted-foreground"
+									>Jumlah orang, bukan tim.</span
+								>
 							</label>
 							<label class="flex min-w-0 flex-col gap-1">
-								<span class="text-xs text-muted-foreground">Jenis lomba</span>
-								<select class="input min-w-0" value={c.scoringMode} onchange={(e) => (c.scoringMode = e.currentTarget.value as Competition["scoringMode"])}>
-									<option value="terberat">Ikan terberat</option>
-									<option value="kumulatif">Berat kumulatif</option>
-									<option value="jackpot_pita">Jackpot pita</option>
-									<option value="layangan_aduan">Aduan layangan</option>
-									<option value="layangan_hias">Layangan hias</option>
+								<span class="text-xs text-muted-foreground"
+									>Jenis lomba</span
+								>
+								<select
+									class="input min-w-0"
+									value={c.scoringMode}
+									onchange={(e) =>
+										(c.scoringMode = e.currentTarget
+											.value as Competition["scoringMode"])}
+								>
+									<option value="terberat"
+										>Ikan terberat</option
+									>
+									<option value="kumulatif"
+										>Berat kumulatif</option
+									>
+									<option value="jackpot_pita"
+										>Jackpot pita</option
+									>
+									<option value="layangan_aduan"
+										>Aduan layangan</option
+									>
+									<option value="layangan_hias"
+										>Layangan hias</option
+									>
 								</select>
 							</label>
 						</div>
 						<div class="flex flex-wrap justify-end gap-2">
-							<button type="button" class="btn" onclick={() => openRoundDialog(c)} disabled={c.scoringMode !== "layangan_aduan" || advancing !== null} title={c.scoringMode !== "layangan_aduan" ? "Hanya tersedia untuk aduan layangan" : "Mulai babak berikutnya"}>
-								{#if advancing === c.id}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{:else}<ArrowRight class="h-4 w-4" aria-hidden="true" />{/if}
+							<button
+								type="button"
+								class="btn"
+								onclick={() => openRoundDialog(c)}
+								disabled={c.scoringMode !== "layangan_aduan" ||
+									advancing !== null}
+								title={c.scoringMode !== "layangan_aduan"
+									? "Hanya tersedia untuk aduan layangan"
+									: "Mulai babak berikutnya"}
+							>
+								{#if advancing === c.id}<Loader2
+										class="h-4 w-4 animate-spin"
+										aria-hidden="true"
+									/>{:else}<ArrowRight
+										class="h-4 w-4"
+										aria-hidden="true"
+									/>{/if}
 								Babak berikutnya
 							</button>
-							<button type="button" class="btn btn-gold" onclick={() => void saveComp(c)} disabled={savingId !== null}>
+							<button
+								type="button"
+								class="btn btn-gold"
+								onclick={() => void saveComp(c)}
+								disabled={savingId !== null}
+							>
 								<Save class="h-4 w-4" aria-hidden="true" />
 								Simpan
 							</button>
@@ -1015,13 +1262,25 @@
 				{/each}
 			</section>
 		{:else if tab === "sponsor"}
-			<section class="flex min-w-0 flex-col gap-4" aria-labelledby="sponsor-admin-title">
-				<div class="flex min-w-0 flex-wrap items-end justify-between gap-3">
+			<section
+				class="flex min-w-0 flex-col gap-4"
+				aria-labelledby="sponsor-admin-title"
+			>
+				<div
+					class="flex min-w-0 flex-wrap items-end justify-between gap-3"
+				>
 					<div>
-						<h1 id="sponsor-admin-title" class="text-lg font-bold">Sponsor landing</h1>
-						<p class="text-xs text-muted-foreground">Konten sponsor hanya URL gambar dan URL tujuan.</p>
+						<h1 id="sponsor-admin-title" class="text-lg font-bold">
+							Sponsor landing
+						</h1>
+						<p class="text-xs text-muted-foreground">
+							Konten sponsor hanya URL gambar dan URL tujuan.
+						</p>
 					</div>
-					<span class="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-xs text-cyan-200">{sponsors.length} banner</span>
+					<span
+						class="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-xs text-cyan-200"
+						>{sponsors.length} banner</span
+					>
 				</div>
 
 				<form
@@ -1032,14 +1291,17 @@
 					}}
 				>
 					<label class="flex min-w-0 flex-col gap-1 text-sm">
-						<span class="text-xs text-muted-foreground">Gambar banner (≤500 KB, dikompres)</span>
+						<span class="text-xs text-muted-foreground"
+							>Gambar banner (≤500 KB, dikompres)</span
+						>
 						<div class="flex min-w-0 items-stretch gap-2">
 							<input
 								type="file"
 								accept="image/*"
 								class="hidden"
 								bind:this={sponsorFileInput}
-								onchange={(e) => handleSponsorImage(e.currentTarget)}
+								onchange={(e) =>
+									handleSponsorImage(e.currentTarget)}
 							/>
 							<button
 								type="button"
@@ -1048,11 +1310,21 @@
 								disabled={sponsorSaving || sponsorUploading}
 							>
 								{#if sponsorUploading}
-									<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+									<Loader2
+										class="h-4 w-4 animate-spin"
+										aria-hidden="true"
+									/>
 									<span>Mengompres & mengunggah…</span>
 								{:else}
-									<FileUp class="h-4 w-4" aria-hidden="true" />
-									<span>{sponsorImagePreview ? "Ganti gambar" : "Pilih gambar"}</span>
+									<FileUp
+										class="h-4 w-4"
+										aria-hidden="true"
+									/>
+									<span
+										>{sponsorImagePreview
+											? "Ganti gambar"
+											: "Pilih gambar"}</span
+									>
 								{/if}
 							</button>
 							{#if sponsorForm.imageUrl}
@@ -1062,22 +1334,64 @@
 									rel="noopener noreferrer"
 									class="btn shrink-0 px-3 py-2 text-xs"
 								>
-									<ExternalLink class="h-4 w-4" aria-hidden="true" />
+									<ExternalLink
+										class="h-4 w-4"
+										aria-hidden="true"
+									/>
 								</a>
 							{/if}
 						</div>
 					</label>
 					<label class="flex min-w-0 flex-col gap-1 text-sm">
-						<span class="text-xs text-muted-foreground">URL tujuan sponsor</span>
-						<input type="url" class="input min-w-0" value={sponsorForm.url} oninput={(event) => (sponsorForm.url = event.currentTarget.value)} placeholder="https://..." required />
+						<span class="text-xs text-muted-foreground"
+							>URL tujuan sponsor</span
+						>
+						<input
+							type="url"
+							class="input min-w-0"
+							value={sponsorForm.url}
+							oninput={(event) =>
+								(sponsorForm.url = event.currentTarget.value)}
+							placeholder="https://..."
+							required
+						/>
 					</label>
 					<div class="flex flex-wrap gap-2 sm:justify-end">
 						{#if editingSponsorId}
-							<button type="button" class="btn" onclick={resetSponsorForm} disabled={sponsorSaving || sponsorUploading}><X class="h-4 w-4" aria-hidden="true" />Batal</button>
+							<button
+								type="button"
+								class="btn"
+								onclick={resetSponsorForm}
+								disabled={sponsorSaving || sponsorUploading}
+								><X
+									class="h-4 w-4"
+									aria-hidden="true"
+								/>Batal</button
+							>
 						{/if}
-						<button type="submit" class="btn btn-gold" disabled={sponsorSaving || sponsorUploading}>
-							{#if sponsorUploading}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{:else if sponsorSaving}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{:else if editingSponsorId}<Save class="h-4 w-4" aria-hidden="true" />{:else}<Plus class="h-4 w-4" aria-hidden="true" />{/if}
-							{sponsorUploading ? "Mengunggah…" : editingSponsorId ? "Simpan perubahan" : "Tambah sponsor"}
+						<button
+							type="submit"
+							class="btn btn-gold"
+							disabled={sponsorSaving || sponsorUploading}
+						>
+							{#if sponsorUploading}<Loader2
+									class="h-4 w-4 animate-spin"
+									aria-hidden="true"
+								/>{:else if sponsorSaving}<Loader2
+									class="h-4 w-4 animate-spin"
+									aria-hidden="true"
+								/>{:else if editingSponsorId}<Save
+									class="h-4 w-4"
+									aria-hidden="true"
+								/>{:else}<Plus
+									class="h-4 w-4"
+									aria-hidden="true"
+								/>{/if}
+							{sponsorUploading
+								? "Mengunggah…"
+								: editingSponsorId
+									? "Simpan perubahan"
+									: "Tambah sponsor"}
 						</button>
 					</div>
 				</form>
@@ -1091,20 +1405,74 @@
 				{/if}
 
 				{#if sponsors.length === 0}
-					<div class="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Belum ada sponsor. Tambahkan banner pertama.</div>
+					<div
+						class="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground"
+					>
+						Belum ada sponsor. Tambahkan banner pertama.
+					</div>
 				{:else}
-					<div class="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					<div
+						class="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+					>
 						{#each sponsors as sponsor (sponsor.id)}
-							<article class="min-w-0 overflow-hidden rounded-xl border border-border bg-background/60">
-								<a href={sponsor.url} target="_blank" rel="noopener noreferrer" class="block border-b border-border bg-black/20">
-									<img src={sponsor.imageUrl} alt="Preview banner sponsor" class="aspect-[10/3] w-full object-cover" loading="lazy" />
+							<article
+								class="min-w-0 overflow-hidden rounded-xl border border-border bg-background/60"
+							>
+								<a
+									href={sponsor.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="block border-b border-border bg-black/20"
+								>
+									<img
+										src={sponsor.imageUrl}
+										alt="Preview banner sponsor"
+										class="aspect-[10/3] w-full object-cover"
+										loading="lazy"
+									/>
 								</a>
 								<div class="flex min-w-0 flex-col gap-3 p-3">
-									<p class="break-all text-xs text-muted-foreground">{sponsor.url}</p>
+									<p
+										class="break-all text-xs text-muted-foreground"
+									>
+										{sponsor.url}
+									</p>
 									<div class="flex flex-wrap gap-2">
-										<a href={sponsor.url} target="_blank" rel="noopener noreferrer" class="btn flex-1 px-2 py-1 text-xs"><ExternalLink class="h-3.5 w-3.5" aria-hidden="true" />Buka</a>
-										<button type="button" class="btn px-2 py-1 text-xs" onclick={() => editSponsor(sponsor)} disabled={sponsorSaving || deletingSponsorId !== null}><Pencil class="h-3.5 w-3.5" aria-hidden="true" />Edit</button>
-										<button type="button" class="btn btn-destructive px-2 py-1 text-xs" onclick={() => void removeSponsor(sponsor)} disabled={sponsorSaving || deletingSponsorId !== null}><Trash2 class="h-3.5 w-3.5" aria-hidden="true" />{deletingSponsorId === sponsor.id ? "Menghapus…" : "Hapus"}</button>
+										<a
+											href={sponsor.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="btn flex-1 px-2 py-1 text-xs"
+											><ExternalLink
+												class="h-3.5 w-3.5"
+												aria-hidden="true"
+											/>Buka</a
+										>
+										<button
+											type="button"
+											class="btn px-2 py-1 text-xs"
+											onclick={() => editSponsor(sponsor)}
+											disabled={sponsorSaving ||
+												deletingSponsorId !== null}
+											><Pencil
+												class="h-3.5 w-3.5"
+												aria-hidden="true"
+											/>Edit</button
+										>
+										<button
+											type="button"
+											class="btn btn-destructive px-2 py-1 text-xs"
+											onclick={() =>
+												void removeSponsor(sponsor)}
+											disabled={sponsorSaving ||
+												deletingSponsorId !== null}
+											><Trash2
+												class="h-3.5 w-3.5"
+												aria-hidden="true"
+											/>{deletingSponsorId === sponsor.id
+												? "Menghapus…"
+												: "Hapus"}</button
+										>
 									</div>
 								</div>
 							</article>
@@ -1113,15 +1481,30 @@
 				{/if}
 			</section>
 		{:else if tab === "panitia"}
-			<section class="flex min-w-0 flex-col gap-4" aria-labelledby="panitia-title">
-				<div class="flex min-w-0 flex-wrap items-end justify-between gap-3">
+			<section
+				class="flex min-w-0 flex-col gap-4"
+				aria-labelledby="panitia-title"
+			>
+				<div
+					class="flex min-w-0 flex-wrap items-end justify-between gap-3"
+				>
 					<div>
-						<h1 id="panitia-title" class="text-lg font-bold">Operasi panitia — check-in</h1>
-						<p class="text-xs text-muted-foreground">Kelola status check-in, pembayaran, dan metode pelunasan peserta.</p>
+						<h1 id="panitia-title" class="text-lg font-bold">
+							Operasi panitia — check-in
+						</h1>
+						<p class="text-xs text-muted-foreground">
+							Kelola status check-in, pembayaran, dan metode
+							pelunasan peserta.
+						</p>
 					</div>
 					<label class="flex min-w-0 flex-col gap-1 text-sm">
-						<span class="text-xs text-muted-foreground">Filter check-in</span>
-						<select class="input min-w-0" bind:value={panitiaFilter}>
+						<span class="text-xs text-muted-foreground"
+							>Filter check-in</span
+						>
+						<select
+							class="input min-w-0"
+							bind:value={panitiaFilter}
+						>
 							<option value="all">Semua</option>
 							<option value="belum">Belum check-in</option>
 							<option value="sudah">Sudah check-in</option>
@@ -1130,63 +1513,148 @@
 				</div>
 
 				<div class="grid min-w-0 gap-2 sm:grid-cols-3">
-					<div class="rounded-xl border border-border bg-background/60 p-3 text-center">
-						<p class="text-xs text-muted-foreground">Total peserta</p>
-						<p class="mt-1 text-2xl font-bold tabular-nums">{panitiaParticipants.length}</p>
+					<div
+						class="rounded-xl border border-border bg-background/60 p-3 text-center"
+					>
+						<p class="text-xs text-muted-foreground">
+							Total peserta
+						</p>
+						<p class="mt-1 text-2xl font-bold tabular-nums">
+							{panitiaParticipants.length}
+						</p>
 					</div>
-					<div class="rounded-xl border border-emerald-300/25 bg-emerald-300/5 p-3 text-center">
+					<div
+						class="rounded-xl border border-emerald-300/25 bg-emerald-300/5 p-3 text-center"
+					>
 						<p class="text-xs text-emerald-200">Sudah check-in</p>
-						<p class="mt-1 text-2xl font-bold tabular-nums text-emerald-200">{panitiaParticipants.filter((p) => p.checkedIn).length}</p>
+						<p
+							class="mt-1 text-2xl font-bold tabular-nums text-emerald-200"
+						>
+							{panitiaParticipants.filter((p) => p.checkedIn)
+								.length}
+						</p>
 					</div>
-					<div class="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-center">
+					<div
+						class="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-center"
+					>
 						<p class="text-xs text-amber-200">Belum check-in</p>
-						<p class="mt-1 text-2xl font-bold tabular-nums text-amber-200">{panitiaParticipants.filter((p) => !p.checkedIn).length}</p>
+						<p
+							class="mt-1 text-2xl font-bold tabular-nums text-amber-200"
+						>
+							{panitiaParticipants.filter((p) => !p.checkedIn)
+								.length}
+						</p>
 					</div>
 				</div>
 
 				{#if panitiaParticipants.length === 0}
-					<div class="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Belum ada peserta terdaftar.</div>
+					<div
+						class="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground"
+					>
+						Belum ada peserta terdaftar.
+					</div>
 				{:else}
-					<div class="min-w-0 overflow-x-auto rounded-xl border border-border">
-						<table class="w-full min-w-[720px] border-collapse text-sm">
+					<div
+						class="min-w-0 overflow-x-auto rounded-xl border border-border"
+					>
+						<table
+							class="w-full min-w-[720px] border-collapse text-sm"
+						>
 							<thead>
-								<tr class="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-									<th class="px-3 py-2 font-semibold">Peserta</th>
-									<th class="px-3 py-2 font-semibold">Lomba</th>
-									<th class="px-3 py-2 font-semibold">Check-in</th>
-									<th class="px-3 py-2 font-semibold">Pembayaran</th>
-									<th class="px-3 py-2 font-semibold">Metode</th>
-									<th class="px-3 py-2 font-semibold">Aksi</th>
+								<tr
+									class="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground"
+								>
+									<th class="px-3 py-2 font-semibold"
+										>Peserta</th
+									>
+									<th class="px-3 py-2 font-semibold"
+										>Lomba</th
+									>
+									<th class="px-3 py-2 font-semibold"
+										>Check-in</th
+									>
+									<th class="px-3 py-2 font-semibold"
+										>Pembayaran</th
+									>
+									<th class="px-3 py-2 font-semibold"
+										>Metode</th
+									>
+									<th class="px-3 py-2 font-semibold">Aksi</th
+									>
 								</tr>
 							</thead>
 							<tbody>
 								{#each panitiaParticipants.filter((p) => panitiaFilter === "all" || (panitiaFilter === "sudah") === p.checkedIn) as row (row.participant.id)}
-									<tr class="border-b border-border/60 last:border-0">
+									<tr
+										class="border-b border-border/60 last:border-0"
+									>
 										<td class="px-3 py-2">
-											<p class="font-semibold">{row.participant.name}</p>
-											<p class="text-xs text-muted-foreground">{row.participant.ticketNumber}</p>
+											<p class="font-semibold">
+												{row.participant.name}
+											</p>
+											<p
+												class="text-xs text-muted-foreground"
+											>
+												{row.participant.ticketNumber}
+											</p>
 										</td>
-										<td class="px-3 py-2 text-xs">{row.competitionName}</td>
+										<td class="px-3 py-2 text-xs"
+											>{row.competitionName}</td
+										>
 										<td class="px-3 py-2">
 											{#if row.checkedIn}
-												<span class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-xs text-emerald-200">Sudah</span>
+												<span
+													class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-xs text-emerald-200"
+													>Sudah</span
+												>
 											{:else}
-												<span class="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-xs text-amber-200">Belum</span>
+												<span
+													class="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-xs text-amber-200"
+													>Belum</span
+												>
 											{/if}
 										</td>
 										<td class="px-3 py-2">
 											{#if row.paidStatus === "full"}
-												<span class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-xs text-emerald-200">Lunas</span>
+												<span
+													class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-xs text-emerald-200"
+													>Lunas</span
+												>
 											{:else if row.paidStatus === "dp"}
-												<span class="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-xs text-amber-200">DP</span>
+												<span
+													class="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-xs text-amber-200"
+													>DP</span
+												>
 											{:else}
-												<span class="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-xs text-rose-200">Belum</span>
+												<span
+													class="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-xs text-rose-200"
+													>Belum</span
+												>
 											{/if}
 										</td>
-										<td class="px-3 py-2 text-xs">{row.paymentMethods.length > 0 ? row.paymentMethods.map(methodLabel).join(", ") : "—"}</td>
+										<td class="px-3 py-2 text-xs"
+											>{row.paymentMethods.length > 0
+												? row.paymentMethods
+														.map(methodLabel)
+														.join(", ")
+												: "—"}</td
+										>
 										<td class="px-3 py-2">
 											{#if row.checkedIn}
-												<button type="button" class="btn btn-ghost px-2 py-1 text-xs" onclick={() => void panitiaUndoCheckIn(row)} disabled={panitiaSaving !== null}><Undo2 class="h-3.5 w-3.5" aria-hidden="true" />Batalkan</button>
+												<button
+													type="button"
+													class="btn btn-ghost px-2 py-1 text-xs"
+													onclick={() =>
+														void panitiaUndoCheckIn(
+															row,
+														)}
+													disabled={panitiaSaving !==
+														null}
+													><Undo2
+														class="h-3.5 w-3.5"
+														aria-hidden="true"
+													/>Batalkan</button
+												>
 											{:else if row.paidStatus === "none"}
 												<!-- QW-4/A10: belum DP / ditolak / didiskualifikasi → check-in pasti
 													 ditolak checkin.ts; nonaktifkan + alasan, bukan tombol yang gagal. -->
@@ -1194,10 +1662,26 @@
 													class="inline-flex items-center gap-1 rounded-md border border-border/60 px-2 py-1 text-xs text-muted-foreground"
 													title="Belum memenuhi syarat masuk (minimal DP dibayar)"
 												>
-													<BadgeCheck class="h-3.5 w-3.5" aria-hidden="true" />Belum layak
+													<BadgeCheck
+														class="h-3.5 w-3.5"
+														aria-hidden="true"
+													/>Belum layak
 												</span>
 											{:else}
-												<button type="button" class="btn btn-gold px-2 py-1 text-xs" onclick={() => void panitiaCheckIn(row)} disabled={panitiaSaving !== null}><BadgeCheck class="h-3.5 w-3.5" aria-hidden="true" />Check-in</button>
+												<button
+													type="button"
+													class="btn btn-gold px-2 py-1 text-xs"
+													onclick={() =>
+														void panitiaCheckIn(
+															row,
+														)}
+													disabled={panitiaSaving !==
+														null}
+													><BadgeCheck
+														class="h-3.5 w-3.5"
+														aria-hidden="true"
+													/>Check-in</button
+												>
 											{/if}
 										</td>
 									</tr>
@@ -1208,34 +1692,100 @@
 				{/if}
 			</section>
 		{:else}
-			<section class="flex min-w-0 flex-col gap-3" aria-labelledby="payment-config-title">
-				<h1 id="payment-config-title" class="text-lg font-bold">Metode pembayaran</h1>
+			<section
+				class="flex min-w-0 flex-col gap-3"
+				aria-labelledby="payment-config-title"
+			>
+				<h1 id="payment-config-title" class="text-lg font-bold">
+					Metode pembayaran
+				</h1>
 				{#each configs as cfg (cfg.id)}
-					<div class="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-background/60 p-4">
-						<label class="flex min-w-0 items-center gap-2 text-sm font-semibold">
-							<input type="checkbox" checked={cfg.isActive} onchange={(e) => (cfg.isActive = e.currentTarget.checked)} class="h-4 w-4 accent-gold" />
-							<span class="break-words">{methodLabel(cfg.method)}</span>
+					<div
+						class="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-background/60 p-4"
+					>
+						<label
+							class="flex min-w-0 items-center gap-2 text-sm font-semibold"
+						>
+							<input
+								type="checkbox"
+								checked={cfg.isActive}
+								onchange={(e) =>
+									(cfg.isActive = e.currentTarget.checked)}
+								class="h-4 w-4 accent-gold"
+							/>
+							<span class="break-words"
+								>{methodLabel(cfg.method)}</span
+							>
 						</label>
-						<div class="grid min-w-0 grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+						<div
+							class="grid min-w-0 grid-cols-1 gap-2 text-sm sm:grid-cols-2"
+						>
 							<label class="flex min-w-0 flex-col gap-1">
-								<span class="text-xs text-muted-foreground">Nama akun</span>
-								<input type="text" class="input min-w-0" value={cfg.accountName ?? ""} onchange={(e) => (cfg.accountName = e.currentTarget.value || null)} />
+								<span class="text-xs text-muted-foreground"
+									>Nama akun</span
+								>
+								<input
+									type="text"
+									class="input min-w-0"
+									value={cfg.accountName ?? ""}
+									onchange={(e) =>
+										(cfg.accountName =
+											e.currentTarget.value || null)}
+								/>
 							</label>
 							<label class="flex min-w-0 flex-col gap-1">
-								<span class="text-xs text-muted-foreground">Nomor akun</span>
-								<input type="text" class="input min-w-0" value={cfg.accountNumber ?? ""} onchange={(e) => (cfg.accountNumber = e.currentTarget.value || null)} />
+								<span class="text-xs text-muted-foreground"
+									>Nomor akun</span
+								>
+								<input
+									type="text"
+									class="input min-w-0"
+									value={cfg.accountNumber ?? ""}
+									onchange={(e) =>
+										(cfg.accountNumber =
+											e.currentTarget.value || null)}
+								/>
 							</label>
-							<label class="flex min-w-0 flex-col gap-1 sm:col-span-2">
-								<span class="text-xs text-muted-foreground">Instruksi pembayaran</span>
-								<input type="text" class="input min-w-0" value={cfg.instructions ?? ""} onchange={(e) => (cfg.instructions = e.currentTarget.value)} />
+							<label
+								class="flex min-w-0 flex-col gap-1 sm:col-span-2"
+							>
+								<span class="text-xs text-muted-foreground"
+									>Instruksi pembayaran</span
+								>
+								<input
+									type="text"
+									class="input min-w-0"
+									value={cfg.instructions ?? ""}
+									onchange={(e) =>
+										(cfg.instructions =
+											e.currentTarget.value)}
+								/>
 							</label>
-							<label class="flex min-w-0 flex-col gap-1 sm:col-span-2">
-								<span class="text-xs text-muted-foreground">URL gambar QRIS</span>
-								<input type="text" class="input min-w-0" value={cfg.qrisImageUrl ?? ""} onchange={(e) => (cfg.qrisImageUrl = e.currentTarget.value || null)} />
-							</label>
+							{#if cfg.method === "qris"}
+								<label
+									class="flex min-w-0 flex-col gap-1 sm:col-span-2"
+								>
+									<span class="text-xs text-muted-foreground"
+										>URL gambar QRIS</span
+									>
+									<input
+										type="text"
+										class="input min-w-0"
+										value={cfg.qrisImageUrl ?? ""}
+										onchange={(e) =>
+											(cfg.qrisImageUrl =
+												e.currentTarget.value || null)}
+									/>
+								</label>
+							{/if}
 						</div>
 						<div class="flex justify-end">
-							<button type="button" class="btn btn-gold" onclick={() => void saveConfig(cfg)} disabled={savingId !== null}>
+							<button
+								type="button"
+								class="btn btn-gold"
+								onclick={() => void saveConfig(cfg)}
+								disabled={savingId !== null}
+							>
 								<Save class="h-4 w-4" aria-hidden="true" />
 								Simpan
 							</button>
@@ -1253,18 +1803,23 @@
 							Data lock pasca-acara
 						</h2>
 						<p class="text-xs text-muted-foreground">
-							Blokir semua perubahan data (pembayaran, skor, check-in,
-							pendaftaran) setelah acara selesai.
+							Blokir semua perubahan data (pembayaran, skor,
+							check-in, pendaftaran) setelah acara selesai.
 						</p>
 					</div>
 					<button
 						type="button"
-						class="btn {dataLock.locked ? 'btn-destructive' : 'btn-gold'} shrink-0"
+						class="btn {dataLock.locked
+							? 'btn-destructive'
+							: 'btn-gold'} shrink-0"
 						onclick={() => void toggleDataLock()}
 						disabled={lockSaving}
 					>
 						{#if lockSaving}
-							<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+							<Loader2
+								class="h-4 w-4 animate-spin"
+								aria-hidden="true"
+							/>
 						{:else}
 							<Lock class="h-4 w-4" aria-hidden="true" />
 						{/if}
@@ -1274,7 +1829,8 @@
 				{#if dataLock.locked}
 					<p class="text-xs text-destructive" role="status">
 						Data terkunci pada{" "}
-						{dataLock.lockedAt?.toLocaleString("id-ID") ?? "waktu tak dikenal"}.
+						{dataLock.lockedAt?.toLocaleString("id-ID") ??
+							"waktu tak dikenal"}.
 					</p>
 				{/if}
 			</section>
@@ -1283,77 +1839,185 @@
 </div>
 
 {#if selectedPayment}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4">
-		<div class="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0a0f1c] shadow-[0_0_40px_rgba(34,211,238,0.16)]" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title">
-			<div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-4">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4"
+	>
+		<div
+			class="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0a0f1c] shadow-[0_0_40px_rgba(34,211,238,0.16)]"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="payment-dialog-title"
+		>
+			<div
+				class="flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-4"
+			>
 				<div class="min-w-0">
-					<p class="text-xs uppercase tracking-wider text-cyan-300">Detail pembayaran</p>
-					<h2 id="payment-dialog-title" class="break-words text-lg font-bold">{selectedPayment.participantName}</h2>
+					<p class="text-xs uppercase tracking-wider text-cyan-300">
+						Detail pembayaran
+					</p>
+					<h2
+						id="payment-dialog-title"
+						class="break-words text-lg font-bold"
+					>
+						{selectedPayment.participantName}
+					</h2>
 				</div>
-				<button type="button" class="btn shrink-0 px-2" aria-label="Tutup detail pembayaran" onclick={closePaymentModal} disabled={actingPayment !== null}>
+				<button
+					type="button"
+					class="btn shrink-0 px-2"
+					aria-label="Tutup detail pembayaran"
+					onclick={closePaymentModal}
+					disabled={actingPayment !== null}
+				>
 					<X class="h-4 w-4" aria-hidden="true" />
 				</button>
 			</div>
 			<div class="min-h-0 overflow-y-auto px-4 py-4 sm:px-4">
 				{#if paymentAction}
-					<div class="mb-4 flex gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100" role="note">
-						<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-								<p>{paymentAction === "verify" ? "Anda akan menandai pembayaran ini sebagai terverifikasi." : paymentAction === "settle" ? `Sisa Rp ${remainingForParticipant(selectedPayment).toLocaleString("id-ID")} akan dicatat sebagai pembayaran tunai dan peserta menjadi lunas.` : "Anda akan menolak pembayaran ini dan menyimpan alasan penolakan."}</p>
+					<div
+						class="mb-4 flex gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100"
+						role="note"
+					>
+						<AlertTriangle
+							class="mt-0.5 h-5 w-5 shrink-0"
+							aria-hidden="true"
+						/>
+						<p>
+							{paymentAction === "verify"
+								? "Anda akan menandai pembayaran ini sebagai terverifikasi."
+								: paymentAction === "settle"
+									? `Kurang bayar Rp${remainingForParticipant(selectedPayment).toLocaleString("id-ID")} akan dicatat sebagai pembayaran tunai dan peserta menjadi lunas.`
+									: "Anda akan menolak pembayaran ini dan menyimpan alasan penolakan."}
+						</p>
 					</div>
 					{#if paymentAction === "settle" && settleHasPendingWarning(selectedPayment)}
-						<div class="mb-4 flex gap-2 rounded-lg border border-rose-300/30 bg-rose-300/10 p-3 text-xs text-rose-200" role="alert">
-							<AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-							<p>Peserta ini masih punya pembayaran pending yang bisa menutupi sisa. Verifikasi atau tolak dulu agar tidak double-charge.</p>
+						<div
+							class="mb-4 flex gap-2 rounded-lg border border-rose-300/30 bg-rose-300/10 p-3 text-xs text-rose-200"
+							role="alert"
+						>
+							<AlertTriangle
+								class="mt-0.5 h-4 w-4 shrink-0"
+								aria-hidden="true"
+							/>
+							<p>
+								Peserta ini masih punya pembayaran pending yang
+								bisa menutupi sisa. Verifikasi atau tolak dulu
+								agar tidak double-charge.
+							</p>
 						</div>
 					{/if}
 				{/if}
 
-				<div class="grid min-w-0 grid-cols-1 gap-3 rounded-xl border border-border/70 bg-background/40 p-3 text-sm sm:grid-cols-2">
-					<div class="min-w-0"><p class="text-xs text-muted-foreground">Lomba</p><p class="break-words font-medium">{selectedPayment.competitionName}</p></div>
-					<div class="min-w-0"><p class="text-xs text-muted-foreground">Nominal</p><p class="break-words font-mono font-medium tabular-nums">Rp {Number(selectedPayment.amount).toLocaleString("id-ID")}</p></div>
-					<div class="min-w-0"><p class="text-xs text-muted-foreground">Metode</p><p class="break-words font-medium">{methodLabel(selectedPayment.paymentMethod)}</p></div>
-					<div class="min-w-0"><p class="text-xs text-muted-foreground">Status</p><p class="break-words font-medium">{statusLabel(selectedPayment)}</p></div>
-					<div class="min-w-0 sm:col-span-2"><p class="text-xs text-muted-foreground">Waktu pembayaran</p><p class="break-words font-medium">{formatDate(selectedPayment.createdAt)}</p></div>
+				<div
+					class="grid min-w-0 grid-cols-1 gap-3 rounded-xl border border-border/70 bg-background/40 p-3 text-sm sm:grid-cols-2"
+				>
+					<div class="min-w-0">
+						<p class="text-xs text-muted-foreground">Lomba</p>
+						<p class="break-words font-medium">
+							{selectedPayment.competitionName}
+						</p>
+					</div>
+					<div class="min-w-0">
+						<p class="text-xs text-muted-foreground">Nominal</p>
+						<p
+							class="break-words font-mono font-medium tabular-nums"
+						>
+							Rp {Number(selectedPayment.amount).toLocaleString(
+								"id-ID",
+							)}
+						</p>
+					</div>
+					<div class="min-w-0">
+						<p class="text-xs text-muted-foreground">Metode</p>
+						<p class="break-words font-medium">
+							{methodLabel(selectedPayment.paymentMethod)}
+						</p>
+					</div>
+					<div class="min-w-0">
+						<p class="text-xs text-muted-foreground">Status</p>
+						<p class="break-words font-medium">
+							{statusLabel(selectedPayment)}
+						</p>
+					</div>
+					<div class="min-w-0 sm:col-span-2">
+						<p class="text-xs text-muted-foreground">
+							Waktu pembayaran
+						</p>
+						<p class="break-words font-medium">
+							{formatDate(selectedPayment.createdAt)}
+						</p>
+					</div>
 				</div>
 
 				<div class="mt-4">
 					<p class="mb-2 text-sm font-semibold">Bukti pembayaran</p>
 					{#if selectedPayment.proofImageUrl?.startsWith("http")}
-						<img src={selectedPayment.proofImageUrl} alt="Bukti pembayaran {selectedPayment.participantName}" class="max-h-80 w-full rounded-xl border border-border/70 bg-black/30 object-contain" />
+						<img
+							src={selectedPayment.proofImageUrl}
+							alt="Bukti pembayaran {selectedPayment.participantName}"
+							class="max-h-80 w-full rounded-xl border border-border/70 bg-black/30 object-contain"
+						/>
 					{:else if selectedPayment.proofImageUrl}
-						<p class="rounded-xl border border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">Bukti tersimpan sebagai draft dan belum dapat ditampilkan sebagai gambar.</p>
+						<p
+							class="rounded-xl border border-border/70 bg-background/40 p-3 text-sm text-muted-foreground"
+						>
+							Bukti tersimpan sebagai draft dan belum dapat
+							ditampilkan sebagai gambar.
+						</p>
 					{:else}
-						<p class="rounded-xl border border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">Belum ada bukti pembayaran.</p>
+						<p
+							class="rounded-xl border border-border/70 bg-background/40 p-3 text-sm text-muted-foreground"
+						>
+							Belum ada bukti pembayaran.
+						</p>
 					{/if}
 				</div>
 
 				{#if selectedPayment.rejectReason}
-					<div class="mt-4 rounded-xl border border-red-300/30 bg-red-300/10 p-3 text-sm">
-						<p class="text-xs text-red-200">Alasan penolakan sebelumnya</p>
-						<p class="mt-1 break-words">{selectedPayment.rejectReason}</p>
+					<div
+						class="mt-4 rounded-xl border border-red-300/30 bg-red-300/10 p-3 text-sm"
+					>
+						<p class="text-xs text-red-200">
+							Alasan penolakan sebelumnya
+						</p>
+						<p class="mt-1 break-words">
+							{selectedPayment.rejectReason}
+						</p>
 					</div>
 				{/if}
 
 				{#if paymentAction === "reject"}
 					<div class="mt-4 space-y-3">
 						<label class="flex flex-col gap-1 text-sm">
-							<span class="text-xs text-muted-foreground">Template alasan penolakan</span>
+							<span class="text-xs text-muted-foreground"
+								>Template alasan penolakan</span
+							>
 							<select
 								class="input min-w-0"
 								aria-label="Template alasan penolakan"
 								value={rejectionTemplate}
-								onchange={(event) => selectRejectionTemplate(event.currentTarget.value)}
+								onchange={(event) =>
+									selectRejectionTemplate(
+										event.currentTarget.value,
+									)}
 							>
 								<option value="">Pilih template alasan</option>
 								{#each rejectionReasonTemplates as template}
 									<option value={template}>{template}</option>
 								{/each}
-								<option value={CUSTOM_REJECTION_REASON}>Lainnya — tulis manual</option>
+								<option value={CUSTOM_REJECTION_REASON}
+									>Lainnya — tulis manual</option
+								>
 							</select>
-							<span class="text-[11px] text-muted-foreground">Pilih template lalu sesuaikan teks bila diperlukan.</span>
+							<span class="text-[11px] text-muted-foreground"
+								>Pilih template lalu sesuaikan teks bila
+								diperlukan.</span
+							>
 						</label>
 						<label class="flex flex-col gap-1 text-sm">
-							<span class="text-xs text-muted-foreground">Alasan penolakan</span>
+							<span class="text-xs text-muted-foreground"
+								>Alasan penolakan</span
+							>
 							<textarea
 								class="input min-h-24 resize-y"
 								value={actionReason}
@@ -1368,36 +2032,114 @@
 				{/if}
 
 				{#if paymentActionError}
-					<p class="mt-3 break-words text-sm text-destructive" role="alert">{paymentActionError}</p>
+					<p
+						class="mt-3 break-words text-sm text-destructive"
+						role="alert"
+					>
+						{paymentActionError}
+					</p>
 				{/if}
 			</div>
-			<div class="flex flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-4">
+			<div
+				class="flex flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-4"
+			>
 				{#if paymentAction}
-					<button type="button" class="btn" onclick={() => { paymentAction = null; paymentActionError = ""; actionReason = ""; }} disabled={actingPayment !== null}>Batal</button>
+					<button
+						type="button"
+						class="btn"
+						onclick={() => {
+							paymentAction = null;
+							paymentActionError = "";
+							actionReason = "";
+						}}
+						disabled={actingPayment !== null}>Batal</button
+					>
 					{#if paymentAction === "verify"}
-						<button type="button" class="btn btn-gold" onclick={() => void verify(selectedPayment!)} disabled={actingPayment !== null}>
-							{#if actingPayment === selectedPayment.id}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{:else}<BadgeCheck class="h-4 w-4" aria-hidden="true" />{/if}
+						<button
+							type="button"
+							class="btn btn-gold"
+							onclick={() => void verify(selectedPayment!)}
+							disabled={actingPayment !== null}
+						>
+							{#if actingPayment === selectedPayment.id}<Loader2
+									class="h-4 w-4 animate-spin"
+									aria-hidden="true"
+								/>{:else}<BadgeCheck
+									class="h-4 w-4"
+									aria-hidden="true"
+								/>{/if}
 							Konfirmasi verifikasi
 						</button>
 					{:else if paymentAction === "settle"}
-						<button type="button" class="btn btn-gold" onclick={() => void settle(selectedPayment!)} disabled={actingPayment !== null}>
-							{#if actingPayment === selectedPayment.id}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{:else}<Banknote class="h-4 w-4" aria-hidden="true" />{/if}
+						<button
+							type="button"
+							class="btn btn-gold"
+							onclick={() => void settle(selectedPayment!)}
+							disabled={actingPayment !== null}
+						>
+							{#if actingPayment === selectedPayment.id}<Loader2
+									class="h-4 w-4 animate-spin"
+									aria-hidden="true"
+								/>{:else}<Banknote
+									class="h-4 w-4"
+									aria-hidden="true"
+								/>{/if}
 							Konfirmasi lunas tunai
 						</button>
 					{:else}
-						<button type="button" class="btn btn-destructive" onclick={() => void reject(selectedPayment!)} disabled={actingPayment !== null}>
-							{#if actingPayment === selectedPayment.id}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{:else}<Ban class="h-4 w-4" aria-hidden="true" />{/if}
+						<button
+							type="button"
+							class="btn btn-destructive"
+							onclick={() => void reject(selectedPayment!)}
+							disabled={actingPayment !== null}
+						>
+							{#if actingPayment === selectedPayment.id}<Loader2
+									class="h-4 w-4 animate-spin"
+									aria-hidden="true"
+								/>{:else}<Ban
+									class="h-4 w-4"
+									aria-hidden="true"
+								/>{/if}
 							Konfirmasi penolakan
 						</button>
 					{/if}
-					{:else}
+				{:else}
 					{#if !selectedPayment.isVerified}
-						<button type="button" class="btn" onclick={() => openPaymentAction(selectedPayment!, "reject")}><Ban class="h-4 w-4" aria-hidden="true" />Tolak</button>
+						<button
+							type="button"
+							class="btn"
+							onclick={() =>
+								openPaymentAction(selectedPayment!, "reject")}
+							><Ban
+								class="h-4 w-4"
+								aria-hidden="true"
+							/>Tolak</button
+						>
 					{:else if canSettlePayment(selectedPayment)}
-						<button type="button" class="btn btn-gold" onclick={() => openPaymentAction(selectedPayment!, "settle")}><Banknote class="h-4 w-4" aria-hidden="true" />Lunas Rp {remainingForParticipant(selectedPayment).toLocaleString("id-ID")}</button>
+						<button
+							type="button"
+							class="btn btn-gold"
+							onclick={() =>
+								openPaymentAction(selectedPayment!, "settle")}
+							><Banknote
+								class="h-4 w-4"
+								aria-hidden="true"
+							/>Lunas Rp {remainingForParticipant(
+								selectedPayment,
+							).toLocaleString("id-ID")}</button
+						>
 					{/if}
 					{#if !selectedPayment.isVerified}
-						<button type="button" class="btn btn-gold" onclick={() => openPaymentAction(selectedPayment!, "verify")}><BadgeCheck class="h-4 w-4" aria-hidden="true" />Verifikasi</button>
+						<button
+							type="button"
+							class="btn btn-gold"
+							onclick={() =>
+								openPaymentAction(selectedPayment!, "verify")}
+							><BadgeCheck
+								class="h-4 w-4"
+								aria-hidden="true"
+							/>Verifikasi</button
+						>
 					{/if}
 				{/if}
 			</div>
@@ -1406,87 +2148,407 @@
 {/if}
 
 {#if importDialogOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4">
-		<div class="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0a0f1c] shadow-[0_0_40px_rgba(34,211,238,0.16)]" role="dialog" aria-modal="true" aria-labelledby="participant-import-title">
-			<div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-4">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4"
+	>
+		<div
+			class="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0a0f1c] shadow-[0_0_40px_rgba(34,211,238,0.16)]"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="participant-import-title"
+		>
+			<div
+				class="flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-4"
+			>
 				<div>
-					<p class="text-xs uppercase tracking-wider text-cyan-300">Wizard import peserta</p>
-					<h2 id="participant-import-title" class="text-lg font-bold">Import data peserta dari CSV</h2>
+					<p class="text-xs uppercase tracking-wider text-cyan-300">
+						Wizard import peserta
+					</p>
+					<h2 id="participant-import-title" class="text-lg font-bold">
+						Import data peserta dari CSV
+					</h2>
 				</div>
-				<button type="button" class="btn shrink-0 px-2" aria-label="Tutup wizard import peserta" onclick={closeImportDialog} disabled={importing}><X class="h-4 w-4" aria-hidden="true" /></button>
+				<button
+					type="button"
+					class="btn shrink-0 px-2"
+					aria-label="Tutup wizard import peserta"
+					onclick={closeImportDialog}
+					disabled={importing}
+					><X class="h-4 w-4" aria-hidden="true" /></button
+				>
 			</div>
-			<div class="flex items-center gap-1 border-b border-border px-4 py-3 text-[11px] sm:px-4">
+			<div
+				class="flex items-center gap-1 border-b border-border px-4 py-3 text-[11px] sm:px-4"
+			>
 				{#each ["Panduan", "Pilih file", "Pratinjau", "Selesai"] as label, index}
-					<span class="flex items-center gap-1 {importStep === index + 1 ? 'font-semibold text-cyan-200' : importStep > index + 1 ? 'text-emerald-300' : 'text-muted-foreground'}"><span class="flex h-5 w-5 items-center justify-center rounded-full border border-current">{index + 1}</span><span class="hidden sm:inline">{label}</span></span>
-					{#if index < 3}<span class="h-px flex-1 bg-border"></span>{/if}
+					<span
+						class="flex items-center gap-1 {importStep === index + 1
+							? 'font-semibold text-cyan-200'
+							: importStep > index + 1
+								? 'text-emerald-300'
+								: 'text-muted-foreground'}"
+						><span
+							class="flex h-5 w-5 items-center justify-center rounded-full border border-current"
+							>{index + 1}</span
+						><span class="hidden sm:inline">{label}</span></span
+					>
+					{#if index < 3}<span class="h-px flex-1 bg-border"
+						></span>{/if}
 				{/each}
 			</div>
 			<div class="min-h-0 overflow-y-auto px-4 py-4 sm:px-4">
 				{#if importStep === 1}
 					<div class="space-y-4 text-sm">
-						<div><h3 class="font-semibold">Format CSV</h3><p class="mt-1 text-xs text-muted-foreground">Kolom wajib: <code>nama</code>, <code>no_wa</code>, dan <code>lomba</code> atau <code>competition_id</code>. Kolom tiket dan lapak opsional.</p></div>
-						<pre class="overflow-x-auto rounded-xl border border-border bg-black/30 p-3 text-xs leading-6 text-cyan-100">nama,no_wa,lomba,nomor_tiket,nomor_lapak{'\n'}Budi,081234567890,Mancing Lele,RA-2026-101,1{'\n'}Sari,+628123456789,Aduan Layangan,,2</pre>
-						<details class="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3" open><summary class="cursor-pointer font-semibold text-amber-100">Panduan edge case</summary><ul class="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground"><li>UTF-8 dengan BOM, delimiter koma, titik koma, dan tab didukung. Nilai yang mengandung delimiter harus diapit tanda kutip.</li><li>Baris kosong dan kolom ekstra aman; kolom ekstra diabaikan dan diberi peringatan.</li><li>Nomor WA harus format Indonesia (08…, 62…, atau +62…). Spasi dan tanda hubung dinormalisasi.</li><li>Lomba harus sama dengan nama lomba atau memakai ID lomba. Nomor tiket dan WA+lomba tidak boleh duplikat.</li><li>Kuota dicek sebelum import. Error wajib diperbaiki di CSV sebelum tombol import aktif.</li><li>Status, pembayaran, lunas, dan verifikasi diabaikan. Peserta diimport sebagai terdaftar; status pembayaran tetap berasal dari transaksi.</li></ul></details>
+						<div>
+							<h3 class="font-semibold">Format CSV</h3>
+							<p class="mt-1 text-xs text-muted-foreground">
+								Kolom wajib: <code>nama</code>,
+								<code>no_wa</code>, dan <code>lomba</code> atau
+								<code>competition_id</code>. Kolom tiket dan
+								lapak opsional.
+							</p>
+						</div>
+						<pre
+							class="overflow-x-auto rounded-xl border border-border bg-black/30 p-3 text-xs leading-6 text-cyan-100">nama,no_wa,lomba,nomor_tiket,nomor_lapak{"\n"}Budi,081234567890,Mancing Lele,RA-2026-101,1{"\n"}Sari,+628123456789,Aduan Layangan,,2</pre>
+						<details
+							class="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3"
+							open
+						>
+							<summary
+								class="cursor-pointer font-semibold text-amber-100"
+								>Panduan edge case</summary
+							>
+							<ul
+								class="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground"
+							>
+								<li>
+									UTF-8 dengan BOM, delimiter koma, titik
+									koma, dan tab didukung. Nilai yang
+									mengandung delimiter harus diapit tanda
+									kutip.
+								</li>
+								<li>
+									Baris kosong dan kolom ekstra aman; kolom
+									ekstra diabaikan dan diberi peringatan.
+								</li>
+								<li>
+									Nomor WA harus format Indonesia (08…, 62…,
+									atau +62…). Spasi dan tanda hubung
+									dinormalisasi.
+								</li>
+								<li>
+									Lomba harus sama dengan nama lomba atau
+									memakai ID lomba. Nomor tiket dan WA+lomba
+									tidak boleh duplikat.
+								</li>
+								<li>
+									Kuota dicek sebelum import. Error wajib
+									diperbaiki di CSV sebelum tombol import
+									aktif.
+								</li>
+								<li>
+									Status, pembayaran, lunas, dan verifikasi
+									diabaikan. Peserta diimport sebagai
+									terdaftar; status pembayaran tetap berasal
+									dari transaksi.
+								</li>
+							</ul>
+						</details>
 					</div>
 				{:else if importStep === 2}
-					<div class="space-y-4"><label class="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-cyan-300/40 bg-cyan-300/5 p-8 text-center"><FileUp class="h-8 w-8 text-cyan-300" aria-hidden="true" /><span class="font-semibold">Pilih file CSV</span><span class="text-xs text-muted-foreground">Maksimal 5 MB</span><input type="file" accept=".csv,text/csv" class="sr-only" onchange={selectImportFile} /></label>{#if importFileName}<p class="rounded-lg border border-emerald-300/25 bg-emerald-300/5 p-3 text-sm text-emerald-100">File dipilih: {importFileName}</p>{/if}{#if importFileError}<p class="text-sm text-destructive" role="alert">{importFileError}</p>{/if}</div>
+					<div class="space-y-4">
+						<label
+							class="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-cyan-300/40 bg-cyan-300/5 p-8 text-center"
+							><FileUp
+								class="h-8 w-8 text-cyan-300"
+								aria-hidden="true"
+							/><span class="font-semibold">Pilih file CSV</span
+							><span class="text-xs text-muted-foreground"
+								>Maksimal 5 MB</span
+							><input
+								type="file"
+								accept=".csv,text/csv"
+								class="sr-only"
+								onchange={selectImportFile}
+							/></label
+						>{#if importFileName}<p
+								class="rounded-lg border border-emerald-300/25 bg-emerald-300/5 p-3 text-sm text-emerald-100"
+							>
+								File dipilih: {importFileName}
+							</p>{/if}{#if importFileError}<p
+								class="text-sm text-destructive"
+								role="alert"
+							>
+								{importFileError}
+							</p>{/if}
+					</div>
 				{:else if importStep === 3}
 					{#if importPreview}
-						{@const importErrors = importPreview.issues.filter((item) => item.level === "error")}
-						{@const importWarnings = importPreview.issues.filter((item) => item.level === "warning")}
-						<div class="space-y-4 text-sm"><div class="grid grid-cols-2 gap-2 sm:grid-cols-4"><div class="rounded-lg border border-border p-3"><p class="text-xs text-muted-foreground">Baris data</p><p class="text-xl font-bold">{importPreview.dataRowCount}</p></div><div class="rounded-lg border border-border p-3"><p class="text-xs text-muted-foreground">Siap import</p><p class="text-xl font-bold text-emerald-300">{importPreview.rows.length}</p></div><div class="rounded-lg border border-border p-3"><p class="text-xs text-muted-foreground">Error</p><p class="text-xl font-bold text-rose-300">{importErrors.length}</p></div><div class="rounded-lg border border-border p-3"><p class="text-xs text-muted-foreground">Peringatan</p><p class="text-xl font-bold text-amber-200">{importWarnings.length}</p></div></div>{#if importPreview.issues.length > 0}<div class="max-h-48 overflow-y-auto rounded-xl border border-border bg-black/20 p-3 text-xs">{#each importPreview.issues as item}<p class="mb-1 {item.level === 'error' ? 'text-rose-200' : 'text-amber-100'}">Baris {item.row}: {item.message}</p>{/each}</div>{/if}{#if importPreview.rows.length > 0}<div class="overflow-x-auto rounded-xl border border-border"><table class="w-full text-left text-xs"><thead class="border-b border-border bg-background/50"><tr><th class="px-2 py-2">Baris</th><th class="px-2 py-2">Nama</th><th class="px-2 py-2">WA</th><th class="px-2 py-2">Lomba</th><th class="px-2 py-2">Tiket</th></tr></thead><tbody>{#each importPreview.rows.slice(0, 10) as row}<tr class="border-b border-border/50"><td class="px-2 py-2">{row.row}</td><td class="px-2 py-2">{row.name}</td><td class="px-2 py-2">{row.phone}</td><td class="px-2 py-2">{competitions.find((competition) => competition.id === row.competitionId)?.name}</td><td class="px-2 py-2">{row.ticketNumber ?? "Otomatis"}</td></tr>{/each}</tbody></table></div>{#if importPreview.rows.length > 10}<p class="text-xs text-muted-foreground">Menampilkan 10 baris pertama dari {importPreview.rows.length} baris valid.</p>{/if}{/if}{#if importFileError}<p class="text-sm text-destructive" role="alert">{importFileError}</p>{/if}</div>
+						{@const importErrors = importPreview.issues.filter(
+							(item) => item.level === "error",
+						)}
+						{@const importWarnings = importPreview.issues.filter(
+							(item) => item.level === "warning",
+						)}
+						<div class="space-y-4 text-sm">
+							<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+								<div
+									class="rounded-lg border border-border p-3"
+								>
+									<p class="text-xs text-muted-foreground">
+										Baris data
+									</p>
+									<p class="text-xl font-bold">
+										{importPreview.dataRowCount}
+									</p>
+								</div>
+								<div
+									class="rounded-lg border border-border p-3"
+								>
+									<p class="text-xs text-muted-foreground">
+										Siap import
+									</p>
+									<p
+										class="text-xl font-bold text-emerald-300"
+									>
+										{importPreview.rows.length}
+									</p>
+								</div>
+								<div
+									class="rounded-lg border border-border p-3"
+								>
+									<p class="text-xs text-muted-foreground">
+										Error
+									</p>
+									<p class="text-xl font-bold text-rose-300">
+										{importErrors.length}
+									</p>
+								</div>
+								<div
+									class="rounded-lg border border-border p-3"
+								>
+									<p class="text-xs text-muted-foreground">
+										Peringatan
+									</p>
+									<p class="text-xl font-bold text-amber-200">
+										{importWarnings.length}
+									</p>
+								</div>
+							</div>
+							{#if importPreview.issues.length > 0}<div
+									class="max-h-48 overflow-y-auto rounded-xl border border-border bg-black/20 p-3 text-xs"
+								>
+									{#each importPreview.issues as item}<p
+											class="mb-1 {item.level === 'error'
+												? 'text-rose-200'
+												: 'text-amber-100'}"
+										>
+											Baris {item.row}: {item.message}
+										</p>{/each}
+								</div>{/if}{#if importPreview.rows.length > 0}<div
+									class="overflow-x-auto rounded-xl border border-border"
+								>
+									<table class="w-full text-left text-xs">
+										<thead
+											class="border-b border-border bg-background/50"
+											><tr
+												><th class="px-2 py-2">Baris</th
+												><th class="px-2 py-2">Nama</th
+												><th class="px-2 py-2">WA</th
+												><th class="px-2 py-2">Lomba</th
+												><th class="px-2 py-2">Tiket</th
+												></tr
+											></thead
+										><tbody
+											>{#each importPreview.rows.slice(0, 10) as row}<tr
+													class="border-b border-border/50"
+													><td class="px-2 py-2"
+														>{row.row}</td
+													><td class="px-2 py-2"
+														>{row.name}</td
+													><td class="px-2 py-2"
+														>{row.phone}</td
+													><td class="px-2 py-2"
+														>{competitions.find(
+															(competition) =>
+																competition.id ===
+																row.competitionId,
+														)?.name}</td
+													><td class="px-2 py-2"
+														>{row.ticketNumber ??
+															"Otomatis"}</td
+													></tr
+												>{/each}</tbody
+										>
+									</table>
+								</div>
+								{#if importPreview.rows.length > 10}<p
+										class="text-xs text-muted-foreground"
+									>
+										Menampilkan 10 baris pertama dari {importPreview
+											.rows.length} baris valid.
+									</p>{/if}{/if}{#if importFileError}<p
+									class="text-sm text-destructive"
+									role="alert"
+								>
+									{importFileError}
+								</p>{/if}
+						</div>
 					{/if}
-				{:else}
-					{#if importResult}<div class="space-y-4 text-sm"><div class="rounded-xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-emerald-100"><p class="font-semibold">Import selesai</p><p class="mt-1">{importResult.imported} peserta berhasil ditambahkan. {importResult.skipped} baris dilewati.</p></div>{#if importResult.issues.length > 0}<div class="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-xs text-amber-100">{#each importResult.issues as item}<p>Baris {item.row}: {item.message}</p>{/each}</div>{/if}</div>{/if}
-				{/if}
+				{:else if importResult}<div class="space-y-4 text-sm">
+						<div
+							class="rounded-xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-emerald-100"
+						>
+							<p class="font-semibold">Import selesai</p>
+							<p class="mt-1">
+								{importResult.imported} peserta berhasil ditambahkan.
+								{importResult.skipped} baris dilewati.
+							</p>
+						</div>
+						{#if importResult.issues.length > 0}<div
+								class="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-xs text-amber-100"
+							>
+								{#each importResult.issues as item}<p>
+										Baris {item.row}: {item.message}
+									</p>{/each}
+							</div>{/if}
+					</div>{/if}
 			</div>
-			<div class="flex flex-wrap justify-between gap-2 border-t border-border px-4 py-3 sm:px-4">
-				{#if importStep === 1}<span></span><button type="button" class="btn btn-gold" onclick={() => (importStep = 2)}>Lanjut pilih file</button>
-				{:else if importStep === 2}<button type="button" class="btn" onclick={() => (importStep = 1)}>Kembali</button><button type="button" class="btn btn-gold" onclick={() => void readImportFile()} disabled={!importFile}>Baca dan validasi CSV</button>
-				{:else if importStep === 3}<button type="button" class="btn" onclick={() => (importStep = 2)} disabled={importing}>Ganti file</button><button type="button" class="btn btn-gold" onclick={() => void runParticipantImport()} disabled={importing || !importPreview || importPreview.rows.length === 0 || importPreview.issues.some((item) => item.level === "error")}>{#if importing}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{/if}Import {importPreview?.rows.length ?? 0} peserta</button>
-				{:else}<span></span><button type="button" class="btn btn-gold" onclick={closeImportDialog}>Selesai</button>{/if}
+			<div
+				class="flex flex-wrap justify-between gap-2 border-t border-border px-4 py-3 sm:px-4"
+			>
+				{#if importStep === 1}<span></span><button
+						type="button"
+						class="btn btn-gold"
+						onclick={() => (importStep = 2)}
+						>Lanjut pilih file</button
+					>
+				{:else if importStep === 2}<button
+						type="button"
+						class="btn"
+						onclick={() => (importStep = 1)}>Kembali</button
+					><button
+						type="button"
+						class="btn btn-gold"
+						onclick={() => void readImportFile()}
+						disabled={!importFile}>Baca dan validasi CSV</button
+					>
+				{:else if importStep === 3}<button
+						type="button"
+						class="btn"
+						onclick={() => (importStep = 2)}
+						disabled={importing}>Ganti file</button
+					><button
+						type="button"
+						class="btn btn-gold"
+						onclick={() => void runParticipantImport()}
+						disabled={importing ||
+							!importPreview ||
+							importPreview.rows.length === 0 ||
+							importPreview.issues.some(
+								(item) => item.level === "error",
+							)}
+						>{#if importing}<Loader2
+								class="h-4 w-4 animate-spin"
+								aria-hidden="true"
+							/>{/if}Import {importPreview?.rows.length ?? 0} peserta</button
+					>
+				{:else}<span></span><button
+						type="button"
+						class="btn btn-gold"
+						onclick={closeImportDialog}>Selesai</button
+					>{/if}
 			</div>
 		</div>
 	</div>
 {/if}
 
 {#if roundCompetition}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4">
-		<div class="w-full max-w-lg rounded-2xl border border-red-300/30 bg-[#0a0f1c] shadow-[0_0_40px_rgba(220,38,38,0.18)]" role="dialog" aria-modal="true" aria-labelledby="round-dialog-title">
-			<div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-4">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4"
+	>
+		<div
+			class="w-full max-w-lg rounded-2xl border border-red-300/30 bg-[#0a0f1c] shadow-[0_0_40px_rgba(220,38,38,0.18)]"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="round-dialog-title"
+		>
+			<div
+				class="flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-4"
+			>
 				<div>
-					<p class="text-xs uppercase tracking-wider text-red-200">Konfirmasi tindakan panitia</p>
-					<h2 id="round-dialog-title" class="text-lg font-bold">Mulai babak berikutnya?</h2>
+					<p class="text-xs uppercase tracking-wider text-red-200">
+						Konfirmasi tindakan panitia
+					</p>
+					<h2 id="round-dialog-title" class="text-lg font-bold">
+						Mulai babak berikutnya?
+					</h2>
 				</div>
-				<button type="button" class="btn px-2" aria-label="Tutup konfirmasi babak" onclick={closeRoundDialog} disabled={advancing !== null}><X class="h-4 w-4" aria-hidden="true" /></button>
+				<button
+					type="button"
+					class="btn px-2"
+					aria-label="Tutup konfirmasi babak"
+					onclick={closeRoundDialog}
+					disabled={advancing !== null}
+					><X class="h-4 w-4" aria-hidden="true" /></button
+				>
 			</div>
 			{#if forceAdvance}
-	<div class="rounded-xl border border-red-300/30 bg-red-500/10 p-3 text-red-100">
-		<p class="font-semibold">
-			{unjudgedCount} peserta belum dinilai pada babak
-			{roundCompetition.currentRound}.
-		</p>
-		<p class="mt-1">
-			Lanjutkan tetap? Skor yang belum masuk akan tertinggal di babak lama.
-		</p>
-	</div>
-{:else}<div class="space-y-3 px-4 py-4 text-sm sm:px-4">
-	<div class="rounded-xl border border-red-300/30 bg-red-500/10 p-3 text-red-100">
-		<p class="font-semibold">Apa yang akan terjadi?</p>
-		<p class="mt-1">{roundCompetition.name} akan berpindah dari babak {roundCompetition.currentRound} ke babak {roundCompetition.currentRound + 1}. Papan skor babak aduan yang sedang berjalan akan mulai membaca babak baru.</p>
-	</div>
-	<ul class="list-disc space-y-1 pl-5 text-muted-foreground">
-		<li>Pastikan semua skor babak saat ini sudah final.</li>
-		<li>Tindakan ini tidak memiliki undo otomatis.</li>
-		<li>Jika salah menekan, panitia perlu mengembalikan nomor babak melalui konfigurasi atau database.</li>
-	</ul>
-</div>{/if}
-			<div class="flex flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-4">
-				<button type="button" class="btn" onclick={closeRoundDialog} disabled={advancing !== null}>Batal</button>
-				<button type="button" class="btn btn-destructive" onclick={() => void nextRound()} disabled={advancing !== null}>
-					{#if advancing !== null}<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />{/if}
+				<div
+					class="rounded-xl border border-red-300/30 bg-red-500/10 p-3 text-red-100"
+				>
+					<p class="font-semibold">
+						{unjudgedCount} peserta belum dinilai pada babak
+						{roundCompetition.currentRound}.
+					</p>
+					<p class="mt-1">
+						Lanjutkan tetap? Skor yang belum masuk akan tertinggal
+						di babak lama.
+					</p>
+				</div>
+			{:else}<div class="space-y-3 px-4 py-4 text-sm sm:px-4">
+					<div
+						class="rounded-xl border border-red-300/30 bg-red-500/10 p-3 text-red-100"
+					>
+						<p class="font-semibold">Apa yang akan terjadi?</p>
+						<p class="mt-1">
+							{roundCompetition.name} akan berpindah dari babak {roundCompetition.currentRound}
+							ke babak {roundCompetition.currentRound + 1}.
+							Leaderboard babak aduan yang sedang berjalan akan
+							mulai membaca babak baru.
+						</p>
+					</div>
+					<ul class="list-disc space-y-1 pl-5 text-muted-foreground">
+						<li>Pastikan semua skor babak saat ini sudah final.</li>
+						<li>Tindakan ini tidak memiliki undo otomatis.</li>
+						<li>
+							Jika salah menekan, panitia perlu mengembalikan
+							nomor babak melalui konfigurasi atau database.
+						</li>
+					</ul>
+				</div>{/if}
+			<div
+				class="flex flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-4"
+			>
+				<button
+					type="button"
+					class="btn"
+					onclick={closeRoundDialog}
+					disabled={advancing !== null}>Batal</button
+				>
+				<button
+					type="button"
+					class="btn btn-destructive"
+					onclick={() => void nextRound()}
+					disabled={advancing !== null}
+				>
+					{#if advancing !== null}<Loader2
+							class="h-4 w-4 animate-spin"
+							aria-hidden="true"
+						/>{/if}
 					Ya, mulai babak {roundCompetition.currentRound + 1}
-					{#if forceAdvance} (paksa){/if}
+					{#if forceAdvance}
+						(paksa){/if}
 				</button>
 			</div>
 		</div>
