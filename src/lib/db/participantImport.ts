@@ -487,5 +487,16 @@ export async function importParticipantRows(
 		usedTickets.add(ticket.toLowerCase());
 		imported += 1;
 	}
+	// B4-7/A39: satu entri audit per batch import.
+	if (imported > 0) {
+		await supabase.from("audit_logs").insert({
+			action: "import_participants",
+			entity_type: "participants",
+			entity_id: "batch",
+			actor_hash: "admin-import",
+			payload: { imported, skipped },
+			idempotency_key: crypto.randomUUID(),
+		});
+	}
 	return { imported, skipped, issues };
 }
