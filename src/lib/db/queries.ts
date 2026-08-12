@@ -40,6 +40,31 @@ export type LeaderboardRow = {
 
 type DbRow = Record<string, unknown>;
 
+/**
+ * PostgREST caps a single response at `db-max-rows` (Supabase default 1000).
+ * Tabel participants/payments/scores bisa melewati itu di 5000 pendaftar —
+ * tanpa paging, sisa baris kepotong diam-diam. Loop `.range()` sampai
+ * halaman terakhir (< pageSize baris).
+ */
+async function fetchAllRows<T>(
+	buildPage: (
+		from: number,
+		to: number,
+	) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+	pageSize = 1000,
+): Promise<T[]> {
+	const rows: T[] = [];
+	let from = 0;
+	for (;;) {
+		const { data, error } = await buildPage(from, from + pageSize - 1);
+		if (error) throw error;
+		const page = data ?? [];
+		rows.push(...page);
+		if (page.length < pageSize) return rows;
+		from += pageSize;
+	}
+}
+
 const value = <T>(row: DbRow, camel: string, snake: string): T =>
 	(row[camel] ?? row[snake]) as T;
 
@@ -215,18 +240,19 @@ export async function getParticipants(
 			: all;
 	}
 	const { supabase } = await getSupabase();
-	let query = supabase
-		.from("participants")
-		.select("*")
-		.order("created_at", { ascending: true });
-	if (competitionId) {
-		query = query.eq("competition_id", competitionId);
-	}
-	const { data, error } = await query;
-	if (error) {
+	const rows = await fetchAllRows<DbRow>((from, to) => {
+		let query = supabase
+			.from("participants")
+			.select("*")
+			.order("created_at", { ascending: true });
+		if (competitionId) {
+			query = query.eq("competition_id", competitionId);
+		}
+		return query.range(from, to);
+	}).catch((error: { message: string }) => {
 		throw new Error(`getParticipants: ${error.message}`);
-	}
-	return (data ?? []).map((row) => normalizeParticipantRow(row as DbRow));
+	});
+	return rows.map((row) => normalizeParticipantRow(row));
 }
 
 /**
@@ -268,18 +294,19 @@ export async function getPayments(
 			: all;
 	}
 	const { supabase } = await getSupabase();
-	let query = supabase
-		.from("participant_payments")
-		.select("*")
-		.order("created_at", { ascending: true });
-	if (participantId) {
-		query = query.eq("participant_id", participantId);
-	}
-	const { data, error } = await query;
-	if (error) {
+	const rows = await fetchAllRows<DbRow>((from, to) => {
+		let query = supabase
+			.from("participant_payments")
+			.select("*")
+			.order("created_at", { ascending: true });
+		if (participantId) {
+			query = query.eq("participant_id", participantId);
+		}
+		return query.range(from, to);
+	}).catch((error: { message: string }) => {
 		throw new Error(`getPayments: ${error.message}`);
-	}
-	return (data ?? []).map((row) => normalizePaymentRow(row as DbRow));
+	});
+	return rows.map((row) => normalizePaymentRow(row));
 }
 
 export async function getLeaderboard(
@@ -315,18 +342,17 @@ export async function getLeaderboard(
 			});
 	}
 	const { supabase } = await getSupabase();
-	let query = supabase
-		.from(table)
-		.select("*, participants(name, lapak_number)")
-		.eq("competition_id", competitionId);
-	if (round !== undefined) {
-		query = query.eq("round", round);
-	}
-	const { data, error } = await query.order("received_at", { ascending: true });
-	if (error) {
+	const rows = await fetchAllRows<DbRow>((from, to) => {
+		let query = supabase
+			.from(table)
+			.select("*, participants(name, lapak_number)")
+			.eq("competition_id", competitionId);
+		if (round !== undefined) {
+			query = query.eq("round", round);
+		}
+		return query.order("received_at", { ascending: true }).range(from, to);
+	}).catch((error: { message: string }) => {
 		throw new Error(`getLeaderboard: ${error.message}`);
-	}
-	return (data ?? []).map((row) =>
-		normalizeLeaderboardRow(row as DbRow, table),
-	);
+	});
+	return rows.map((row) => normalizeLeaderboardRow(row, table));
 }

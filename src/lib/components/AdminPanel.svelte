@@ -49,7 +49,12 @@
 		type ParticipantCsvPreview,
 		type ParticipantImportResult,
 	} from "$lib/db/participantImport";
-	import { getCompetitions, getPaymentConfigs } from "$lib/db/queries";
+	import {
+		getCompetitions,
+		getParticipants,
+		getPaymentConfigs,
+		getPayments,
+	} from "$lib/db/queries";
 	import type { Competition, PaymentConfig } from "$lib/db/queries";
 	import { staffRole, type StaffRole } from "$lib/db/schema";
 	import {
@@ -242,16 +247,26 @@ let showTerms = $state(false);
 
 	const load = async () => {
 		try {
-			const [comps, cfgs, allPayments, sponsorList, panitia, lock, staff] =
+			// Fetch peserta/pembayaran/lomba SEKALI di sini dan lewatkan ke
+			// getMergedPayments/getPanitiaParticipants — keduanya butuh tabel yang
+			// sama; tanpa ini tiap fungsi fetch ulang dari nol (2x round-trip
+			// participants + payments, tiap tabel bisa 5 halaman `.range()` di 5000
+			// peserta).
+			const [comps, cfgs, rawParticipants, rawPayments, sponsorList, lock, staff] =
 				await Promise.all([
 					getCompetitions(false),
 					getPaymentConfigs(false),
-					getMergedPayments(),
+					getParticipants(),
+					getPayments(),
 					getSponsors(),
-					getPanitiaParticipants(),
 					getDataLock(),
 					listStaffMembers(),
 				]);
+			const preloaded = { participants: rawParticipants, competitions: comps };
+			const [allPayments, panitia] = await Promise.all([
+				getMergedPayments(preloaded),
+				getPanitiaParticipants({ ...preloaded, payments: rawPayments }),
+			]);
 			competitions = comps;
 			configs = cfgs;
 			payments = allPayments;

@@ -364,16 +364,26 @@ export async function demoAuditLogs(): Promise<AuditRecord[]> {
 	);
 }
 
-/** Gabungan payment seed + lokal (demo), diperkaya nama peserta & lomba. */
-export async function getMergedPayments(): Promise<PaymentWithMeta[]> {
+/**
+ * Gabungan payment seed + lokal (demo), diperkaya nama peserta & lomba.
+ *
+ * `preloaded` (mode live saja): lewatkan participants/competitions yang
+ * sudah di-fetch caller (mis. AdminPanel.load()) supaya tidak fetch ulang
+ * tabel yang sama — di 5000 peserta tiap fetch ulang itu beberapa halaman
+ * `.range()`.
+ */
+export async function getMergedPayments(preloaded?: {
+	participants?: Participant[];
+	competitions?: Competition[];
+}): Promise<PaymentWithMeta[]> {
 	if (!get(demoMode)) {
 		const { getCompetitions, getParticipants, getPayments } = await import(
 			"./queries"
 		);
 		const [payments, participants, competitions] = await Promise.all([
 			getPayments(),
-			getParticipants(),
-			getCompetitions(false),
+			preloaded?.participants ?? getParticipants(),
+			preloaded?.competitions ?? getCompetitions(false),
 		]);
 		const participantMap = new Map(participants.map((p) => [p.id, p]));
 		return payments.map((payment) => {
@@ -442,16 +452,26 @@ export interface PanitiaParticipant {
 	checkedInAt: Date | null;
 }
 
-/** Peserta + info pembayaran & check-in untuk tab panitia di admin. */
-export async function getPanitiaParticipants(): Promise<PanitiaParticipant[]> {
+/**
+ * Peserta + info pembayaran & check-in untuk tab panitia di admin.
+ *
+ * `preloaded`: lewatkan participants/payments/competitions yang sudah
+ * di-fetch caller (mis. AdminPanel.load(), yang juga memanggil
+ * getMergedPayments() dengan tabel yang sama) supaya tidak fetch ulang.
+ */
+export async function getPanitiaParticipants(preloaded?: {
+	participants?: Participant[];
+	payments?: ParticipantPayment[];
+	competitions?: Competition[];
+}): Promise<PanitiaParticipant[]> {
 	const isDemo = get(demoMode);
 	const { getCompetitions, getParticipants, getPayments } = await import(
 		"./queries"
 	);
 	const [participants, payments, competitions] = await Promise.all([
-		getParticipants(),
-		getPayments(),
-		getCompetitions(false),
+		preloaded?.participants ?? getParticipants(),
+		preloaded?.payments ?? getPayments(),
+		preloaded?.competitions ?? getCompetitions(false),
 	]);
 	const checkedInIds = new Set<string>();
 	if (isDemo) {
