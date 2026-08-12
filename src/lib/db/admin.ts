@@ -192,6 +192,117 @@ export async function advanceRound(
 	return { ok: true, round: next.currentRound, unjudged };
 }
 
+/**
+ * Timer bersama per babak: juri tekan "Mulai Lomba" sekali, semua peserta
+ * babak itu baca titik mulai yang sama (bukan timer per-kartu-peserta).
+ * Update 3 kolom sempit saja — TIDAK lewat saveCompetition (yg menulis
+ * seluruh field admin dari snapshot in-memory pemanggil; berisiko menimpa
+ * edit admin yang konkuren dalam jendela polling ~30 detik yang sama).
+ */
+export async function startRound(
+	competitionId: string,
+	round: number,
+	startedBy: string,
+): Promise<{ queued: boolean; startedAt: string }> {
+	const startedAt = new Date().toISOString();
+	if (get(demoMode)) {
+		const merged = await getMergedCompetitions(false);
+		const competition = merged.find((c) => c.id === competitionId);
+		if (!competition) {
+			throw new Error("Kompetisi tidak ditemukan.");
+		}
+		await localPut(COMP_STORE, {
+			...competition,
+			roundStartedAt: startedAt,
+			roundStartedRound: round,
+			roundStartedBy: startedBy,
+		});
+		return { queued: false, startedAt };
+	}
+	try {
+		const { supabase } = await import("./supabaseClient");
+		const { data, error } = await supabase.rpc("start_round", {
+			p_competition_id: competitionId,
+			p_round: round,
+			p_started_at: startedAt,
+			p_started_by: startedBy,
+		});
+		if (error) {
+			throw error;
+		}
+		const result = data as { ok?: boolean; reason?: string } | undefined;
+		if (!result?.ok) {
+			throw new Error(
+				result?.reason === "locked"
+					? "Data terkunci — semua tulis diblokir."
+					: "Kompetisi tidak ditemukan.",
+			);
+		}
+		return { queued: false, startedAt };
+	} catch (e) {
+		const { isOfflineError } = await import("$lib/offline/networkStore");
+		if (!isOfflineError(e)) {
+			throw e;
+		}
+		const { enqueue } = await import("$lib/offline/queue");
+		await enqueue(
+			`round-start:${competitionId}:${round}:${startedAt}`,
+			"/rest/competitions/start-round",
+			{ competitionId, round, startedAt, startedBy },
+		);
+		return { queued: true, startedAt };
+	}
+}
+
+/**
+ * Tutup timer babak — kebalikan startRound, sengaja TIDAK dicek data_lock
+ * (beres-beres timer yang sudah jalan harus selalu bisa dilakukan juri).
+ */
+export async function stopRound(
+	competitionId: string,
+): Promise<{ queued: boolean }> {
+	if (get(demoMode)) {
+		const merged = await getMergedCompetitions(false);
+		const competition = merged.find((c) => c.id === competitionId);
+		if (!competition) {
+			throw new Error("Kompetisi tidak ditemukan.");
+		}
+		await localPut(COMP_STORE, {
+			...competition,
+			roundStartedAt: null,
+			roundStartedRound: null,
+			roundStartedBy: null,
+		});
+		return { queued: false };
+	}
+	try {
+		const { supabase } = await import("./supabaseClient");
+		const { data, error } = await supabase.rpc("stop_round", {
+			p_competition_id: competitionId,
+		});
+		if (error) {
+			throw error;
+		}
+		const result = data as { ok?: boolean; reason?: string } | undefined;
+		if (!result?.ok) {
+			throw new Error("Kompetisi tidak ditemukan.");
+		}
+		return { queued: false };
+	} catch (e) {
+		const { isOfflineError } = await import("$lib/offline/networkStore");
+		if (!isOfflineError(e)) {
+			throw e;
+		}
+		const { enqueue } = await import("$lib/offline/queue");
+		await enqueue(
+			`round-stop:${competitionId}:${Date.now()}`,
+			"/rest/competitions/stop-round",
+			{ competitionId },
+		);
+		return { queued: true };
+	}
+}
+
 export async function resetDemoAdminState(): Promise<void> {
 	await Promise.all([
 		localClear(COMP_STORE),

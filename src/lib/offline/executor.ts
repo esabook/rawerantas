@@ -162,6 +162,43 @@ export const executeQueueEntry: ExecuteOp = async (entry) => {
 				}),
 			);
 
+		case "/rest/competitions/start-round": {
+			// B/A: RPC start_round (bukan update polos) — dicek data_lock server;
+			// terkunci = penolakan bisnis → conflict (hentikan retry), bukan error.
+			let rpcResponse: { data: unknown; error: unknown };
+			try {
+				rpcResponse = await supabase.rpc("start_round", {
+					p_competition_id: payload.competitionId,
+					p_round: payload.round,
+					p_started_at: payload.startedAt,
+					p_started_by: payload.startedBy,
+				});
+			} catch {
+				return "error";
+			}
+			if (rpcResponse.error) {
+				return "error";
+			}
+			const result = rpcResponse.data as { ok?: boolean } | undefined;
+			return result?.ok === true ? "ok" : "conflict";
+		}
+
+		case "/rest/competitions/stop-round": {
+			let rpcResponse: { data: unknown; error: unknown };
+			try {
+				rpcResponse = await supabase.rpc("stop_round", {
+					p_competition_id: payload.competitionId,
+				});
+			} catch {
+				return "error";
+			}
+			if (rpcResponse.error) {
+				return "error";
+			}
+			const result = rpcResponse.data as { ok?: boolean } | undefined;
+			return result?.ok === true ? "ok" : "conflict";
+		}
+
 		case "/rest/payments":
 			return executePayment(supabase, payload);
 

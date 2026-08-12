@@ -133,6 +133,19 @@ create table if not exists audit_logs (
 	created_at timestamptz not null default now()
 );
 
+-- Roster panitia/juri — login per-orang via 6 digit terakhir HP (ganti PIN
+-- bersama). Tidak ada policy select publik: berisi PII (no. HP), akses
+-- lewat RPC staff_login/list_staff_members saja (lihat bagian 9).
+create table if not exists staff_members (
+	id uuid primary key default gen_random_uuid(),
+	role text not null check (role in ('panitia', 'juri')),
+	name text not null,
+	phone text not null,
+	phone_last6 text generated always as (right(phone, 6)) stored,
+	is_active boolean not null default true,
+	created_at timestamptz not null default now()
+);
+
 alter table participants add column if not exists checked_in_at timestamptz;
 alter table participant_payments add column if not exists reject_reason text;
 alter table scores_layangan add column if not exists flight_duration_ms integer;
@@ -148,6 +161,23 @@ update participant_payments
 set idempotency_key = gen_random_uuid()
 where idempotency_key is null;
 alter table participant_payments alter column idempotency_key set not null;
+
+-- Sumber pendaftaran (web mandiri vs input panitia on-site) + identitas
+-- panitia penerima — nama disimpan sbg snapshot saat itu (bukan FK), sejalan
+-- dgn konvensi verified_by/recorded_by di tabel lain (teks polos, bukan FK).
+alter table participants add column if not exists registration_source text
+	not null default 'web' check (registration_source in ('web', 'panitia'));
+alter table participants add column if not exists registered_by_staff_id text;
+alter table participants add column if not exists registered_by_staff_name text;
+
+-- Timer bersama per babak (juri tekan "Mulai Lomba" sekali, semua peserta
+-- babak itu pakai titik mulai yang sama — bukan timer per-kartu-peserta).
+-- round_started_round dipisah dari current_round: begitu admin advance babak,
+-- perbandingan round_started_round <> current_round bikin "sudah mulai" jadi
+-- basi otomatis tanpa kode pembersih tambahan.
+alter table competitions add column if not exists round_started_at timestamptz;
+alter table competitions add column if not exists round_started_round integer;
+alter table competitions add column if not exists round_started_by text;
 
 create unique index if not exists participants_competition_phone_idx
 	on participants (competition_id, phone);
@@ -315,6 +345,7 @@ alter table scores_mancing enable row level security;
 alter table scores_layangan enable row level security;
 alter table scores_layangan_hias enable row level security;
 alter table audit_logs enable row level security;
+alter table staff_members enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on
@@ -823,7 +854,10 @@ create or replace function register_participant(
 	p_competition uuid,
 	p_name text,
 	p_phone text,
-	p_idempotency_key uuid default gen_random_uuid()
+	p_idempotency_key uuid default gen_random_uuid(),
+	p_source text default 'web',
+	p_staff_id text default null,
+	p_staff_name text default null
 ) returns jsonb
 language plpgsql
 security definer
@@ -883,8 +917,14 @@ begin
 	-- Dedupe idempoten (F3): bila ada race pendaftaran nomor sama, kembalikan
 	-- baris existing (slot yang sudah direservasi barusan jadi terbuang — kasus
 	-- ekstrem concurrency, diterima).
-	insert into participants (competition_id, name, phone, ticket_number, lapak_number, status)
-	values (p_competition, trim(p_name), p_phone, v_ticket, v_lapak, 'registered')
+	insert into participants (
+		competition_id, name, phone, ticket_number, lapak_number, status,
+		registration_source, registered_by_staff_id, registered_by_staff_name
+	)
+	values (
+		p_competition, trim(p_name), p_phone, v_ticket, v_lapak, 'registered',
+		coalesce(p_source, 'web'), p_staff_id, p_staff_name
+	)
 	on conflict (competition_id, phone)
 	do update set id = participants.id
 	returning id, ticket_number, (xmax = 0) as inserted
@@ -908,7 +948,7 @@ begin
 end;
 $$;
 
-grant execute on function register_participant(uuid, text, text, uuid)
+grant execute on function register_participant(uuid, text, text, uuid, text, text, text)
 	to anon, authenticated;
 
 -- B1-5 (F7, A21, A22): check-in via RPC — eligibility dicek ulang di server
@@ -1172,9 +1212,213 @@ grant execute on function get_payment_configs(boolean) to anon, authenticated;
 -- 8. Realtime publication (B3-7/A35) — langkah deployment wajib
 --    Tanpa ini postgres_changes di display/leaderboard tak pernah menyala.
 -- ============================================================
-alter publication supabase_realtime add table
-	scores_mancing,
-	scores_layangan,
-	scores_layangan_hias,
-	participants,
-	competitions;
+-- do $$ ... foreach, bukan "add table" langsung: ALTER PUBLICATION tidak
+-- punya ADD TABLE IF NOT EXISTS — paste ulang skrip ini akan gagal dgn
+-- "already member of publication" tanpa guard ini.
+do $$
+declare
+	t text;
+begin
+	foreach t in array array[
+		'scores_mancing',
+		'scores_layangan',
+		'scores_layangan_hias',
+		'participants',
+		'competitions'
+	]
+	loop
+		if not exists (
+			select 1 from pg_publication_tables
+			where pubname = 'supabase_realtime' and tablename = t
+		) then
+			execute format('alter publication supabase_realtime add table %I', t);
+		end if;
+	end loop;
+end $$;
+
+-- ============================================================
+-- 9. Roster panitia/juri — login per-orang via 6 digit terakhir HP
+--    staff_members tanpa policy select publik (PII no. HP) — semua akses
+--    lewat RPC di bawah. Sama seperti RPC lain di file ini: dibuka utk
+--    anon/authenticated, tidak ada auth server-side tambahan — akses UI
+--    dijaga PinGate admin di klien (pola trust yang sama dgn RPC lainnya).
+-- ============================================================
+
+-- Login: cocokkan role + 6 digit terakhir HP ke roster aktif. Tidak pernah
+-- mengembalikan nomor HP. count=0 -> not_found, count>1 -> ambiguous (dua
+-- staf aktif kebetulan berbagi 6 digit terakhir — jangan pernah tebak salah
+-- satu).
+create or replace function staff_login(p_role text, p_last6 text)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+	v_count int;
+	v_row staff_members%rowtype;
+begin
+	if p_role not in ('panitia', 'juri') then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_role');
+	end if;
+	if p_last6 is null or p_last6 !~ '^[0-9]{6}$' then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_last6');
+	end if;
+
+	select count(*) into v_count from staff_members
+	where role = p_role and phone_last6 = p_last6 and is_active = true;
+
+	if v_count = 0 then
+		return jsonb_build_object('ok', false, 'reason', 'not_found');
+	elsif v_count > 1 then
+		return jsonb_build_object('ok', false, 'reason', 'ambiguous');
+	end if;
+
+	select * into v_row from staff_members
+	where role = p_role and phone_last6 = p_last6 and is_active = true;
+
+	return jsonb_build_object('ok', true, 'staffId', v_row.id, 'name', v_row.name);
+end;
+$$;
+
+grant execute on function staff_login(text, text) to anon, authenticated;
+
+-- Kelola roster (AdminPanel) — daftar lengkap termasuk nonaktif.
+create or replace function list_staff_members()
+returns table (
+	id uuid,
+	role text,
+	name text,
+	phone text,
+	is_active boolean,
+	created_at timestamptz
+)
+language plpgsql security definer set search_path = public
+as $$
+begin
+	return query
+		select s.id, s.role, s.name, s.phone, s.is_active, s.created_at
+		from staff_members s
+		order by s.role, s.name;
+end;
+$$;
+
+grant execute on function list_staff_members() to anon, authenticated;
+
+-- Tambah/ubah anggota roster. p_id null => insert baru.
+create or replace function upsert_staff_member(
+	p_id uuid,
+	p_role text,
+	p_name text,
+	p_phone text
+) returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+	v_id uuid := p_id;
+begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
+	if p_role not in ('panitia', 'juri') then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_role');
+	end if;
+	if p_name is null or trim(p_name) = '' then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_name');
+	end if;
+	if p_phone is null or trim(p_phone) = '' then
+		return jsonb_build_object('ok', false, 'reason', 'invalid_phone');
+	end if;
+
+	if v_id is null then
+		insert into staff_members (role, name, phone)
+		values (p_role, trim(p_name), p_phone)
+		returning id into v_id;
+	else
+		update staff_members
+		set role = p_role, name = trim(p_name), phone = p_phone
+		where id = v_id;
+		if not found then
+			return jsonb_build_object('ok', false, 'reason', 'not_found');
+		end if;
+	end if;
+
+	return jsonb_build_object('ok', true, 'id', v_id);
+end;
+$$;
+
+grant execute on function upsert_staff_member(uuid, text, text, text)
+	to anon, authenticated;
+
+-- Aktifkan/nonaktifkan (soft delete) — histori atribusi tetap terbaca.
+create or replace function set_staff_active(p_id uuid, p_active boolean)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
+	update staff_members set is_active = p_active where id = p_id;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'not_found');
+	end if;
+	return jsonb_build_object('ok', true);
+end;
+$$;
+
+grant execute on function set_staff_active(uuid, boolean) to anon, authenticated;
+
+-- ============================================================
+-- 10. Timer bersama per babak — start/stop (susulan)
+--     start_round DIKUNCI oleh data_lock (jangan mulai babak baru setelah
+--     acara ditutup admin). stop_round SENGAJA TIDAK dikunci — menutup timer
+--     yang sudah jalan adalah beres-beres, harus selalu bisa dilakukan juri
+--     kapan pun, termasuk setelah acara dikunci.
+-- ============================================================
+
+-- p_started_at datang dari klien (bukan now() server) supaya antrean offline
+-- yang baru drain belakangan tetap pakai jam saat juri menekan tombol, bukan
+-- jam saat koneksi baru pulih.
+create or replace function start_round(
+	p_competition_id uuid,
+	p_round integer,
+	p_started_at timestamptz,
+	p_started_by text
+) returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+begin
+	if data_lock_is_locked() then
+		return jsonb_build_object('ok', false, 'reason', 'locked');
+	end if;
+	update competitions
+	set round_started_at = p_started_at,
+		round_started_round = p_round,
+		round_started_by = p_started_by
+	where id = p_competition_id;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'not_found');
+	end if;
+	return jsonb_build_object('ok', true);
+end;
+$$;
+
+grant execute on function start_round(uuid, integer, timestamptz, text)
+	to anon, authenticated;
+
+create or replace function stop_round(p_competition_id uuid) returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+begin
+	update competitions
+	set round_started_at = null,
+		round_started_round = null,
+		round_started_by = null
+	where id = p_competition_id;
+	if not found then
+		return jsonb_build_object('ok', false, 'reason', 'not_found');
+	end if;
+	return jsonb_build_object('ok', true);
+end;
+$$;
+
+grant execute on function stop_round(uuid) to anon, authenticated;

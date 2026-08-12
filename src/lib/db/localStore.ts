@@ -162,6 +162,7 @@ export const localStores = {
 	sponsors: "demo_sponsors",
 	auditLogs: "demo_audit_logs",
 	dataLock: "demo_data_lock",
+	staff: "demo_staff",
 } as const;
 
 /** Bersihkan semua store lokal demo (backend aktif). */

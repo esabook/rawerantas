@@ -30,5 +30,5 @@ export async function createLocalDb(file = ":memory:"): Promise<LocalDb> {
 
 export async function resetLocalDb(): Promise<void> {
 	const db = await getLocalDb();
-	db.delete(schema.localKv);
+	await db.delete(schema.localKv);
 }

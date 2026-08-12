@@ -10,6 +10,10 @@ export interface RegistrationInput {
 	competitionId: string;
 	name: string;
 	phone: string;
+	/** "panitia" utk pendaftaran on-site loket; default "web" (pendaftaran mandiri). */
+	source?: "web" | "panitia";
+	registeredByStaffId?: string;
+	registeredByStaffName?: string;
 }
 
 export interface RegistrationResult {
@@ -121,6 +125,9 @@ export async function registerParticipant(
 			p_name: input.name,
 			p_phone: phone,
 			p_idempotency_key: idempotencyKey,
+			p_source: input.source ?? "web",
+			p_staff_id: input.registeredByStaffId ?? null,
+			p_staff_name: input.registeredByStaffName ?? null,
 		});
 		if (error) {
 			throw error;
@@ -158,6 +165,9 @@ export async function registerParticipant(
 			name: input.name,
 			phone,
 			idempotencyKey,
+			source: input.source ?? "web",
+			registeredByStaffId: input.registeredByStaffId ?? null,
+			registeredByStaffName: input.registeredByStaffName ?? null,
 		});
 		return {
 			participantId: "",
@@ -230,6 +240,9 @@ async function registerParticipantDemo(
 		phone,
 		status: "registered",
 		checkedInAt: null,
+		registrationSource: input.source ?? "web",
+		registeredByStaffId: input.registeredByStaffId ?? null,
+		registeredByStaffName: input.registeredByStaffName ?? null,
 		createdAt: new Date(),
 	};
 	await saveDemoRegistration(participant);

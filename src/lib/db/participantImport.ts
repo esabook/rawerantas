@@ -440,6 +440,9 @@ export async function importParticipantRows(
 				phone: row.phone,
 				status: "registered",
 				checkedInAt: null,
+				registrationSource: "panitia",
+				registeredByStaffId: null,
+				registeredByStaffName: null,
 				createdAt: new Date(),
 			};
 			await localPut(localStores.registrations, participant);
@@ -472,6 +475,7 @@ export async function importParticipantRows(
 			ticket_number: ticket,
 			lapak_number: row.lapakNumber,
 			status: "registered",
+			registration_source: "panitia",
 		});
 		if (error) {
 			skipped += 1;

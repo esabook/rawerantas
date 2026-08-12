@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$env/static/public", () => ({
@@ -60,6 +61,8 @@ import {
 	saveCompetition,
 	savePaymentConfig,
 	setDataLock,
+	startRound,
+	stopRound,
 	undoCheckIn,
 	verifyPayment,
 } from "$lib/db/admin";
@@ -73,6 +76,7 @@ import {
 import { registerParticipant, resetDemoRegistrations } from "$lib/db/register";
 import { demoCompetitions, demoPaymentConfigs } from "$lib/demo/generator";
 import { setDemoMode } from "$lib/demo/store";
+import { clearQueue, peekBatch } from "$lib/offline/queue";
 
 const mancing = demoCompetitions()[0];
 const aduan = demoCompetitions()[1];
@@ -375,6 +379,42 @@ describe("admin domain", () => {
 		const comps = await getCompetitions(false);
 		expect(comps.find((c) => c.id === mancing.id)?.fee).toBe(mancing.fee);
 	});
+
+	it("startRound (demo): set roundStartedAt/Round/By, terlihat via getCompetitions", async () => {
+		const res = await startRound(aduan.id, aduan.currentRound, "staff-1:Budi");
+		expect(res.queued).toBe(false);
+		const comps = await getCompetitions(false);
+		const updated = comps.find((c) => c.id === aduan.id);
+		expect(updated?.roundStartedRound).toBe(aduan.currentRound);
+		expect(updated?.roundStartedBy).toBe("staff-1:Budi");
+		expect(updated?.roundStartedAt).toBeTruthy();
+	});
+
+	it("startRound dipanggil dua kali (ulangi) → roundStartedAt berubah", async () => {
+		await startRound(aduan.id, aduan.currentRound, "staff-1:Budi");
+		const first = (await getCompetitions(false)).find(
+			(c) => c.id === aduan.id,
+		)?.roundStartedAt;
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		await startRound(aduan.id, aduan.currentRound, "staff-1:Budi");
+		const second = (await getCompetitions(false)).find(
+			(c) => c.id === aduan.id,
+		)?.roundStartedAt;
+		expect(new Date(second as Date).getTime()).toBeGreaterThan(
+			new Date(first as Date).getTime(),
+		);
+	});
+
+	it("stopRound (demo): kosongkan roundStartedAt/Round/By", async () => {
+		await startRound(aduan.id, aduan.currentRound, "staff-1:Budi");
+		await stopRound(aduan.id);
+		const updated = (await getCompetitions(false)).find(
+			(c) => c.id === aduan.id,
+		);
+		expect(updated?.roundStartedAt).toBeNull();
+		expect(updated?.roundStartedRound).toBeNull();
+		expect(updated?.roundStartedBy).toBeNull();
+	});
 });
 
 describe("verify/reject live via RPC (B1-3)", () => {
@@ -525,5 +565,76 @@ describe("verify/reject live via RPC (B1-3)", () => {
 				).toBe(true);
 			});
 		});
+	});
+});
+
+describe("startRound/stopRound live (RPC + data_lock + offline queue)", () => {
+	beforeEach(async () => {
+		sb.rpcResult = { ok: true };
+		sb.rpcError = null;
+		sb.rpcs.length = 0;
+		await clearQueue();
+		await setDemoMode(false);
+	});
+
+	afterAll(async () => {
+		await clearQueue();
+		await setDemoMode(true);
+	});
+
+	it("online → RPC start_round dipanggil, tidak queued", async () => {
+		const res = await startRound(aduan.id, 2, "staff-1:Budi");
+		expect(res.queued).toBe(false);
+		expect(sb.rpcs.at(-1)?.fn).toBe("start_round");
+		expect(sb.rpcs.at(-1)?.args).toMatchObject({
+			p_competition_id: aduan.id,
+			p_round: 2,
+			p_started_by: "staff-1:Budi",
+		});
+	});
+
+	it("RPC menolak locked → pesan terkunci, bukan offline-queue", async () => {
+		sb.rpcResult = { ok: false, reason: "locked" };
+		await expect(startRound(aduan.id, 2, "staff-1:Budi")).rejects.toThrow(
+			"terkunci",
+		);
+		expect(await peekBatch(10)).toHaveLength(0);
+	});
+
+	it("offline → di-enqueue ke /rest/competitions/start-round, queued:true", async () => {
+		sb.rpcError = new TypeError("Failed to fetch");
+		const res = await startRound(aduan.id, 2, "staff-1:Budi");
+		expect(res.queued).toBe(true);
+		const entries = await peekBatch(10);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.endpoint).toBe("/rest/competitions/start-round");
+		expect(entries[0]?.payload).toMatchObject({
+			competitionId: aduan.id,
+			round: 2,
+			startedBy: "staff-1:Budi",
+		});
+	});
+
+	it("stopRound online → RPC stop_round dipanggil, tidak queued", async () => {
+		const res = await stopRound(aduan.id);
+		expect(res.queued).toBe(false);
+		expect(sb.rpcs.at(-1)?.fn).toBe("stop_round");
+		expect(sb.rpcs.at(-1)?.args).toMatchObject({ p_competition_id: aduan.id });
+	});
+
+	it("stopRound tetap jalan walau data_lock terkunci (beres-beres selalu boleh)", async () => {
+		sb.rpcResult = { ok: true };
+		const res = await stopRound(aduan.id);
+		expect(res.queued).toBe(false);
+	});
+
+	it("stopRound offline → di-enqueue ke /rest/competitions/stop-round", async () => {
+		sb.rpcError = new TypeError("Failed to fetch");
+		const res = await stopRound(aduan.id);
+		expect(res.queued).toBe(true);
+		const entries = await peekBatch(10);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.endpoint).toBe("/rest/competitions/stop-round");
+		expect(entries[0]?.payload).toMatchObject({ competitionId: aduan.id });
 	});
 });

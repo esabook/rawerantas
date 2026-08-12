@@ -4,6 +4,7 @@ import { demoMode } from "$lib/demo/store";
 import { isOfflineError } from "$lib/offline/networkStore";
 import { enqueue } from "$lib/offline/queue";
 import { localClear, localGetAll, localPut, localStores } from "./localStore";
+import { submitCashPayment } from "./payment";
 import type { Participant, ParticipantPayment } from "./queries";
 import {
 	getCompetitions,
@@ -13,6 +14,8 @@ import {
 	getSupabase,
 	normalizeParticipantRow,
 } from "./queries";
+import { registerParticipant } from "./register";
+import { formatStaffActor } from "./staff";
 
 const STORE = localStores.checkins;
 
@@ -345,6 +348,77 @@ export async function findParticipantByTicket(
 		);
 	}
 	return { ...summary.participant, status: summary.status };
+}
+
+export interface WalkinCheckinInput {
+	competitionId: string;
+	name: string;
+	phone: string;
+	staffId?: string;
+	staffName?: string;
+}
+
+/**
+ * Daftar peserta on-site (loket), lunasi tunai, lalu check-in langsung —
+ * satu aksi panitia. Reuse registerParticipant/submitCashPayment/
+ * checkInParticipant apa adanya, jadi guard kuota/DP/disqualified tetap satu
+ * sumber kebenaran. Offline: registerParticipant tidak punya id lokal untuk
+ * langsung dibayar/check-in, jadi loket harus online.
+ */
+export async function registerWalkinCheckin(
+	input: WalkinCheckinInput,
+): Promise<{
+	participantId: string;
+	eligibility: CheckinEligibility;
+	queued: boolean;
+}> {
+	const staff =
+		input.staffId && input.staffName
+			? { id: input.staffId, name: input.staffName }
+			: null;
+	const registration = await registerParticipant({
+		competitionId: input.competitionId,
+		name: input.name,
+		phone: input.phone,
+		source: "panitia",
+		registeredByStaffId: staff?.id,
+		registeredByStaffName: staff?.name,
+	});
+	if (!registration.participantId) {
+		throw new Error(
+			"Sedang offline — pendaftaran on-site butuh koneksi utk langsung bayar & check-in.",
+		);
+	}
+	// Peserta sudah tercatat (kuota terpakai) begitu registerParticipant sukses.
+	// Bila bayar/check-in di bawah gagal, lampirkan participantId ke error agar
+	// caller bisa membuka ParticipantDetailCard alih-alih menampilkan dead-end.
+	try {
+		const summary = await getCheckinSummary(registration.participantId);
+		let paymentQueued = false;
+		if (summary.remaining > 0) {
+			const paymentResult = await submitCashPayment(
+				{
+					participantId: registration.participantId,
+					competitionId: input.competitionId,
+				},
+				{ fee: summary.fee },
+			);
+			paymentQueued = Boolean(paymentResult.queued);
+		}
+		const { eligibility, queued: checkinQueued } = await checkInParticipant(
+			registration.participantId,
+			staff ? formatStaffActor(staff) : null,
+		);
+		return {
+			participantId: registration.participantId,
+			eligibility,
+			queued: paymentQueued || Boolean(checkinQueued),
+		};
+	} catch (e) {
+		throw Object.assign(e instanceof Error ? e : new Error(String(e)), {
+			participantId: registration.participantId,
+		});
+	}
 }
 
 export async function resetDemoCheckins(): Promise<void> {

@@ -51,6 +51,9 @@ export const normalizeCompetitionRow = (row: DbRow): Competition =>
 		totalQuota: value(row, "totalQuota", "total_quota"),
 		currentRound: value(row, "currentRound", "current_round"),
 		isActive: value(row, "isActive", "is_active"),
+		roundStartedAt: value(row, "roundStartedAt", "round_started_at"),
+		roundStartedRound: value(row, "roundStartedRound", "round_started_round"),
+		roundStartedBy: value(row, "roundStartedBy", "round_started_by"),
 		createdAt: value(row, "createdAt", "created_at"),
 	}) as Competition;
 
@@ -71,6 +74,17 @@ export const normalizeParticipantRow = (row: DbRow): Participant =>
 		ticketNumber: value(row, "ticketNumber", "ticket_number"),
 		lapakNumber: value(row, "lapakNumber", "lapak_number"),
 		checkedInAt: value(row, "checkedInAt", "checked_in_at"),
+		registrationSource: value(row, "registrationSource", "registration_source"),
+		registeredByStaffId: value(
+			row,
+			"registeredByStaffId",
+			"registered_by_staff_id",
+		),
+		registeredByStaffName: value(
+			row,
+			"registeredByStaffName",
+			"registered_by_staff_name",
+		),
 		createdAt: value(row, "createdAt", "created_at"),
 	}) as Participant;
 

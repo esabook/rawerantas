@@ -82,12 +82,6 @@ export function writeGrant(kind: PinKind, officer?: string): void {
 	sessionStorage.setItem(grantStorageKey(kind), JSON.stringify(grant));
 }
 
-/** B4-6/A14: nama/ID petugas yang tercatat di grant (utk recordedBy). */
-export function readOfficer(kind: PinKind): string {
-	const grant = readGrant(kind);
-	return grant?.officer?.trim() ?? "";
-}
-
 export function clearGrant(kind: PinKind): void {
 	if (typeof sessionStorage === "undefined") {
 		return;
@@ -95,7 +89,7 @@ export function clearGrant(kind: PinKind): void {
 	sessionStorage.removeItem(grantStorageKey(kind));
 }
 
-export function grantStillValid(grant: GrantInfo | null): boolean {
+export function grantStillValid(grant: { at: number } | null): boolean {
 	if (!grant) {
 		return false;
 	}
@@ -103,6 +97,101 @@ export function grantStillValid(grant: GrantInfo | null): boolean {
 }
 
 export class PinLockoutError extends Error {}
+
+// --- Roster panitia/juri: login per-orang via 6 digit terakhir HP ---
+// Namespace terpisah dari grant PIN admin (STORAGE_KEY di atas) — kind
+// "admin" tidak tersentuh sama sekali oleh apa pun di bawah ini.
+
+export type StaffPinKind = "panitia" | "juri";
+const STAFF_STORAGE_KEY = "rawerantas:staff-granted";
+
+export interface StaffGrantInfo {
+	kind: StaffPinKind;
+	at: number;
+	staffId: string;
+	name: string;
+}
+
+function staffGrantStorageKey(kind: StaffPinKind): string {
+	return `${STAFF_STORAGE_KEY}:${kind}`;
+}
+
+export function readStaffGrant(kind: StaffPinKind): StaffGrantInfo | null {
+	if (typeof sessionStorage === "undefined") {
+		return null;
+	}
+	const raw = sessionStorage.getItem(staffGrantStorageKey(kind));
+	if (!raw) {
+		return null;
+	}
+	try {
+		const parsed = JSON.parse(raw) as StaffGrantInfo;
+		if (parsed.kind !== kind || typeof parsed.at !== "number") {
+			return null;
+		}
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+
+export function writeStaffGrant(
+	kind: StaffPinKind,
+	staffId: string,
+	name: string,
+): void {
+	if (typeof sessionStorage === "undefined") {
+		return;
+	}
+	const grant: StaffGrantInfo = { kind, at: Date.now(), staffId, name };
+	sessionStorage.setItem(staffGrantStorageKey(kind), JSON.stringify(grant));
+}
+
+export function clearStaffGrant(kind: StaffPinKind): void {
+	if (typeof sessionStorage === "undefined") {
+		return;
+	}
+	sessionStorage.removeItem(staffGrantStorageKey(kind));
+}
+
+/**
+ * Login panitia/juri: cocokkan 6 digit terakhir HP ke roster aktif (via
+ * staffLogin di db/staff.ts). Reuse lockout mechanism yang sama dgn PIN
+ * (isLockedOut/recordFailedAttempt sudah generic atas PinKind).
+ */
+export async function verifyStaffLogin(
+	kind: StaffPinKind,
+	last6: string,
+): Promise<StaffGrantInfo> {
+	if (!/^\d{6}$/.test(last6)) {
+		throw new Error("Masukkan 6 digit terakhir nomor HP.");
+	}
+	const { locked } = await isLockedOut(kind);
+	if (locked) {
+		throw new PinLockoutError(
+			`Terlalu banyak percobaan. Coba lagi dalam 30 detik.`,
+		);
+	}
+	const { staffLogin } = await import("$lib/db/staff");
+	const result = await staffLogin(kind, last6);
+	if (!result.ok) {
+		const next = await recordFailedAttempt(kind);
+		if (next.lockedUntil > 0) {
+			throw new PinLockoutError(`5× salah. Kunci 30 detik.`);
+		}
+		if (result.reason === "ambiguous") {
+			throw new Error(
+				"Ditemukan lebih dari satu kecocokan — hubungi admin untuk verifikasi manual.",
+			);
+		}
+		throw new Error(
+			`Nomor tidak ditemukan di roster ${kind} aktif — hubungi admin (${next.attempts}/${MAX_ATTEMPTS}).`,
+		);
+	}
+	writePinState(kind, { attempts: 0, lockedUntil: 0 });
+	writeStaffGrant(kind, result.staffId, result.name);
+	return { kind, at: Date.now(), staffId: result.staffId, name: result.name };
+}
 
 export interface PinState {
 	attempts: number;

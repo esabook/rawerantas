@@ -73,6 +73,7 @@ import {
 	findParticipantByTicket,
 	getCheckinStats,
 	getCheckinSummary,
+	registerWalkinCheckin,
 	resetDemoCheckins,
 } from "$lib/db/checkin";
 import { resetDemoPayments, submitPayment } from "$lib/db/payment";
@@ -240,6 +241,41 @@ describe("checkin domain", () => {
 		expect(found?.id).toBe(fullyPaid.id);
 		const missing = await findParticipantByTicket("RA-2026-999");
 		expect(missing).toBeNull();
+	});
+
+	it("daftar on-site (tunai) → lunas + check-in langsung dalam satu aksi", async () => {
+		const competition = demoCompetitions()[0];
+		const result = await registerWalkinCheckin({
+			competitionId: competition.id,
+			name: "Peserta Onsite",
+			phone: "081234500001",
+		});
+		expect(result.eligibility).toBe("ok");
+		expect(result.queued).toBe(false);
+		const summary = await getCheckinSummary(result.participantId);
+		expect(summary.status).toBe("checked_in");
+		expect(summary.remaining).toBe(0);
+		expect(summary.checkedInAt).not.toBeNull();
+		const { getPayments } = await import("$lib/db/queries");
+		const payments = await getPayments(result.participantId);
+		expect(payments).toHaveLength(1);
+		expect(payments[0]?.paymentMethod).toBe("cash");
+		expect(payments[0]?.isVerified).toBe(true);
+	});
+
+	it("daftar on-site tercatat sbg sumber panitia + identitas panitia yang login", async () => {
+		const competition = demoCompetitions()[0];
+		const result = await registerWalkinCheckin({
+			competitionId: competition.id,
+			name: "Peserta Onsite Dua",
+			phone: "081234500002",
+			staffId: "staff-abc",
+			staffName: "Budi Panitia",
+		});
+		const summary = await getCheckinSummary(result.participantId);
+		expect(summary.participant.registrationSource).toBe("panitia");
+		expect(summary.participant.registeredByStaffId).toBe("staff-abc");
+		expect(summary.participant.registeredByStaffName).toBe("Budi Panitia");
 	});
 });
 

@@ -127,6 +127,79 @@ describe("executor offline — skor layangan (QW-1/A26)", () => {
 	});
 });
 
+function startRoundEntry(payload: Record<string, unknown>): QueueEntry {
+	return {
+		idempotencyKey: `round-start:${payload.competitionId}:${payload.round}:${payload.startedAt}`,
+		endpoint: "/rest/competitions/start-round",
+		payload,
+		timestamp: 6,
+		retries: 0,
+		status: "pending",
+	};
+}
+
+function stopRoundEntry(payload: Record<string, unknown>): QueueEntry {
+	return {
+		idempotencyKey: `round-stop:${payload.competitionId}:${payload.at}`,
+		endpoint: "/rest/competitions/stop-round",
+		payload,
+		timestamp: 7,
+		retries: 0,
+		status: "pending",
+	};
+}
+
+describe('executor offline — "Mulai Lomba"/"Selesai Babak" (timer bersama per babak)', () => {
+	beforeEach(() => {
+		captured.rpcs.length = 0;
+		captured.rpcError = null;
+		captured.rpcResult = { ok: true };
+	});
+
+	it("drain start-round → RPC start_round dgn payload persis", async () => {
+		const result = await executeQueueEntry(
+			startRoundEntry({
+				competitionId: "comp-aduan",
+				round: 2,
+				startedAt: "2026-08-17T09:00:00.000Z",
+				startedBy: "staff-1:Budi",
+			}),
+		);
+		expect(result).toBe("ok");
+		expect(captured.rpcs.at(-1)?.fn).toBe("start_round");
+		expect(captured.rpcs.at(-1)?.args).toMatchObject({
+			p_competition_id: "comp-aduan",
+			p_round: 2,
+			p_started_at: "2026-08-17T09:00:00.000Z",
+			p_started_by: "staff-1:Budi",
+		});
+	});
+
+	it("drain start-round: RPC tolak locked → conflict (berhenti retry)", async () => {
+		captured.rpcResult = { ok: false, reason: "locked" };
+		const result = await executeQueueEntry(
+			startRoundEntry({
+				competitionId: "comp-aduan",
+				round: 2,
+				startedAt: "2026-08-17T09:00:00.000Z",
+				startedBy: "staff-1:Budi",
+			}),
+		);
+		expect(result).toBe("conflict");
+	});
+
+	it("drain stop-round → RPC stop_round dgn competitionId", async () => {
+		const result = await executeQueueEntry(
+			stopRoundEntry({ competitionId: "comp-aduan", at: 1 }),
+		);
+		expect(result).toBe("ok");
+		expect(captured.rpcs.at(-1)?.fn).toBe("stop_round");
+		expect(captured.rpcs.at(-1)?.args).toMatchObject({
+			p_competition_id: "comp-aduan",
+		});
+	});
+});
+
 function deleteEntry(
 	endpoint: string,
 	payload: Record<string, unknown>,

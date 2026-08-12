@@ -121,6 +121,9 @@ async function persistPayment(
 			phone: "",
 			status: mode === "full" ? "fully_paid" : "dp_paid",
 			checkedInAt: null,
+			registrationSource: "web",
+			registeredByStaffId: null,
+			registeredByStaffName: null,
 			createdAt: new Date(),
 		};
 		await saveDemoPayment(

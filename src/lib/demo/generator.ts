@@ -4,10 +4,12 @@ import type {
 	participantPayments,
 	participants,
 	paymentConfigs,
+	StaffRole,
 	scoresLayangan,
 	scoresLayanganHias,
 	scoresMancing,
 	sponsors,
+	staffMembers,
 } from "../db/schema";
 
 export type MockCompetition = InferSelectModel<typeof competitions>;
@@ -18,6 +20,7 @@ export type MockSponsor = InferSelectModel<typeof sponsors>;
 export type MockMancing = InferSelectModel<typeof scoresMancing>;
 export type MockLayangan = InferSelectModel<typeof scoresLayangan>;
 export type MockHias = InferSelectModel<typeof scoresLayanganHias>;
+export type MockStaff = InferSelectModel<typeof staffMembers>;
 
 export const SEED = 17082026;
 export const EVENT_START = "2026-08-17T07:00:00+07:00";
@@ -102,6 +105,9 @@ export const mockCompetitions: MockCompetition[] = [
 		totalQuota: 50,
 		currentRound: 1,
 		isActive: true,
+		roundStartedAt: null,
+		roundStartedRound: null,
+		roundStartedBy: null,
 		createdAt: at(-86_400_000),
 	},
 	{
@@ -113,6 +119,9 @@ export const mockCompetitions: MockCompetition[] = [
 		totalQuota: 40,
 		currentRound: 1,
 		isActive: true,
+		roundStartedAt: null,
+		roundStartedRound: null,
+		roundStartedBy: null,
 		createdAt: at(-86_400_000),
 	},
 	{
@@ -124,6 +133,9 @@ export const mockCompetitions: MockCompetition[] = [
 		totalQuota: 30,
 		currentRound: 1,
 		isActive: true,
+		roundStartedAt: null,
+		roundStartedRound: null,
+		roundStartedBy: null,
 		createdAt: at(-86_400_000),
 	},
 ];
@@ -148,6 +160,9 @@ export const mockParticipants: MockParticipant[] = Array.from(
 							? "checked_in"
 							: "registered",
 			checkedInAt: idx > 22 && idx <= 30 ? at(-int(1_000, 20_000)) : null,
+			registrationSource: "web",
+			registeredByStaffId: null,
+			registeredByStaffName: null,
 			createdAt: at(-int(1_000, 40_000)),
 		};
 	},
@@ -309,8 +324,36 @@ export const mockHiasScores: MockHias[] = mockParticipants
 		};
 	});
 
+// Kode 6 digit sengaja dipisah dari prefix nomor: phone = prefix + code, jadi
+// `code` SELALU 6 digit terakhir persis (concat, bukan hasil hitung manual).
+const staffSeed = (
+	n: number,
+	role: StaffRole,
+	name: string,
+	code: string,
+	isActive: boolean,
+): MockStaff => ({
+	id: uuid(900_000 + n),
+	role,
+	name,
+	phone: `+62812${code}`,
+	phoneLast6: code,
+	isActive,
+	createdAt: at(-86_400_000),
+});
+
+export const mockStaffMembers: MockStaff[] = [
+	staffSeed(1, "panitia", "Budi Panitia", "111111", true),
+	staffSeed(2, "panitia", "Sari Panitia", "222222", true),
+	staffSeed(3, "panitia", "Eko Panitia", "333333", false),
+	staffSeed(4, "juri", "Dewi Juri", "444444", true),
+	staffSeed(5, "juri", "Hendra Juri", "555555", true),
+	staffSeed(6, "juri", "Nita Juri", "666666", false),
+];
+
 export const demoCompetitions = () => mockCompetitions;
 export const demoParticipants = () => mockParticipants;
+export const demoStaff = () => mockStaffMembers;
 export const demoMancingScores = () => mockMancingScores;
 export const demoLayanganScores = () => mockLayanganScores;
 export const demoHiasScores = () => mockHiasScores;

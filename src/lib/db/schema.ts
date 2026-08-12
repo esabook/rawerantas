@@ -33,6 +33,12 @@ export type ParticipantStatus = (typeof participantStatus)[number];
 export const layanganStatus = ["mudun", "putus", "menang", "dq"] as const;
 export type LayanganStatus = (typeof layanganStatus)[number];
 
+export const registrationSource = ["web", "panitia"] as const;
+export type RegistrationSource = (typeof registrationSource)[number];
+
+export const staffRole = ["panitia", "juri"] as const;
+export type StaffRole = (typeof staffRole)[number];
+
 export const competitions = pgTable("competitions", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	name: text("name").notNull(),
@@ -42,6 +48,9 @@ export const competitions = pgTable("competitions", {
 	totalQuota: integer("total_quota").notNull().default(0),
 	currentRound: integer("current_round").notNull().default(1),
 	isActive: boolean("is_active").notNull().default(true),
+	roundStartedAt: timestamp("round_started_at", { withTimezone: true }),
+	roundStartedRound: integer("round_started_round"),
+	roundStartedBy: text("round_started_by"),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
@@ -85,6 +94,12 @@ export const participants = pgTable(
 			.notNull()
 			.default("registered"),
 		checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+		registrationSource: text("registration_source")
+			.$type<RegistrationSource>()
+			.notNull()
+			.default("web"),
+		registeredByStaffId: text("registered_by_staff_id"),
+		registeredByStaffName: text("registered_by_staff_name"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -245,3 +260,17 @@ export const auditLogs = pgTable(
 		uniqueIndex("audit_logs_idempotency_idx").on(table.idempotencyKey),
 	],
 );
+
+export const staffMembers = pgTable("staff_members", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	role: text("role").$type<StaffRole>().notNull(),
+	name: text("name").notNull(),
+	phone: text("phone").notNull(),
+	phoneLast6: text("phone_last6")
+		.generatedAlwaysAs(sql`right(phone, 6)`)
+		.notNull(),
+	isActive: boolean("is_active").notNull().default(true),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
