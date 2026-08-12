@@ -5,10 +5,10 @@ Bidenk 0813-2572-8559
 
 ## Hadiah Juara
 
-1. Rp 20 Juta
-2. Rp 10 Juta
-3. Rp 3 Juta
-4. Rp 1 Juta
+1. Rp 20 Juta (Layang-layang yang turun paling terakhir)
+2. Rp 10 Juta (Layang-layang yang turun ke dua terakhir)
+3. Rp 3 Juta (Layang-layang yang turun ke tiga terakhir)
+4. Rp 1 Juta (Layang-layang yang turun ke empat terakhir)
 5. Rp 500.000
 6. Rp 300.000
 7. Rp 200.000
@@ -17,6 +17,8 @@ Bidenk 0813-2572-8559
 - Panjang senar layangan **maksimal 50 meter**
 - Layangan wajib **terpasang lampu**
 - Layang-layang bebas 
+- Pendaftaran ditutup hari **Sabtu, 12 September 2026** jam **19:30 WIB**
+- Penilaian lomba dimulai setengah jam dari waktu dimulainya lomba / start
 - Peserta boleh mendaftar lebih dari satu tiket untuk layangan berbeda.
 
 

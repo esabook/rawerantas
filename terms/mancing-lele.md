@@ -5,20 +5,17 @@ Bidenk 0813-2572-8559
 
 ## Hadiah Juara
 
-1. Rp 20 Juta
-2. Rp 10 Juta
-3. Rp 3 Juta
-4. Rp 1 Juta
-5. Rp 500.000
-6. Rp 300.000
-7. Rp 200.000
+1. Rp 5 Juta
+2. Rp 3 Juta
+3. Rp 2 Juta
 
-## Persyaratan
-- Panjang senar layangan **maksimal 50 meter**
-- Layangan wajib **terpasang lampu**
-- Layang-layang bebas 
-- Peserta boleh mendaftar lebih dari satu tiket untuk layangan berbeda.
-
+## Ketentuan Lomba
+- Bebas pilih lapak/spot
+- Tidak ada fasilitas apapun dari panitia
+- Pancing dan umpan bebas
+- Boleh mendaftar lebih dari 1 (1 joran 1 nomor pendaftaran)
+- Akhir pendaftaran hari **Minggu, 6 September 2026** jam **10.00 WIB** (jam berlangsung bisa berubah mengikuti arahan panitia)
+- Kategori juara tidak berdasarkan bobot ikan, tapi yang tercepat mendapatkan ikan yag diberi tanda oleh panitia (**ikan berpita**)
 
 
 ## Pendaftaran

@@ -75,13 +75,6 @@
 	let proofFile = $state<File | null>(null);
 	let termsCompetition = $state<Competition | null>(null);
 
-	const prizesFor = (competition: Competition): string[] => {
-		const prizes = ["Juara 1 — Rp 20Jt", "Juara 7 — Rp 200.000"];
-		return competition.scoringMode === "jackpot_pita"
-			? [...prizes, "Bonus — hadiah jackpot pita"]
-			: prizes;
-	};
-
 	const selectedCompetition = $derived(
 		competitions.find((c) => c.id === competitionId),
 	);
@@ -543,7 +536,6 @@
 			>
 				{#each liveCompetitions as c (c.id)}
 					{@const selected = competitionId === c.id}
-					{@const prizes = prizesFor(c)}
 					<div
 						class="relative flex w-[16rem] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border {selected
 							? 'border-cyan-300/70 shadow-[0_0_24px_rgba(34,211,238,0.14)]'
@@ -633,11 +625,10 @@
 								<ul
 									class="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-300"
 								>
-									{#each prizes.slice(0, 3) as prize}
-										<li class="break-words pl-1">
-											{prize}
-										</li>
-									{/each}
+									<li class="break-words pl-1">
+										Lihat Syarat & Ketentuan untuk daftar
+										hadiah lengkap.
+									</li>
 								</ul>
 							</div>
 						</label>
