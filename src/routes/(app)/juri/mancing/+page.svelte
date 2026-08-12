@@ -5,8 +5,9 @@
 	import MancingPanel from "$lib/components/MancingPanel.svelte";
 	import { getCompetitions } from "$lib/db/queries";
 	import type { Competition } from "$lib/db/queries";
+	import { formatStaffActor } from "$lib/db/staff";
 	import { env } from "$lib/env";
-	import { readOfficer, sha256Hex } from "$lib/security/pin";
+	import { readStaffGrant } from "$lib/security/pin";
 
 	let competitions = $state<Competition[]>([]);
 	let loading = $state(true);
@@ -27,15 +28,12 @@
 	);
 
 	onMount(() => {
-		void sha256Hex(env.juriPin)
-			.then((hash) => {
-				// B4-6/A14: rekam identitas petugas + hash PIN di recordedBy.
-				const officer = readOfficer("juri");
-				recordedBy = officer ? `${hash}:${officer}` : hash;
-			})
-			.catch(() => {
-				recordedBy = "";
-			});
+		// B/A: identitas juri dari roster (login 6-digit HP) — dipakai sbg
+		// recordedBy skor, bukan hash PIN bersama lagi.
+		const staff = readStaffGrant("juri");
+		recordedBy = staff
+			? formatStaffActor({ id: staff.staffId, name: staff.name })
+			: "";
 		const load = () =>
 			getCompetitions(false)
 				.then((rows) => {

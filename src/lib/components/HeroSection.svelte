@@ -93,8 +93,8 @@
 			</h1>
 
 			<p class="mt-5 text-base leading-relaxed text-slate-300 sm:text-lg">
-				Arena lomba warga dengan energi pertandingan besar. Masuk
-				lapangan, ikuti skor, dan kejar posisi puncak.
+				Arena lomba warga dengan energi pertandingan besar. Masuk arena
+				lomba, intip skor, dan kejar posisi puncak.
 			</p>
 
 			<div class="relative mx-auto mt-6 w-full min-w-0 max-w-[640px]">
@@ -138,12 +138,12 @@
 								<p
 									class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"
 								>
-									Siapkan untuk me-
+									Siapkan diri untuk memeriahkan festival
 								</p>
 								<p
 									class="font-display mt-2 text-3xl font-extrabold uppercase leading-none text-slate-100 sm:text-4xl"
 								>
-									Meriahkan!
+									Layang<sup>2</sup> Sidadadi
 								</p>
 							</div>
 							<div
@@ -154,30 +154,19 @@
 						</div>
 
 						<div
-							class="relative mt-12 grid grid-cols-2 gap-3 text-center sm:mt-14"
+							class="relative mt-12 grid grid-cols-1 gap-3 text-center sm:mt-14"
 						>
 							<div class="border-r border-slate-800">
 								<p
 									class="font-display break-words text-xl font-extrabold text-cyan-300 sm:text-2xl"
 								>
 									{eventDate}
-								</p>
-								<p
-									class="text-[9px] font-bold uppercase tracking-widest text-slate-500"
-								>
-									Tanggal event
-								</p>
-							</div>
-							<div>
-								<p
-									class="font-display text-2xl font-extrabold text-indigo-300"
-								>
 									{env.appYear}
 								</p>
 								<p
 									class="text-[9px] font-bold uppercase tracking-widest text-slate-500"
 								>
-									Musim
+									Tanggal event
 								</p>
 							</div>
 						</div>

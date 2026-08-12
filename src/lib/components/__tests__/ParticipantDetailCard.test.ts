@@ -95,10 +95,13 @@ describe("ParticipantDetailCard", () => {
 		expect(btn?.disabled).toBe(true);
 	});
 
-	it("peserta sudah check-in → info, tanpa tombol", async () => {
+	it("peserta sudah check-in → identitas + BIB tampil, kartu tidak langsung tertutup", async () => {
+		let done = false;
 		const { container } = render(ParticipantDetailCard, {
 			participantId: dpPaid.id,
-			onDone: () => {},
+			onDone: () => {
+				done = true;
+			},
 		});
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("Check-in Peserta");
@@ -118,6 +121,17 @@ describe("ParticipantDetailCard", () => {
 			(b) => (b.textContent ?? "").includes("Check-in"),
 		);
 		expect(buttons.length).toBe(0);
+		// B/A: onDone tidak otomatis dipanggil — kartu (nama + BIB) tetap
+		// tampil sampai panitia menekan "Selesai" utk menyerahkan nomor BIB.
+		expect(done).toBe(false);
+		expect(container.textContent ?? "").toContain(dpPaid.name);
+		expect(container.textContent ?? "").toContain(String(dpPaid.lapakNumber));
+		const selesaiBtn = Array.from(container.querySelectorAll("button")).find(
+			(b) => (b.textContent ?? "").includes("Selesai"),
+		) as HTMLButtonElement | undefined;
+		expect(selesaiBtn).toBeTruthy();
+		fireEvent.click(selesaiBtn as Element);
+		expect(done).toBe(true);
 	});
 
 	it("check-in offline (queued) → badge menunggu sinkron (B2-4/F16)", async () => {

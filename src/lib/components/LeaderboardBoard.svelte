@@ -142,16 +142,16 @@
 						<div class="min-w-0">
 							<p class="truncate text-sm font-semibold">
 								{row ? nameOf(row) : "Peserta"}
-{#if competition.scoringMode === "jackpot_pita" && entry.entries.some((e) => e.isJackpot)}
-								<span
-									class="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-600"
-									>Jackpot</span
-								>
-							{/if}
+								{#if competition.scoringMode === "jackpot_pita" && entry.entries.some((e) => e.isJackpot)}
+									<span
+										class="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-600"
+										>Jackpot</span
+									>
+								{/if}
 							</p>
 							<p class="text-xs text-muted-foreground">
 								{row && lapakOf(row)
-									? `BIB ${lapakOf(row)}`
+									? `No Peserta ${lapakOf(row)}`
 									: ""}
 								{#if entry.entries.length > 1}
 									· {entry.entries.length} skor
@@ -168,10 +168,11 @@
 						{#if competition.scoringMode === "layangan_aduan"}
 							{entry.score} menang
 							<br />
-							<span class="text-[10px] font-normal text-muted-foreground">
-								Total {formatDuration(entry.subScore)} · Terlama {formatDuration(
-									maxDuration(entry.entries),
-								)}
+							<span
+								class="text-[10px] font-normal text-muted-foreground"
+							>
+								Total {formatDuration(entry.subScore)} · Terlama
+								{formatDuration(maxDuration(entry.entries))}
 							</span>
 						{:else}
 							{formatScore(entry.score, entry.subScore)}

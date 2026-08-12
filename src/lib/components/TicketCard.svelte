@@ -120,7 +120,7 @@
 		</div>
 		{#if participant.lapakNumber}
 			<p class="text-xs text-muted-foreground sm:col-span-2">
-				BIB #{participant.lapakNumber}
+				No Peserta #{participant.lapakNumber}
 			</p>
 		{/if}
 	</div>

@@ -18,7 +18,7 @@ vi.mock("$env/static/public", () => ({
 }));
 
 import LayanganPanel from "$lib/components/LayanganPanel.svelte";
-import { resetDemoLayanganScores } from "$lib/db/layangan";
+import { resetLocalDemoState } from "$lib/db/localStore";
 import { demoCompetitions, demoParticipants } from "$lib/demo/generator";
 import { setDemoMode } from "$lib/demo/store";
 
@@ -54,24 +54,22 @@ const findButton = (container: HTMLElement, label: string) =>
 		(b.textContent ?? "").includes(label),
 	);
 
-const startAndStopTimer = async (container: HTMLElement) => {
-	const start = findButton(container, "Mulai Terbang");
-	expect(start).toBeDefined();
-	await fireEvent.click(start as Element);
-	await waitFor(() => expect(findButton(container, "Berhenti")).toBeDefined());
-	await fireEvent.click(findButton(container, "Berhenti") as Element);
+const startTheRound = async (container: HTMLElement) => {
+	const btn = findButton(container, "Mulai Lomba");
+	expect(btn).toBeDefined();
+	await fireEvent.click(btn as Element);
 	await waitFor(() => {
-		const mudun = findButton(container, "Catat MUDUN") as
-			| HTMLButtonElement
-			| undefined;
-		expect(mudun?.disabled).toBe(false);
+		expect(container.textContent ?? "").toContain("Dimulai");
 	});
 };
 
 describe("LayanganPanel", () => {
 	beforeEach(async () => {
 		await setDemoMode(true);
-		await resetDemoLayanganScores();
+		// B/A: resetLocalDemoState (bukan hanya resetDemoLayanganScores) —
+		// "Mulai Lomba" menulis override lokal ke store kompetisi juga, harus
+		// bersih tiap test agar round-started tidak bocor antar test.
+		await resetLocalDemoState();
 	});
 
 	it("menampilkan badge babak dan offline", async () => {
@@ -114,6 +112,7 @@ describe("LayanganPanel", () => {
 
 	it("klik card → popup konfirmasi → MUDUN tercatat", async () => {
 		const { container } = await renderPanel(2);
+		await startTheRound(container);
 		const pendingCards = () =>
 			Array.from(container.querySelectorAll("ul button")).filter((b) =>
 				(b.textContent ?? "").includes("BELUM DINILAI"),
@@ -124,7 +123,6 @@ describe("LayanganPanel", () => {
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
 		});
-		await startAndStopTimer(container);
 		const mudun = Array.from(container.querySelectorAll("button")).find((b) =>
 			(b.textContent ?? "").includes("Catat MUDUN"),
 		);
@@ -146,6 +144,7 @@ describe("LayanganPanel", () => {
 
 	it("undo 5 detik mengembalikan status card menjadi belum dinilai", async () => {
 		const { container } = await renderPanel(2);
+		await startTheRound(container);
 		const pendingCards = () =>
 			Array.from(container.querySelectorAll("ul button")).filter((b) =>
 				(b.textContent ?? "").includes("BELUM DINILAI"),
@@ -155,7 +154,6 @@ describe("LayanganPanel", () => {
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
 		});
-		await startAndStopTimer(container);
 		const mudun = () =>
 			Array.from(container.querySelectorAll("button")).find((b) =>
 				(b.textContent ?? "").includes("Catat MUDUN"),
@@ -187,13 +185,13 @@ describe("LayanganPanel", () => {
 
 	it("klik PUTUS mencatat status putus", async () => {
 		const { container } = await renderPanel(2);
+		await startTheRound(container);
 		const card = container.querySelector("ul button");
 		expect(card).toBeDefined();
 		await fireEvent.click(card as Element);
 		await waitFor(() => {
 			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
 		});
-		await startAndStopTimer(container);
 		const putus = Array.from(container.querySelectorAll("button")).find((b) =>
 			(b.textContent ?? "").includes("Catat PUTUS"),
 		);
@@ -220,5 +218,117 @@ describe("LayanganPanel", () => {
 				aduanParticipants[0].ticketNumber,
 			);
 		});
+	});
+
+	it("babak belum dimulai: MUDUN/PUTUS nonaktif, DQ tetap bisa dicatat", async () => {
+		const { container } = await renderPanel(2);
+		const card = container.querySelector("ul button");
+		expect(card).toBeDefined();
+		await fireEvent.click(card as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
+		});
+		expect(container.textContent ?? "").toContain("Babak belum dimulai");
+		const mudun = findButton(container, "Catat MUDUN") as
+			| HTMLButtonElement
+			| undefined;
+		const putus = findButton(container, "Catat PUTUS") as
+			| HTMLButtonElement
+			| undefined;
+		const dq = findButton(container, "Catat DQ") as
+			| HTMLButtonElement
+			| undefined;
+		expect(mudun?.disabled).toBe(true);
+		expect(putus?.disabled).toBe(true);
+		expect(dq?.disabled).toBe(false);
+		await fireEvent.click(dq as Element);
+		await waitFor(() => {
+			expect(get(toasts).some((t) => t.message.includes("DQ"))).toBe(true);
+		});
+	});
+
+	it('"Mulai Lomba" mengubah panel ke state berjalan dgn timer bersama', async () => {
+		const { container } = await renderPanel(2);
+		expect(findButton(container, "Mulai Lomba")).toBeDefined();
+		await startTheRound(container);
+		expect(findButton(container, "Mulai Lomba")).toBeUndefined();
+		expect(container.textContent ?? "").toContain("Dimulai");
+		const card = container.querySelector("ul button");
+		await fireEvent.click(card as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
+		});
+		const mudun = findButton(container, "Catat MUDUN") as
+			| HTMLButtonElement
+			| undefined;
+		expect(mudun?.disabled).toBe(false);
+	});
+
+	it('tombol "Ulangi" perlu konfirmasi dua langkah sebelum mulai ulang', async () => {
+		const { container } = await renderPanel(2);
+		await startTheRound(container);
+		const ulangi = findButton(container, "Ulangi");
+		expect(ulangi).toBeDefined();
+		await fireEvent.click(ulangi as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Mulai ulang?");
+		});
+		await fireEvent.click(findButton(container, "Batal") as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").not.toContain("Mulai ulang?");
+			expect(container.textContent ?? "").toContain("Dimulai");
+		});
+		await fireEvent.click(findButton(container, "Ulangi") as Element);
+		await waitFor(() =>
+			expect(container.textContent ?? "").toContain("Mulai ulang?"),
+		);
+		await fireEvent.click(findButton(container, "Ya, mulai ulang") as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").not.toContain("Mulai ulang?");
+			expect(container.textContent ?? "").toContain("Dimulai");
+		});
+	});
+
+	it('"Selesai Babak" (2 langkah) menutup timer — MUDUN/PUTUS nonaktif lagi, DQ tetap aktif', async () => {
+		const { container } = await renderPanel(2);
+		await startTheRound(container);
+		const selesai = findButton(container, "Selesai Babak");
+		expect(selesai).toBeDefined();
+		await fireEvent.click(selesai as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Tutup timer babak ini?");
+		});
+		// Batal → timer tetap jalan.
+		await fireEvent.click(findButton(container, "Batal") as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").not.toContain(
+				"Tutup timer babak ini?",
+			);
+			expect(container.textContent ?? "").toContain("Dimulai");
+		});
+		// Selesai Babak lagi → konfirmasi → beneran tutup.
+		await fireEvent.click(findButton(container, "Selesai Babak") as Element);
+		await waitFor(() =>
+			expect(container.textContent ?? "").toContain("Tutup timer babak ini?"),
+		);
+		await fireEvent.click(
+			findButton(container, "Ya, selesai babak") as Element,
+		);
+		await waitFor(() => {
+			expect(findButton(container, "Mulai Lomba")).toBeDefined();
+		});
+		const card = container.querySelector("ul button");
+		await fireEvent.click(card as Element);
+		await waitFor(() => {
+			expect(container.textContent ?? "").toContain("Konfirmasi hasil");
+		});
+		const mudun = findButton(container, "Catat MUDUN") as
+			| HTMLButtonElement
+			| undefined;
+		const dq = findButton(container, "Catat DQ") as
+			| HTMLButtonElement
+			| undefined;
+		expect(mudun?.disabled).toBe(true);
+		expect(dq?.disabled).toBe(false);
 	});
 });

@@ -76,11 +76,7 @@
 	let termsCompetition = $state<Competition | null>(null);
 
 	const prizesFor = (competition: Competition): string[] => {
-		const prizes = [
-			"Juara 1 — piala dan hadiah utama",
-			"Juara 2 — hadiah runner-up",
-			"Juara 3 — hadiah podium",
-		];
+		const prizes = ["Juara 1 — Rp 20Jt", "Juara 7 — Rp 200.000"];
 		return competition.scoringMode === "jackpot_pita"
 			? [...prizes, "Bonus — hadiah jackpot pita"]
 			: prizes;
@@ -89,6 +85,7 @@
 	const selectedCompetition = $derived(
 		competitions.find((c) => c.id === competitionId),
 	);
+	const liveCompetitions = $derived(competitions.filter((c) => c.isActive));
 	const phoneWithPrefix = $derived(phone.length > 0 ? `+62${phone}` : "");
 	const validLocalPhone = $derived(/^8\d{8,12}$/.test(phone));
 
@@ -544,7 +541,7 @@
 				role="radiogroup"
 				aria-label="Pilihan lomba"
 			>
-				{#each competitions as c (c.id)}
+				{#each liveCompetitions as c (c.id)}
 					{@const selected = competitionId === c.id}
 					{@const prizes = prizesFor(c)}
 					<div
@@ -583,8 +580,10 @@
 								</span>
 								<span
 									class="font-display text-xs text-slate-500"
-									>{c.totalQuota} slot</span
 								>
+									--- slot
+									<!-- {c.totalQuota} slot -->
+								</span>
 							</div>
 							<h3
 								class="font-display break-words text-lg font-extrabold uppercase leading-tight text-slate-100"

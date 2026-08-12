@@ -23,8 +23,10 @@ vi.mock("$env/static/public", () => ({
 
 import {
 	clearGrant,
+	clearStaffGrant,
 	DEMO_PIN,
 	MAX_ATTEMPTS,
+	readStaffGrant,
 	recordFailedAttempt,
 	sha256Hex,
 	verifyPin,
@@ -37,7 +39,7 @@ afterEach(() => {
 	sessionStorage.clear();
 });
 
-const renderGate = (kind: "juri" | "admin" = "juri") =>
+const renderGate = (kind: "juri" | "panitia" | "admin" = "admin") =>
 	render(PinGateHarness, { kind });
 
 const typePin = async (pin: string) => {
@@ -64,9 +66,9 @@ describe("verifyPin", () => {
 	});
 });
 
-describe("PinGate", () => {
+describe("PinGate (admin — PIN bersama tidak berubah)", () => {
 	beforeEach(() => {
-		renderGate("juri");
+		renderGate("admin");
 	});
 
 	it("PIN benar → children render", async () => {
@@ -97,16 +99,71 @@ describe("PinGate", () => {
 
 	it("grant session valid → children langsung render tanpa PIN", () => {
 		cleanup();
-		writeGrant("juri");
-		renderGate("juri");
+		writeGrant("admin");
+		renderGate("admin");
 		expect(hasContent()).toBe(true);
 	});
 
 	it("grant kedaluwarsa/absent → gate tetap (children tidak render)", () => {
 		cleanup();
-		clearGrant("juri");
-		renderGate("juri");
+		clearGrant("admin");
+		renderGate("admin");
 		expect(hasContent()).toBe(false);
+	});
+});
+
+describe("PinGate (panitia/juri — login roster via 6 digit HP)", () => {
+	beforeEach(() => {
+		clearStaffGrant("juri");
+		clearStaffGrant("panitia");
+	});
+
+	it("6 digit HP terdaftar & aktif (roster demo) → children render + grant tersimpan", async () => {
+		renderGate("juri");
+		// Demo seed: "Dewi Juri" +62812444444 (aktif).
+		await typePin("444444");
+		await waitFor(() => expect(hasContent()).toBe(true));
+		const grant = readStaffGrant("juri");
+		expect(grant?.name).toBe("Dewi Juri");
+	});
+
+	it("6 digit HP tidak dikenal → pesan not_found, children tidak render", async () => {
+		renderGate("panitia");
+		await typePin("999999");
+		await waitFor(() =>
+			expect(
+				(screen.getByRole("alert").textContent ?? "").includes(
+					"tidak ditemukan",
+				),
+			).toBe(true),
+		);
+		expect(hasContent()).toBe(false);
+	});
+
+	it("anggota nonaktif → diperlakukan sama seperti tidak ditemukan", async () => {
+		renderGate("juri");
+		// Demo seed: "Nita Juri" +62812666666 (nonaktif).
+		await typePin("666666");
+		await waitFor(() =>
+			expect(
+				(screen.getByRole("alert").textContent ?? "").includes(
+					"tidak ditemukan",
+				),
+			).toBe(true),
+		);
+		expect(hasContent()).toBe(false);
+	});
+
+	it("5× salah → lockout", async () => {
+		renderGate("juri");
+		for (let i = 0; i < MAX_ATTEMPTS; i++) {
+			await typePin("999999");
+			await waitFor(() => expect(screen.queryByRole("alert")).toBeTruthy());
+		}
+		await waitFor(() =>
+			expect(screen.queryByRole("button", { name: "1" })).toBeNull(),
+		);
+		expect(screen.getAllByText(/Kunci|Coba lagi/i).length).toBeGreaterThan(0);
 	});
 });
 

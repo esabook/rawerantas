@@ -51,6 +51,13 @@
 	} from "$lib/db/participantImport";
 	import { getCompetitions, getPaymentConfigs } from "$lib/db/queries";
 	import type { Competition, PaymentConfig } from "$lib/db/queries";
+	import { staffRole, type StaffRole } from "$lib/db/schema";
+	import {
+		listStaffMembers,
+		setStaffActive,
+		upsertStaffMember,
+		type StaffMember,
+	} from "$lib/db/staff";
 	import {
 		deleteSponsor as deleteSponsorRecord,
 		getSponsors,
@@ -59,7 +66,13 @@
 		type Sponsor,
 	} from "$lib/db/sponsor";
 
-	type AdminTab = "config" | "competition" | "sponsor" | "verify" | "panitia";
+	type AdminTab =
+		| "config"
+		| "competition"
+		| "sponsor"
+		| "verify"
+		| "panitia"
+		| "staff";
 	type PaymentStatus = "all" | "baru" | "lunas" | "belum_lunas" | "ditolak";
 	type PaymentAction = "verify" | "reject" | "settle";
 	type ImportStep = 1 | 2 | 3 | 4;
@@ -99,6 +112,16 @@ let configs = $state<PaymentConfig[]>([]);
 let sponsors = $state<Sponsor[]>([]);
 let payments = $state<PaymentWithMeta[]>([]);
 let panitiaParticipants = $state<PanitiaParticipant[]>([]);
+let staffMembers = $state<StaffMember[]>([]);
+let editingStaffId = $state<string | null>(null);
+let staffForm = $state<{ role: StaffRole; name: string; phone: string }>({
+	role: "panitia",
+	name: "",
+	phone: "",
+});
+let staffSaving = $state(false);
+let staffTogglingId = $state<string | null>(null);
+let staffError = $state("");
 let panitiaSaving = $state<string | null>(null);
 let panitiaFilter = $state("all");
 let loading = $state(true);
@@ -219,7 +242,7 @@ let showTerms = $state(false);
 
 	const load = async () => {
 		try {
-			const [comps, cfgs, allPayments, sponsorList, panitia, lock] =
+			const [comps, cfgs, allPayments, sponsorList, panitia, lock, staff] =
 				await Promise.all([
 					getCompetitions(false),
 					getPaymentConfigs(false),
@@ -227,6 +250,7 @@ let showTerms = $state(false);
 					getSponsors(),
 					getPanitiaParticipants(),
 					getDataLock(),
+					listStaffMembers(),
 				]);
 			competitions = comps;
 			configs = cfgs;
@@ -234,6 +258,7 @@ let showTerms = $state(false);
 			sponsors = sponsorList;
 			panitiaParticipants = panitia;
 			dataLock = lock;
+			staffMembers = staff;
 			error = "";
 		} catch (e) {
 			error = e instanceof Error ? e.message : "Gagal memuat data admin.";
@@ -534,7 +559,10 @@ let showTerms = $state(false);
 		panitiaSaving = row.participant.id;
 		error = "";
 		try {
-			const result = await checkInParticipant(row.participant.id);
+			const result = await checkInParticipant(
+				row.participant.id,
+				await adminActorHash(),
+			);
 			const msg =
 				result.eligibility === "already"
 					? "Peserta sudah check-in sebelumnya."
@@ -571,6 +599,60 @@ let showTerms = $state(false);
 				e instanceof Error ? e.message : "Gagal membatalkan check-in.";
 		} finally {
 			panitiaSaving = null;
+		}
+	};
+
+	const resetStaffForm = () => {
+		editingStaffId = null;
+		staffForm = { role: "panitia", name: "", phone: "" };
+		staffError = "";
+	};
+
+	const editStaff = (row: StaffMember) => {
+		editingStaffId = row.id;
+		staffForm = { role: row.role, name: row.name, phone: row.phone };
+		staffError = "";
+	};
+
+	const saveStaffEntry = async () => {
+		if (staffSaving) return;
+		staffSaving = true;
+		staffError = "";
+		try {
+			await upsertStaffMember({
+				id: editingStaffId ?? undefined,
+				role: staffForm.role,
+				name: staffForm.name,
+				phone: staffForm.phone,
+			});
+			sfx.confirm();
+			undoable(
+				editingStaffId ? "Anggota roster diperbarui." : "Anggota roster ditambahkan.",
+				{ onConfirm: () => {} },
+			);
+			resetStaffForm();
+			await load();
+		} catch (e) {
+			sfx.error();
+			staffError = e instanceof Error ? e.message : "Gagal menyimpan anggota.";
+		} finally {
+			staffSaving = false;
+		}
+	};
+
+	const toggleStaffActive = async (row: StaffMember) => {
+		if (staffTogglingId !== null) return;
+		staffTogglingId = row.id;
+		staffError = "";
+		try {
+			await setStaffActive(row.id, !row.isActive);
+			sfx.confirm();
+			await load();
+		} catch (e) {
+			sfx.error();
+			staffError = e instanceof Error ? e.message : "Gagal mengubah status.";
+		} finally {
+			staffTogglingId = null;
 		}
 	};
 
@@ -941,6 +1023,16 @@ let showTerms = $state(false);
 				onclick={() => (tab = "panitia")}
 			>
 				Panitia ({panitiaParticipants.length})
+			</button>
+			<button
+				type="button"
+				class="btn shrink-0 snap-start whitespace-nowrap {tab ===
+				'staff'
+					? 'btn-gold'
+					: ''}"
+				onclick={() => (tab = "staff")}
+			>
+				Roster ({staffMembers.length})
 			</button>
 		</nav>
 
@@ -1637,6 +1729,9 @@ let showTerms = $state(false);
 									<th class="px-3 py-2 font-semibold"
 										>Metode</th
 									>
+									<th class="px-3 py-2 font-semibold"
+										>Sumber</th
+									>
 									<th class="px-3 py-2 font-semibold">Aksi</th
 									>
 								</tr>
@@ -1697,6 +1792,12 @@ let showTerms = $state(false);
 														.join(", ")
 												: "—"}</td
 										>
+										<td class="px-3 py-2 text-xs"
+											>{row.participant.registrationSource ===
+											"panitia"
+												? `Panitia${row.participant.registeredByStaffName ? ` · ${row.participant.registeredByStaffName}` : ""}`
+												: "Web"}</td
+										>
 										<td class="px-3 py-2">
 											{#if row.checkedIn}
 												<button
@@ -1741,6 +1842,172 @@ let showTerms = $state(false);
 													/>Check-in</button
 												>
 											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</section>
+		{:else if tab === "staff"}
+			<section
+				class="flex min-w-0 flex-col gap-4"
+				aria-labelledby="staff-admin-title"
+			>
+				<div>
+					<h1 id="staff-admin-title" class="text-lg font-bold">
+						Roster panitia & juri
+					</h1>
+					<p class="text-xs text-muted-foreground">
+						Anggota login pakai 6 digit terakhir nomor HP di sini.
+						Nonaktifkan alih-alih hapus — histori atribusi (siapa
+						check-in/input skor) tetap terbaca.
+					</p>
+				</div>
+
+				<form
+					class="grid min-w-0 gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4 sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+					onsubmit={(event) => {
+						event.preventDefault();
+						void saveStaffEntry();
+					}}
+				>
+					<label class="flex min-w-0 flex-col gap-1 text-sm">
+						<span class="text-xs text-muted-foreground">Peran</span>
+						<select class="input" bind:value={staffForm.role}>
+							{#each staffRole as role (role)}
+								<option value={role}
+									>{role === "panitia" ? "Panitia" : "Juri"}</option
+								>
+							{/each}
+						</select>
+					</label>
+					<label class="flex min-w-0 flex-col gap-1 text-sm">
+						<span class="text-xs text-muted-foreground">Nama</span>
+						<input
+							type="text"
+							class="input min-w-0"
+							value={staffForm.name}
+							oninput={(event) =>
+								(staffForm.name = event.currentTarget.value)}
+							placeholder="cth: Budi Panitia"
+							required
+						/>
+					</label>
+					<label class="flex min-w-0 flex-col gap-1 text-sm">
+						<span class="text-xs text-muted-foreground">No. HP</span>
+						<input
+							type="tel"
+							class="input min-w-0"
+							value={staffForm.phone}
+							oninput={(event) =>
+								(staffForm.phone = event.currentTarget.value)}
+							placeholder="081234567890"
+							required
+						/>
+					</label>
+					<div class="flex flex-wrap gap-2 sm:justify-end">
+						{#if editingStaffId}
+							<button
+								type="button"
+								class="btn"
+								onclick={resetStaffForm}
+								disabled={staffSaving}
+								><X class="h-4 w-4" aria-hidden="true" />Batal</button
+							>
+						{/if}
+						<button
+							type="submit"
+							class="btn btn-gold"
+							disabled={staffSaving}
+						>
+							{#if staffSaving}
+								<Loader2
+									class="h-4 w-4 animate-spin"
+									aria-hidden="true"
+								/>
+							{:else if editingStaffId}
+								<Save class="h-4 w-4" aria-hidden="true" />
+							{:else}
+								<Plus class="h-4 w-4" aria-hidden="true" />
+							{/if}
+							{editingStaffId ? "Simpan perubahan" : "Tambah"}
+						</button>
+					</div>
+				</form>
+				{#if staffError}
+					<p class="text-sm text-destructive" role="alert">{staffError}</p>
+				{/if}
+
+				{#if staffMembers.length === 0}
+					<div
+						class="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground"
+					>
+						Belum ada anggota roster.
+					</div>
+				{:else}
+					<div
+						class="min-w-0 overflow-x-auto rounded-xl border border-border"
+					>
+						<table class="w-full min-w-[520px] border-collapse text-sm">
+							<thead>
+								<tr
+									class="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground"
+								>
+									<th class="px-3 py-2 font-semibold">Nama</th>
+									<th class="px-3 py-2 font-semibold">Peran</th>
+									<th class="px-3 py-2 font-semibold">No. HP</th>
+									<th class="px-3 py-2 font-semibold">Status</th>
+									<th class="px-3 py-2 font-semibold">Aksi</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each staffMembers as row (row.id)}
+									<tr class="border-b border-border/60 last:border-0">
+										<td class="px-3 py-2 font-semibold"
+											>{row.name}</td
+										>
+										<td class="px-3 py-2 text-xs"
+											>{row.role === "panitia" ? "Panitia" : "Juri"}</td
+										>
+										<td class="px-3 py-2 text-xs font-mono"
+											>{row.phone}</td
+										>
+										<td class="px-3 py-2">
+											{#if row.isActive}
+												<span
+													class="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-xs text-emerald-200"
+													>Aktif</span
+												>
+											{:else}
+												<span
+													class="rounded-full border border-border/60 px-2 py-0.5 text-xs text-muted-foreground"
+													>Nonaktif</span
+												>
+											{/if}
+										</td>
+										<td class="px-3 py-2">
+											<div class="flex gap-1.5">
+												<button
+													type="button"
+													class="btn btn-ghost px-2 py-1 text-xs"
+													onclick={() => editStaff(row)}
+													><Pencil
+														class="h-3.5 w-3.5"
+														aria-hidden="true"
+													/>Edit</button
+												>
+												<button
+													type="button"
+													class="btn btn-ghost px-2 py-1 text-xs"
+													onclick={() => void toggleStaffActive(row)}
+													disabled={staffTogglingId !== null}
+													>{row.isActive
+														? "Nonaktifkan"
+														: "Aktifkan"}</button
+												>
+											</div>
 										</td>
 									</tr>
 								{/each}

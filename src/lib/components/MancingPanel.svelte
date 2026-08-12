@@ -109,7 +109,7 @@
 		}
 		const selectedP = selected;
 		if (!selectedP) {
-			error = "Peserta BIB belum termuat. Coba lagi.";
+			error = "Peserta No Peserta belum termuat. Coba lagi.";
 			return;
 		}
 		submitting = true;
@@ -123,7 +123,7 @@
 				isJackpot: jackpot,
 				recordedBy,
 			});
-			const label = `BIB ${lapak} — ${(weight / 1000).toLocaleString("id-ID")} kg${jackpot ? " 🎗️" : ""}`;
+			const label = `No Peserta ${lapak} — ${(weight / 1000).toLocaleString("id-ID")} kg${jackpot ? " 🎗️" : ""}`;
 			undoable(
 				result.queued ? `Antrean: ${label}` : `Tersimpan: ${label}`,
 				{
@@ -174,7 +174,7 @@
 	</div>
 
 	<label class="flex flex-col gap-1 text-sm">
-		<span class="font-medium">BIB peserta</span>
+		<span class="font-medium">No Peserta peserta</span>
 		<select
 			class="input"
 			value={lapak === null ? "" : String(lapak)}
@@ -190,7 +190,10 @@
 			{#each participants
 				.filter((x) => x.lapakNumber != null && x.lapakNumber !== "")
 				.sort((a, b) => Number(a.lapakNumber) - Number(b.lapakNumber)) as p}
-				<option value={p.lapakNumber} disabled={p.status === "disqualified"}>
+				<option
+					value={p.lapakNumber}
+					disabled={p.status === "disqualified"}
+				>
 					{p.lapakNumber} — {p.name}
 				</option>
 			{/each}
@@ -241,7 +244,7 @@
 			role="alert"
 		>
 			<TriangleAlert class="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-			BIB ini sudah tercatat jackpot pita. Simpan tetap?
+			No Peserta ini sudah tercatat jackpot pita. Simpan tetap?
 		</div>
 	{/if}
 

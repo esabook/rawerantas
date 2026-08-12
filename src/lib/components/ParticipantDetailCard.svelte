@@ -21,9 +21,11 @@
 
 	let {
 		participantId,
+		recordedBy = null,
 		onDone,
 	}: {
 		participantId: string;
+		recordedBy?: string | null;
 		onDone?: () => void;
 	} = $props();
 
@@ -70,7 +72,7 @@
 		try {
 			const { eligibility, queued } = await checkInParticipant(
 				participantId,
-				null,
+				recordedBy,
 			);
 			syncPending = syncPending || Boolean(queued);
 			if (eligibility === "already") {
@@ -84,8 +86,9 @@
 				sfx.coin();
 				vibrate([80, 40, 120]);
 			}
+			// B/A: jangan langsung tutup kartu — biarkan panitia lihat identitas
+			// + No Peserta dulu utk diserahkan ke peserta. Tutup lewat tombol "Selesai".
 			await load();
-			onDone?.();
 		} catch (e) {
 			sfx.error();
 			vibrate([120, 60, 120]);
@@ -184,7 +187,12 @@
 						.ticketNumber}
 				</p>
 				<p class="text-xs text-muted-foreground">
-					BIB {summary.participant.lapakNumber}
+					{summary.participant.registrationSource === "panitia"
+						? `Didaftarkan panitia${summary.participant.registeredByStaffName ? ` · ${summary.participant.registeredByStaffName}` : ""}`
+						: "Daftar mandiri (web)"}
+				</p>
+				<p class="text-lg font-semibold text-accent-foreground">
+					No Peserta #{summary.participant.lapakNumber}
 				</p>
 			</div>
 			<div class="flex shrink-0 items-center gap-1.5">
@@ -317,13 +325,31 @@
 				</p>
 			{/if}
 		{:else}
-			<p
-				class="flex items-center gap-1.5 text-sm text-emerald-600"
-				role="status"
+			<div
+				class="flex flex-col items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/10 p-4 text-center"
 			>
-				<CheckCircle2 class="h-4 w-4" aria-hidden="true" />
-				Peserta sudah masuk.
-			</p>
+				<p
+					class="flex items-center gap-1.5 text-sm font-semibold text-emerald-600"
+					role="status"
+				>
+					<CheckCircle2 class="h-4 w-4" aria-hidden="true" />
+					Peserta sudah masuk
+				</p>
+				<p class="text-xs text-muted-foreground">
+					Serahkan nomor No Peserta ke peserta
+				</p>
+				<p class="font-mono text-4xl font-black tabular-nums">
+					{summary.participant.lapakNumber}
+				</p>
+			</div>
+			<button
+				type="button"
+				class="btn btn-gold h-12 text-base"
+				onclick={() => onDone?.()}
+			>
+				<CheckCircle2 class="h-5 w-5" aria-hidden="true" />
+				Selesai
+			</button>
 		{/if}
 	</div>
 {/if}
@@ -331,13 +357,11 @@
 <TermsDialog
 	open={showTerms}
 	title="Syarat & Ketentuan"
-	competition={
-		summary
-			? {
-					id: summary.participant.competitionId,
-					name: summary.competitionName ?? "",
-				}
-			: null
-	}
+	competition={summary
+		? {
+				id: summary.participant.competitionId,
+				name: summary.competitionName ?? "",
+			}
+		: null}
 	onclose={() => (showTerms = false)}
 />

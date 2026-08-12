@@ -415,7 +415,9 @@
 							{row ? nameOf(row) : "Peserta"}
 						</p>
 						<p class="mt-1 text-sm text-muted-foreground">
-							{row && lapakOf(row) ? `BIB ${lapakOf(row)}` : ""}
+							{row && lapakOf(row)
+								? `No Peserta ${lapakOf(row)}`
+								: ""}
 						</p>
 						<p
 							class="mt-2 font-mono text-4xl font-bold tabular-nums"
@@ -451,7 +453,7 @@
 									</p>
 									<p class="text-sm text-muted-foreground">
 										{row && lapakOf(row)
-											? `BIB ${lapakOf(row)}`
+											? `No Peserta ${lapakOf(row)}`
 											: ""}
 										{#if entry.entries.length > 1}
 											· {entry.entries.length} skor

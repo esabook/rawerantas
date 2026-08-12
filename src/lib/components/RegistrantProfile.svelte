@@ -595,13 +595,14 @@
 								{participant.ticketNumber}
 							</p>
 							{#if participant.lapakNumber}
-								<p class="mt-1 text-xs text-slate-400">
-									BIB #{participant.lapakNumber}
+								<p class="mt-1 text-lg text-slate-400">
+									No Peserta #{participant.lapakNumber}
 								</p>
 							{:else}
 								<p class="mt-1 text-xs text-slate-400">
 									Gunakan nomor tiket untuk check-in, untuk
-									klaim BIB (nomor peserta) di lokasi lomba.
+									klaim No Peserta (nomor peserta) di lokasi
+									lomba.
 								</p>
 							{/if}
 						</div>

@@ -55,7 +55,7 @@
 		},
 		layangan_aduan: {
 			eyebrow: "Aduan Layangan",
-			copy: "Naikkan layangan, baca angin, putuskan lawan di arena.",
+			copy: "Naikkan layangan, jadilah yang paling lama terbang untuk menangkan Rp 20Jt.",
 			accent: "text-blue-300",
 			panel: "from-blue-500/30 via-indigo-500/10 to-transparent",
 			icon: Wind,
@@ -209,7 +209,8 @@
 									<p
 										class="mt-1 break-words font-semibold text-slate-100"
 									>
-										{c.totalQuota} peserta
+										<!-- {c.totalQuota} peserta -->
+										---
 									</p>
 								</div>
 							</div>
@@ -219,7 +220,7 @@
 									class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/5 px-2 py-2.5 text-[10px] font-bold uppercase tracking-widest text-cyan-200 transition-colors hover:border-cyan-200/60 hover:bg-cyan-300/10"
 									onclick={() => (termsCompetition = c)}
 								>
-									Lihat ketentuan dan syarat
+									Lihat syarat & ketentuan
 									<ExternalLink
 										class="h-3.5 w-3.5"
 										aria-hidden="true"

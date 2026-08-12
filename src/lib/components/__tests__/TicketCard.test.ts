@@ -36,6 +36,9 @@ const participant: Participant = {
 	phone: "6281234567890",
 	status: "fully_paid",
 	checkedInAt: null,
+	registrationSource: "web",
+	registeredByStaffId: null,
+	registeredByStaffName: null,
 	createdAt: new Date(),
 };
 
@@ -49,7 +52,7 @@ describe("TicketCard", () => {
 		expect(text).toContain(competition.name);
 		expect(text).toContain("RA-2026-001");
 		expect(text).toContain("Lunas");
-		expect(text).toContain("BIB #7");
+		expect(text).toContain("No Peserta #7");
 	});
 
 	it("status lunas menampilkan verifikasi pembayaran", () => {

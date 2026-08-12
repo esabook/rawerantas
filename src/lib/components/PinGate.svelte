@@ -5,9 +5,14 @@
 		grantStillValid,
 		PIN_LENGTH,
 		readGrant,
+		readStaffGrant,
 		verifyPin,
+		verifyStaffLogin,
 		type PinKind,
 	} from "$lib/security/pin";
+
+	const isStaffKind = (kind: PinKind): kind is "panitia" | "juri" =>
+		kind === "panitia" || kind === "juri";
 
 	let {
 		kind = "juri",
@@ -29,7 +34,9 @@
 	let unlocked = $state(false);
 
 	$effect(() => {
-		unlocked = grantStillValid(readGrant(kind));
+		unlocked = isStaffKind(kind)
+			? grantStillValid(readStaffGrant(kind))
+			: grantStillValid(readGrant(kind));
 	});
 	const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 	const dots = Array.from({ length: PIN_LENGTH }, (_, i) => i);
@@ -65,7 +72,11 @@
 		verifying = true;
 		error = "";
 		try {
-			await verifyPin(kind, pin, officer.trim() || undefined);
+			if (isStaffKind(kind)) {
+				await verifyStaffLogin(kind, pin);
+			} else {
+				await verifyPin(kind, pin, officer.trim() || undefined);
+			}
 			unlocked = true;
 			pin = "";
 			sfx.coin();
@@ -100,19 +111,25 @@
 		<Lock class="h-10 w-10 text-secondary" aria-hidden="true" />
 		<h1 class="text-xl font-semibold">{title}</h1>
 		<p class="text-sm text-muted-foreground">
-			PIN {roleLabel} {PIN_LENGTH} digit
+			{isStaffKind(kind)
+				? `6 digit terakhir nomor HP ${roleLabel}`
+				: `PIN ${roleLabel} ${PIN_LENGTH} digit`}
 		</p>
 
-		<label class="flex w-full max-w-xs flex-col gap-1 text-sm">
-			<span class="text-xs text-muted-foreground">Nama petugas (untuk audit)</span>
-			<input
-				type="text"
-				class="input"
-				placeholder="cth: Budi Panitia"
-				bind:value={officer}
-				autocomplete="off"
-			/>
-		</label>
+		{#if !isStaffKind(kind)}
+			<label class="flex w-full max-w-xs flex-col gap-1 text-sm">
+				<span class="text-xs text-muted-foreground"
+					>Nama petugas (untuk audit)</span
+				>
+				<input
+					type="text"
+					class="input"
+					placeholder="cth: Budi Panitia"
+					bind:value={officer}
+					autocomplete="off"
+				/>
+			</label>
+		{/if}
 
 		{#if locked}
 			<div role="alert" class="w-full rounded-lg bg-destructive/15 p-4 text-center">

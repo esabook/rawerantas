@@ -3,10 +3,12 @@
 		Camera,
 		CameraOff,
 		Info,
+		Loader2,
 		ScanLine,
 		Ticket,
 		Users,
 		UserCheck,
+		UserPlus,
 	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
 	import ParticipantDetailCard from "$lib/components/ParticipantDetailCard.svelte";
@@ -15,9 +17,13 @@
 	import {
 		findParticipantByTicket,
 		getCheckinStats,
+		registerWalkinCheckin,
 	} from "$lib/db/checkin";
 	import { getCompetitions, getParticipantById } from "$lib/db/queries";
 	import type { Competition } from "$lib/db/queries";
+	import { isValidPhone, normalizePhone, QuotaFullError } from "$lib/db/register";
+	import { formatStaffActor } from "$lib/db/staff";
+	import { readStaffGrant } from "$lib/security/pin";
 
 	type ScanState = "idle" | "scanning" | "stopping" | "error" | "done";
 	let scanState = $state<ScanState>("idle");
@@ -33,6 +39,37 @@
 	let competitionError = $state("");
 	let statsLoadToken = 0;
 	let showTerms = $state(false);
+
+	let showWalkin = $state(false);
+	let walkinName = $state("");
+	let walkinPhone = $state("");
+	let walkinCompetitionId = $state("");
+	let walkinSubmitting = $state(false);
+	let walkinError = $state("");
+	let walkinQuotaFull = $state(false);
+
+	const walkinPhoneWithPrefix = $derived(
+		walkinPhone.length > 0 ? `+62${walkinPhone}` : "",
+	);
+	const walkinValidLocalPhone = $derived(/^8\d{8,12}$/.test(walkinPhone));
+	const walkinPhoneError = $derived(
+		walkinPhone.length > 0 &&
+			(!walkinValidLocalPhone || !isValidPhone(walkinPhoneWithPrefix)),
+	);
+	const walkinFormValid = $derived(
+		walkinName.trim().length >= 2 &&
+			walkinValidLocalPhone &&
+			isValidPhone(walkinPhoneWithPrefix) &&
+			walkinCompetitionId.length > 0 &&
+			!walkinSubmitting,
+	);
+	const walkinFee = $derived(
+		competitions.find((c) => c.id === walkinCompetitionId)?.fee ?? null,
+	);
+
+	// B/A: identitas panitia yg login (roster 6-digit HP) — dipakai sbg
+	// registeredBy pendaftaran walk-in dan recordedBy check-in di halaman ini.
+	const panitiaStaff = readStaffGrant("panitia");
 
 	const termsCompetition = $derived(
 		selectedCompetitionId
@@ -72,7 +109,9 @@
 	const loadCompetitions = async () => {
 		competitionError = "";
 		try {
-			competitions = await getCompetitions(false);
+			// Hanya lomba aktif — lomba yang admin nonaktifkan tidak perlu
+			// muncul di loket check-in/walk-in.
+			competitions = await getCompetitions(true);
 		} catch (e) {
 			competitionError =
 				e instanceof Error ? e.message : "Gagal memuat daftar lomba.";
@@ -246,6 +285,65 @@
 		}
 	};
 
+	const openWalkin = () => {
+		walkinCompetitionId = selectedCompetitionId || walkinCompetitionId;
+		walkinName = "";
+		walkinPhone = "";
+		walkinError = "";
+		walkinQuotaFull = false;
+		showWalkin = true;
+	};
+
+	const cancelWalkin = () => {
+		showWalkin = false;
+		walkinError = "";
+		walkinQuotaFull = false;
+	};
+
+	const submitWalkin = async () => {
+		if (!walkinFormValid) {
+			return;
+		}
+		walkinSubmitting = true;
+		walkinError = "";
+		walkinQuotaFull = false;
+		try {
+			const result = await registerWalkinCheckin({
+				competitionId: walkinCompetitionId,
+				name: walkinName.trim().toUpperCase(),
+				phone: normalizePhone(walkinPhoneWithPrefix),
+				staffId: panitiaStaff?.staffId,
+				staffName: panitiaStaff?.name,
+			});
+			await stopCamera();
+			showWalkin = false;
+			foundId = result.participantId;
+			error = "";
+			scanState = "done";
+			void loadStats();
+		} catch (e) {
+			// Peserta sudah tercatat (mungkin sudah kena kuota + bayar) tapi
+			// bayar/check-in gagal di tengah jalan — buka kartu peserta supaya
+			// panitia bisa lanjutkan manual, jangan biarkan jadi dead-end error.
+			const partialId = (e as { participantId?: string }).participantId;
+			if (partialId) {
+				await stopCamera();
+				showWalkin = false;
+				foundId = partialId;
+				error = "";
+				scanState = "done";
+				void loadStats();
+			} else if (e instanceof QuotaFullError) {
+				walkinQuotaFull = true;
+			} else {
+				walkinError =
+					e instanceof Error ? e.message : "Gagal mendaftarkan peserta.";
+			}
+		} finally {
+			walkinSubmitting = false;
+		}
+	};
+
 	onMount(() => {
 		videoEl = document.querySelector<HTMLVideoElement>("#checkin-reader");
 		void videoEl;
@@ -412,6 +510,123 @@
 				{#if error}
 					<p class="text-sm text-destructive" role="alert">{error}</p>
 				{/if}
+
+				<div
+					class="my-1 flex items-center gap-2 text-xs text-muted-foreground"
+				>
+					<span class="h-px flex-1 bg-border"></span>
+					atau daftar di tempat
+					<span class="h-px flex-1 bg-border"></span>
+				</div>
+
+				{#if !showWalkin}
+					<button
+						type="button"
+						class="btn btn-ghost h-11 text-sm"
+						onclick={openWalkin}
+					>
+						<UserPlus class="h-4 w-4" aria-hidden="true" />
+						Daftar Peserta Baru (Tunai)
+					</button>
+				{:else}
+					<div
+						class="flex flex-col gap-2 rounded-lg border border-border/60 p-3"
+					>
+						<p class="text-sm font-semibold">
+							Daftar on-site — bayar tunai + check-in langsung
+						</p>
+						<select
+							class="input h-11"
+							bind:value={walkinCompetitionId}
+							disabled={walkinSubmitting}
+						>
+							<option value="">Pilih lomba</option>
+							{#each competitions as competition (competition.id)}
+								<option value={competition.id}>{competition.name}</option>
+							{/each}
+						</select>
+						{#if walkinFee !== null}
+							<p class="text-xs text-muted-foreground">
+								Biaya: Rp {walkinFee.toLocaleString("id-ID")}
+							</p>
+						{/if}
+						<input
+							type="text"
+							class="input"
+							placeholder="Nama peserta"
+							value={walkinName}
+							oninput={(event) => {
+								walkinName = (
+									event.currentTarget as HTMLInputElement
+								).value.toUpperCase();
+							}}
+							disabled={walkinSubmitting}
+							autocomplete="name"
+						/>
+						<div
+							class="flex min-w-0 items-center rounded-lg border border-border bg-background focus-within:ring-2 focus-within:ring-gold/60"
+						>
+							<span
+								class="shrink-0 border-r border-border px-2 py-2.5 text-sm font-semibold text-muted-foreground"
+								aria-hidden="true">+62</span
+							>
+							<input
+								type="tel"
+								class="min-w-0 flex-1 border-0 bg-transparent px-2 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+								placeholder="81234567890"
+								aria-label="Nomor WA setelah +62"
+								value={walkinPhone}
+								oninput={(event) => {
+									walkinPhone = (
+										event.currentTarget as HTMLInputElement
+									).value.replace(/\D/g, "");
+								}}
+								disabled={walkinSubmitting}
+								inputmode="numeric"
+								maxlength="13"
+								autocomplete="tel-national"
+							/>
+						</div>
+						{#if walkinPhoneError}
+							<p class="text-xs text-destructive">
+								Nomor WA harus diawali angka 8 setelah prefix +62.
+							</p>
+						{/if}
+						{#if walkinQuotaFull}
+							<p class="text-sm text-destructive" role="alert">
+								Kuota lomba ini sudah habis.
+							</p>
+						{:else if walkinError}
+							<p class="text-sm text-destructive" role="alert">
+								{walkinError}
+							</p>
+						{/if}
+						<div class="flex gap-2">
+							<button
+								type="button"
+								class="btn btn-ghost flex-1"
+								onclick={cancelWalkin}
+								disabled={walkinSubmitting}
+							>
+								Batal
+							</button>
+							<button
+								type="button"
+								class="btn btn-gold flex-1"
+								onclick={() => void submitWalkin()}
+								disabled={!walkinFormValid}
+							>
+								{#if walkinSubmitting}
+									<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+									Memproses…
+								{:else}
+									<UserPlus class="h-4 w-4" aria-hidden="true" />
+									Daftar & Check-in
+								{/if}
+							</button>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -419,6 +634,9 @@
 	{#if foundId}
 		<ParticipantDetailCard
 			participantId={foundId}
+			recordedBy={panitiaStaff
+				? formatStaffActor({ id: panitiaStaff.staffId, name: panitiaStaff.name })
+				: null}
 			onDone={() => {
 				foundId = null;
 				manualTicket = "";

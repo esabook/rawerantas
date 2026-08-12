@@ -103,7 +103,7 @@ describe("LeaderboardBoard", () => {
 				row("b", "Budi", { status: "putus", flightDurationMs: 20_000 }),
 			],
 		});
-		const text = container.textContent ?? "";
+		const text = (container.textContent ?? "").replace(/\s+/g, " ");
 		expect(text).toContain("2 menang");
 		expect(text).toContain("Total 01:50");
 		expect(text).toContain("Terlama 01:10");
