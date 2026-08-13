@@ -13,14 +13,16 @@ Bidenk 0813-2572-8559
 6. Rp 300.000
 7. Rp 200.000
 
-## Persyaratan
+## Persyaratan Utama
 - Panjang senar layangan **maksimal 50 meter**
 - Layangan wajib **terpasang lampu**
 - Layang-layang bebas 
 - Pendaftaran ditutup hari **Sabtu, 12 September 2026** jam **19:30 WIB**
 - Penilaian lomba dimulai setengah jam dari waktu dimulainya lomba / start
 - Peserta boleh mendaftar lebih dari satu tiket untuk layangan berbeda.
-
+- Pemenang senarnya di ukur ulang, bila melebihi 50 m di diskualifikasi. 
+- Layang" rusak, putus atau hilang bukan tanggung jwb panitia. 
+- Patok bebas(panitia tdk menyediakan patok)
 
 
 ## Pendaftaran
@@ -36,7 +38,6 @@ Bidenk 0813-2572-8559
 - Verifikasi pembayaran dilakukan oleh panitia; bukti transfer wajib diunggah untuk pembayaran non-tunai.
 - **Pendaftaran secara tunai** tersedia di lokasi lomba jika kuota peserta tersedia.
 - Pembayaran yang sudah diterima tidak dapat dikembalikan (no-refund).
-- Peserta dengan pembayaran belum lunas dapat menyelesaikan sisa tagihan sebelum atau saat check-in.
 
 ## Penilaian
 
