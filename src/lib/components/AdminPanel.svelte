@@ -1366,6 +1366,19 @@ let showTerms = $state(false);
 							</label>
 							<label class="flex min-w-0 flex-col gap-1">
 								<span class="text-xs text-muted-foreground"
+									>Tanggal event</span
+								>
+								<input
+									type="date"
+									class="input min-w-0"
+									value={c.eventDate ?? ""}
+									onchange={(e) =>
+										(c.eventDate =
+											e.currentTarget.value || null)}
+								/>
+							</label>
+							<label class="flex min-w-0 flex-col gap-1">
+								<span class="text-xs text-muted-foreground"
 									>Jenis lomba</span
 								>
 								<select

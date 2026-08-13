@@ -108,6 +108,8 @@ export const mockCompetitions: MockCompetition[] = [
 		roundStartedAt: null,
 		roundStartedRound: null,
 		roundStartedBy: null,
+		eventDate: "2026-08-17",
+		slug: "mancing-lele",
 		createdAt: at(-86_400_000),
 	},
 	{
@@ -122,6 +124,8 @@ export const mockCompetitions: MockCompetition[] = [
 		roundStartedAt: null,
 		roundStartedRound: null,
 		roundStartedBy: null,
+		eventDate: "2026-08-17",
+		slug: "aduan-layangan",
 		createdAt: at(-86_400_000),
 	},
 	{
@@ -136,6 +140,8 @@ export const mockCompetitions: MockCompetition[] = [
 		roundStartedAt: null,
 		roundStartedRound: null,
 		roundStartedBy: null,
+		eventDate: "2026-08-17",
+		slug: "layangan-hias",
 		createdAt: at(-86_400_000),
 	},
 ];

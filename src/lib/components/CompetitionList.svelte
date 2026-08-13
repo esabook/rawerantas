@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		ArrowUpRight,
+		CalendarDays,
 		ExternalLink,
 		Fish,
 		Palette,
@@ -71,6 +72,18 @@
 
 	const metaFor = (competition: Competition): CompetitionMeta =>
 		metaByMode[competition.scoringMode] ?? metaByMode.terberat;
+
+	const formatEventDate = (value: string | null | undefined): string => {
+		if (!value) return "Tanggal menyusul";
+		const date = new Date(value);
+		return Number.isNaN(date.getTime())
+			? "Tanggal menyusul"
+			: date.toLocaleDateString("id-ID", {
+					day: "numeric",
+					month: "long",
+					year: "numeric",
+				});
+	};
 
 	let termsCompetition = $state<Competition | null>(null);
 </script>
@@ -171,6 +184,15 @@
 									>
 										{c.name}
 									</h3>
+									<p
+										class="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-300"
+									>
+										<CalendarDays
+											class="h-3.5 w-3.5 shrink-0 {meta.accent}"
+											aria-hidden="true"
+										/>
+										{formatEventDate(c.eventDate)}
+									</p>
 								</div>
 								<span
 									class="font-display shrink-0 text-4xl font-extrabold text-white/15"
@@ -227,7 +249,7 @@
 									/>
 								</button>
 								<a
-									href="/daftar"
+									href={c.slug ? `/daftar/${c.slug}` : "/daftar"}
 									class="btn btn-sm btn-gold w-full"
 								>
 									Daftar Sekarang

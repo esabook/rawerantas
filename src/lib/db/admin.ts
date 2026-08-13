@@ -101,6 +101,7 @@ export async function saveCompetition(
 			scoring_mode: competition.scoringMode,
 			is_active: competition.isActive,
 			current_round: competition.currentRound,
+			event_date: competition.eventDate,
 		})
 		.eq("id", competition.id);
 	if (error) {

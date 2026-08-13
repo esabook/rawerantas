@@ -79,6 +79,7 @@ export const normalizeCompetitionRow = (row: DbRow): Competition =>
 		roundStartedAt: value(row, "roundStartedAt", "round_started_at"),
 		roundStartedRound: value(row, "roundStartedRound", "round_started_round"),
 		roundStartedBy: value(row, "roundStartedBy", "round_started_by"),
+		eventDate: value(row, "eventDate", "event_date"),
 		createdAt: value(row, "createdAt", "created_at"),
 	}) as Competition;
 

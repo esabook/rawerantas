@@ -11,7 +11,7 @@
 		Save,
 		Ticket,
 	} from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import TermsDialog from "$lib/components/TermsDialog.svelte";
 	import type { Competition, PaymentConfig } from "$lib/db/queries";
 	import {
@@ -40,9 +40,11 @@
 	let {
 		competitions,
 		onLogin,
+		lockedCompetitionId,
 	}: {
 		competitions: Competition[];
 		onLogin?: () => void;
+		lockedCompetitionId?: string;
 	} = $props();
 
 	const draft = loadDraft();
@@ -56,7 +58,9 @@
 
 	let name = $state((draft?.name ?? "").toUpperCase());
 	let phone = $state(toLocalPhone(draft?.phone ?? ""));
-	let competitionId = $state(draft?.competitionId ?? "");
+	let competitionId = $state(
+		untrack(() => lockedCompetitionId) ?? draft?.competitionId ?? "",
+	);
 	let payment = $state<"dp" | "full">(draft?.payment ?? "dp");
 
 	let submitting = $state(false);
@@ -527,6 +531,40 @@
 			{/if}
 		</label>
 
+		{#if lockedCompetitionId}
+			<div
+				class="flex min-w-0 flex-col gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/5 p-4 text-sm"
+			>
+				<p
+					class="font-display text-[10px] font-bold uppercase tracking-widest text-cyan-300"
+				>
+					Lomba
+				</p>
+				<h3
+					class="font-display break-words text-lg font-extrabold uppercase text-slate-100"
+				>
+					{selectedCompetition?.name ?? ""}
+				</h3>
+				{#if selectedCompetition}
+					<p class="text-xs text-slate-400">
+						Tiket Rp {selectedCompetition.fee.toLocaleString(
+							"id-ID",
+						)} · DP mulai Rp {selectedCompetition.minDp.toLocaleString(
+							"id-ID",
+						)}
+					</p>
+					<button
+						type="button"
+						class="mt-1 inline-flex w-fit items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-cyan-200 underline"
+						onclick={() =>
+							(termsCompetition = selectedCompetition ?? null)}
+					>
+						<ExternalLink class="h-3.5 w-3.5" aria-hidden="true" />
+						Lihat Ketentuan & Persyaratan
+					</button>
+				{/if}
+			</div>
+		{:else}
 		<fieldset class="flex min-w-0 flex-col gap-2 text-sm">
 			<legend class="font-medium">Pilih lomba</legend>
 			<div
@@ -656,6 +694,7 @@
 				</p>
 			{/if}
 		</fieldset>
+		{/if}
 
 		<fieldset class="flex flex-col gap-2 text-sm">
 			<legend class="font-medium">Pembayaran</legend>

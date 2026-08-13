@@ -179,6 +179,15 @@ alter table competitions add column if not exists round_started_at timestamptz;
 alter table competitions add column if not exists round_started_round integer;
 alter table competitions add column if not exists round_started_by text;
 
+-- Tanggal event per lomba (landing page tidak lagi pakai 1 tanggal global) +
+-- slug untuk URL pendaftaran langsung /daftar/<slug> yang dishare di iklan.
+alter table competitions add column if not exists event_date date;
+alter table competitions add column if not exists slug text;
+update competitions
+set slug = lower(regexp_replace(trim(name), '[^a-zA-Z0-9]+', '-', 'g'))
+where slug is null;
+create unique index if not exists competitions_slug_idx on competitions (slug);
+
 create unique index if not exists participants_competition_phone_idx
 	on participants (competition_id, phone);
 create unique index if not exists participant_payments_idempotency_idx

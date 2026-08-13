@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import CompetitionList from "$lib/components/CompetitionList.svelte";
-	import HeroSection from "$lib/components/HeroSection.svelte";
+	import TopBar from "$lib/components/TopBar.svelte";
 	import SponsorStrip from "$lib/components/SponsorStrip.svelte";
 	import FooterBar from "$lib/components/FooterBar.svelte";
 	import { getSponsors, type Sponsor } from "$lib/db/sponsor";
@@ -39,7 +39,7 @@
 </svelte:head>
 
 <main class="pb-16">
-	<HeroSection />
+	<TopBar />
 
 	{#if loadError}
 		<p class="px-4 text-sm text-destructive" role="alert">

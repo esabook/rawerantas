@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	check,
+	date,
 	integer,
 	jsonb,
 	pgTable,
@@ -51,6 +52,8 @@ export const competitions = pgTable("competitions", {
 	roundStartedAt: timestamp("round_started_at", { withTimezone: true }),
 	roundStartedRound: integer("round_started_round"),
 	roundStartedBy: text("round_started_by"),
+	eventDate: date("event_date"),
+	slug: text("slug"),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
